@@ -19,7 +19,7 @@ RUN npm run build
 FROM node:20-alpine
 
 # Install nginx, tsx, gettext (for envsubst), and OpenSSL 1.1 compatibility for Prisma
-RUN apk add --no-cache nginx openssl1.1-compat gettext && npm install -g tsx
+RUN apk add --no-cache nginx openssl gettext && npm install -g tsx
 
 # Create nginx directories
 RUN mkdir -p /run/nginx /var/log/nginx
