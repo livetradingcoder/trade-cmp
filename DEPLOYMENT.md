@@ -31,6 +31,7 @@ npm start
 ```
 
 This runs:
+
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:push` - Push database schema
 - `npm run db:seed` - Seed initial data
@@ -46,19 +47,40 @@ Once deployed, copy the Railway URL (e.g., `https://trade-arena-production.up.ra
 
 **Important**: Deploy the backend as a **separate Vercel project** from your frontend.
 
-#### Backend Deployment Steps:
+#### One-Command Vercel Deployment:
 
-1. **Go to [Vercel.com](https://vercel.com)** and create a **new project**
-2. **Import your `livetradingcoder/trade-cmp` repository**
-3. **Configure build settings**:
-   - **Root Directory**: `packages/server`
-   - **Build Command**: `npm run build:server` (includes Prisma generation)
-   - **Install Command**: `npm install`
+**Easiest way - use the automated script:**
+
+```bash
+# Install Vercel CLI and login first
+npm install -g vercel
+vercel login
+
+# Deploy everything with one command
+npm run deploy:vercel
+```
+
+This will:
+1. ✅ Deploy backend API to `trade-arena-api` project
+2. ✅ Deploy frontend to `trade-arena-web` project
+3. ✅ Set up proper project names and configurations
+
+#### Manual Deployment (Alternative):
+
+1. **Deploy Backend:**
+   ```bash
+   npm run deploy:backend
+   ```
+
+2. **Deploy Frontend:**
+   ```bash
+   npm run deploy:frontend
+   ```
 
 #### Vercel Database Setup
 
-1. **Add Vercel Postgres**: In project settings → Storage → Create Database → Postgres
-2. **Environment Variables** (in Vercel backend project settings):
+1. **Add Vercel Postgres**: In backend project settings → Storage → Create Database → Postgres
+2. **Environment Variables** (in backend project):
    ```
    DATABASE_URL=your_postgres_connection_string_from_vercel
    PORT=3001
@@ -68,10 +90,6 @@ Once deployed, copy the Railway URL (e.g., `https://trade-arena-production.up.ra
    npm run db:push
    npm run db:seed
    ```
-
-#### Vercel API Structure
-
-The `packages/server/vercel.json` is already configured for Vercel deployment with proper routing.
 
 ### Vercel API Structure
 
@@ -110,19 +128,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 ### Deploy Frontend to Vercel
 
-1. **Create a separate Vercel project** for the frontend
-2. **Import your `livetradingcoder/trade-cmp` repository**
-3. **Configure build settings**:
-   - **Root Directory**: `packages/web`
-   - **Build Command**: `npm run build` (or leave default)
-   - **Output Directory**: `dist` (configured in vercel.json)
+**Use the automated deployment:**
+```bash
+npm run deploy:vercel
+```
+
+This automatically deploys both frontend and backend with proper configuration.
+
+### Manual Frontend Deployment (Alternative):
+
+1. **Deploy with script:**
+   ```bash
+   npm run deploy:frontend
+   ```
+
+2. **Or manually create project:**
+   - Import `livetradingcoder/trade-cmp` repository
+   - Root Directory: `packages/web`
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
 
 ### Connect Frontend to Backend
 
-1. **Get your backend URL** from either:
+**Automated:** The deployment script handles environment variables automatically.
 
-   - Railway: `https://your-app-name.up.railway.app`
-   - Vercel Backend: `https://your-backend-project.vercel.app`
+**Manual:** In Vercel frontend project settings, add:
+- **Name**: `VITE_API_URL`
+- **Value**: Your backend URL (e.g., `https://trade-arena-api.vercel.app`)
 
 2. **In Vercel frontend project settings**, add environment variable:
 

@@ -19,7 +19,11 @@
     "db:generate": "npm run db:generate -w @trade-arena/server",
     "db:push": "npm run db:push -w @trade-arena/server",
     "db:seed": "npm run db:seed -w @trade-arena/server",
-    "setup": "npm install && npm run db:generate"
+    "setup": "npm install && npm run db:generate",
+    "deploy": "node scripts/deploy.js",
+    "deploy:vercel": "echo 'Deploying backend...' && npm run deploy:backend && echo 'Deploying frontend...' && npm run deploy:frontend",
+    "deploy:backend": "cd packages/server && vercel --prod --yes --name trade-arena-api",
+    "deploy:frontend": "cd packages/web && vercel --prod --yes --name trade-arena-web"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
