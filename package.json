@@ -23,7 +23,8 @@
     "deploy": "node scripts/deploy.js",
     "deploy:vercel": "echo 'Deploying backend...' && npm run deploy:backend && echo 'Deploying frontend...' && npm run deploy:frontend",
     "deploy:backend": "cd packages/server && vercel --prod --yes --name trade-arena-api",
-    "deploy:frontend": "cd packages/web && vercel --prod --yes --name trade-arena-web"
+    "deploy:frontend": "cd packages/web && vercel --prod --yes --name trade-arena-web",
+    "deploy:render": "node scripts/deploy.js render"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

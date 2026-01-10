@@ -4,6 +4,15 @@
 
 Choose one of the following options:
 
+| Feature | Railway | Vercel | Render |
+|---------|---------|--------|--------|
+| **Database** | Built-in PostgreSQL | Built-in PostgreSQL | Built-in PostgreSQL |
+| **Pricing** | Free tier available | Free tier available | Free tier available |
+| **Cold Starts** | No (persistent server) | Yes (serverless) | No (persistent server) |
+| **File Uploads** | Good support | Limited | Good support |
+| **Ease of Setup** | Very easy | Moderate | Easy |
+| **One-Command Deploy** | ✅ `npm start` | ✅ `npm run deploy:vercel` | ⚠️ Manual setup required |
+
 ### Option 1: Deploy to Railway (Recommended)
 
 1. Go to [Railway.app](https://railway.app) and sign up/login
@@ -198,6 +207,61 @@ This automatically deploys both frontend and backend with proper configuration.
 | **Ease of Setup** | Very easy              | Moderate            |
 
 **Recommendation**: Use Railway for backend if you need persistent connections. Use Vercel if you want everything in one platform.
+
+### Option 3: Deploy to Render (Alternative)
+
+Render provides web services, static sites, and PostgreSQL databases with a free tier.
+
+#### One-Command Render Deployment Prep:
+
+```bash
+npm run deploy:render
+```
+
+This shows you the steps needed for Render deployment.
+
+#### Manual Render Deployment Steps:
+
+1. **Create Render Account**: Go to [render.com](https://render.com) and sign up
+
+2. **Create PostgreSQL Database**:
+   - Click "New" → "PostgreSQL"
+   - Name: `trade-arena-db`
+   - Copy the connection string for later
+
+3. **Deploy Backend API**:
+   - Click "New" → "Web Service"
+   - Connect your `livetradingcoder/trade-cmp` repo
+   - **Settings**:
+     - **Name**: `trade-arena-api`
+     - **Root Directory**: `packages/server`
+     - **Build Command**: `npm install && npm run build`
+     - **Start Command**: `npm start`
+   - **Environment Variables**:
+     ```
+     DATABASE_URL=your_postgres_connection_string
+     NODE_ENV=production
+     ```
+
+4. **Deploy Frontend**:
+   - Click "New" → "Static Site"
+   - Connect your `livetradingcoder/trade-cmp` repo
+   - **Settings**:
+     - **Name**: `trade-arena-web`
+     - **Root Directory**: `packages/web`
+     - **Build Command**: `npm install && npm run build`
+     - **Publish Directory**: `dist`
+   - **Environment Variables**:
+     ```
+     VITE_API_URL=https://your-backend-service.onrender.com
+     ```
+
+5. **Database Setup**:
+   After backend is deployed, go to the web service shell and run:
+   ```bash
+   npm run db:push
+   npm run db:seed
+   ```
 
 ## Testing
 
