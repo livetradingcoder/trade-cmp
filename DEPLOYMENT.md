@@ -24,25 +24,19 @@ Railway will provide the actual DATABASE_URL in the database settings.
 
 ### 3. Database Setup
 
-The `npm start` command will automatically run all necessary setup commands:
+**For Railway**: The `npm start` command automatically runs all setup:
 
 ```bash
 npm start
 ```
 
 This runs:
-
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:push` - Push database schema
 - `npm run db:seed` - Seed initial data
 - `npm run start:server` - Start the server
 
-**Or run commands individually:**
-
-```bash
-npm run db:push
-npm run db:seed
-```
+**For Vercel**: Database setup is done separately during deployment
 
 ### 4. Get Backend URL
 
@@ -71,8 +65,8 @@ Once deployed, copy the Railway URL (e.g., `https://trade-arena-production.up.ra
    ```
 3. **Database Migration**: After deployment, run in Vercel terminal:
    ```bash
-   npx prisma db push
-   npx prisma db seed
+   npm run db:push
+   npm run db:seed
    ```
 
 #### Vercel API Structure
@@ -126,10 +120,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 ### Connect Frontend to Backend
 
 1. **Get your backend URL** from either:
+
    - Railway: `https://your-app-name.up.railway.app`
    - Vercel Backend: `https://your-backend-project.vercel.app`
 
 2. **In Vercel frontend project settings**, add environment variable:
+
    - **Name**: `VITE_API_URL`
    - **Value**: Your backend URL
 
