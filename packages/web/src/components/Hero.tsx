@@ -105,9 +105,9 @@ const Hero = () => {
         }
 
         .hero-container {
-          padding-top: 60px;
-          padding-bottom: 30px;
-          min-height: calc(100vh - 120px);
+          padding-top: 40px;
+          padding-bottom: 20px;
+          min-height: 70vh;
           display: flex;
           align-items: center;
         }
