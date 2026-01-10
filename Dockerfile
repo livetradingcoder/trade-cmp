@@ -12,13 +12,10 @@ COPY packages ./packages
 # Install dependencies (skip postinstall to avoid db:generate during build)
 RUN npm ci --ignore-scripts
 
-# Generate Prisma Client before building (no DATABASE_URL needed for generation)
-# This must happen before TypeScript compilation since PrismaClient is imported
-WORKDIR /app/packages/server
-RUN npx prisma generate
-WORKDIR /app
+# Generate Prisma Client (required for build)
+RUN npx prisma generate -w packages/server
 
-# Build both frontend and backend
+# Build both frontend and backend (no env vars needed at build time)
 RUN npm run build --workspaces --if-present
 
 # Production stage - Single container with both backend and frontend
