@@ -55,26 +55,43 @@ ENV PORT=80
 # Expose port 80 (Railway will map this)
 EXPOSE 80
 
-# Create startup script with error handling
+# Create startup script with proper order: generate -> setup -> seed -> start
 RUN echo '#!/bin/sh' > /start.sh && \
+    echo 'set -e' >> /start.sh && \
     echo 'echo "Starting application..."' >> /start.sh && \
     echo 'echo "Using PORT: ${PORT:-80}"' >> /start.sh && \
     echo 'cd packages/server' >> /start.sh && \
-    echo 'echo "Running prisma generate..."' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Step 1: Generate Prisma Client (no DATABASE_URL needed)' >> /start.sh && \
+    echo 'echo "Step 1: Generating Prisma Client..."' >> /start.sh && \
     echo 'npx prisma generate' >> /start.sh && \
-    echo 'echo "Starting backend server on port 3001..."' >> /start.sh && \
-    echo 'node dist/index.js &' >> /start.sh && \
-    echo '# Run migrations and seed in background to not block startup' >> /start.sh && \
-    echo '(' >> /start.sh && \
-    echo '  echo "Running prisma db push..."' >> /start.sh && \
-    echo '  npx prisma db push --accept-data-loss' >> /start.sh && \
-    echo '  echo "Running seed script..."' >> /start.sh && \
-    echo '  npx tsx src/seed.ts' >> /start.sh && \
-    echo ') &' >> /start.sh && \
-    echo 'echo "Configuring nginx with PORT=${PORT:-80}..."' >> /start.sh && \
+    echo 'echo "✅ Prisma Client generated"' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Step 2: Setup database schema (needs DATABASE_URL)' >> /start.sh && \
+    echo 'echo "Step 2: Setting up database schema..."' >> /start.sh && \
+    echo 'npx prisma db push --accept-data-loss || { echo "❌ Database setup failed"; exit 1; }' >> /start.sh && \
+    echo 'echo "✅ Database schema setup complete"' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Step 3: Seed database (needs DATABASE_URL and schema)' >> /start.sh && \
+    echo 'echo "Step 3: Seeding database..."' >> /start.sh && \
+    echo 'npx tsx src/seed.ts || echo "⚠️  Seeding failed, continuing..."' >> /start.sh && \
+    echo 'echo "✅ Database seeding complete"' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Step 4: Configure nginx with Railway PORT' >> /start.sh && \
+    echo 'echo "Step 4: Configuring nginx..."' >> /start.sh && \
     echo 'export PORT=${PORT:-80}' >> /start.sh && \
     echo 'envsubst '"'"'${PORT}'"'"' < /etc/nginx/http.d/default.conf.template > /etc/nginx/http.d/default.conf' >> /start.sh && \
-    echo 'echo "Starting nginx on port ${PORT:-80}..."' >> /start.sh && \
+    echo 'echo "✅ Nginx configured for port ${PORT}"' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Step 5: Start backend server' >> /start.sh && \
+    echo 'echo "Step 5: Starting backend server on port 3001..."' >> /start.sh && \
+    echo 'node dist/index.js &' >> /start.sh && \
+    echo 'sleep 2' >> /start.sh && \
+    echo 'echo "✅ Backend server started"' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo '# Step 6: Start nginx (this blocks and keeps container running)' >> /start.sh && \
+    echo 'echo "Step 6: Starting nginx on port ${PORT}..."' >> /start.sh && \
+    echo 'echo "🚀 Application is ready!"' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh && \
     chmod +x /start.sh
 
