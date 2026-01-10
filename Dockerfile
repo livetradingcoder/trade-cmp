@@ -54,17 +54,19 @@ RUN echo '#!/bin/sh' > /start.sh && \
     echo 'echo "Using PORT: ${PORT:-80}"' >> /start.sh && \
     echo 'cd packages/server' >> /start.sh && \
     echo 'echo "Running prisma generate..."' >> /start.sh && \
-    echo 'npx prisma generate || echo "Prisma generate failed, continuing..."' >> /start.sh && \
-    echo 'echo "Running prisma db push..."' >> /start.sh && \
-    echo 'npx prisma db push --accept-data-loss || echo "Prisma db push failed, continuing..."' >> /start.sh && \
-    echo 'echo "Running seed script..."' >> /start.sh && \
-    echo 'npx tsx src/seed.ts || echo "Seeding failed, continuing..."' >> /start.sh && \
+    echo 'npx prisma generate' >> /start.sh && \
+    echo 'echo "Starting backend server on port 3001..."' >> /start.sh && \
+    echo 'node dist/index.js &' >> /start.sh && \
+    echo '# Run migrations and seed in background to not block startup' >> /start.sh && \
+    echo '(' >> /start.sh && \
+    echo '  echo "Running prisma db push..."' >> /start.sh && \
+    echo '  npx prisma db push --accept-data-loss' >> /start.sh && \
+    echo '  echo "Running seed script..."' >> /start.sh && \
+    echo '  npx tsx src/seed.ts' >> /start.sh && \
+    echo ') &' >> /start.sh && \
     echo 'echo "Configuring nginx with PORT=${PORT:-80}..."' >> /start.sh && \
     echo 'export PORT=${PORT:-80}' >> /start.sh && \
     echo 'envsubst '"'"'${PORT}'"'"' < /etc/nginx/http.d/default.conf.template > /etc/nginx/http.d/default.conf' >> /start.sh && \
-    echo 'echo "Starting backend server on port 3001..."' >> /start.sh && \
-    echo 'node dist/index.js &' >> /start.sh && \
-    echo 'sleep 2' >> /start.sh && \
     echo 'echo "Starting nginx on port ${PORT:-80}..."' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh && \
     chmod +x /start.sh
