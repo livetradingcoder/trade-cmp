@@ -1,0 +1,448 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  --bg-color: #020203;
+  --panel-bg: #0a0a0c;
+  --surface: #121216;
+  --surface-hover: #1c1c22;
+  --panel-border: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --primary: #0066FF;
+  --primary-glow: rgba(0, 102, 255, 0.4);
+  --secondary: #7000ff;
+  --secondary-glow: rgba(112, 0, 255, 0.4);
+  --accent: #ffcc00;
+  --success: #00ff88;
+  --text-main: #ffffff;
+  --text-dim: #94a3b8;
+  --text-muted: #475569;
+
+  --font-sans: 'Outfit', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  --radius: 16px;
+  --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Background Effects */
+.bg-glow-top {
+  position: fixed;
+  top: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 60vh;
+  background: radial-gradient(circle at center, var(--primary-glow) 0%, transparent 70%);
+  z-index: -1;
+  filter: blur(120px);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 50px 50px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Common Layouts */
+.section-container {
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 60px 24px;
+}
+
+/* Sophisticated Components */
+.glass-panel {
+  background: rgba(18, 18, 22, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  transition: var(--transition-smooth);
+}
+
+.glass-panel:hover {
+  border-color: rgba(0, 102, 255, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transform: rotate(45deg);
+  transition: 0.6s;
+}
+
+.btn-primary:hover::after {
+  left: 120%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px var(--primary-glow);
+  background: #005ce6;
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.03);
+  color: white;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-weight: 600;
+  border: 1px solid var(--panel-border);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Typography */
+h1 {
+  font-size: 3.5rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #fff 30%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Ticker */
+.ticker-wrap {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 44px;
+  background: rgba(2, 2, 3, 0.9);
+  border-bottom: 1px solid var(--panel-border);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.ticker-content {
+  display: inline-block;
+  white-space: nowrap;
+  animation: ticker-slide 100s linear infinite;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+@keyframes ticker-slide {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Ticker items should be duplicated for infinite scroll */
+.ticker-item {
+  display: inline-block;
+  padding: 0 40px;
+}
+
+/* Tournament Cards - Glossy */
+.tournament-card {
+  position: relative;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--panel-border);
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.tournament-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+  z-index: 1;
+}
+
+.tournament-card:hover {
+  transform: translateY(-10px);
+  border-color: rgba(0, 102, 255, 0.4);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+}
+
+.tournament-card-image {
+  width: 100%;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.tournament-card:hover .tournament-card-image {
+  transform: scale(1.05);
+}
+
+.tournament-card-content {
+  position: relative;
+  z-index: 2;
+  padding: 32px;
+  margin-top: -60px;
+}
+
+/* Floating Elements */
+.floating-badge {
+  background: rgba(2, 2, 3, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 20px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-premium);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 5px;
+  border: 2px solid var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}
+
+/* Badge Component */
+.badge {
+  display: inline-block;
+  background: rgba(0, 102, 255, 0.1);
+  color: var(--primary);
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(0, 102, 255, 0.2);
+}
+
+/* ======================== */
+/* MOBILE RESPONSIVE STYLES */
+/* ======================== */
+
+@media (max-width: 768px) {
+  /* Reduce section padding on mobile */
+  .section-container {
+    padding: 40px 16px;
+  }
+
+  /* Smaller typography */
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  /* Smaller ticker */
+  .ticker-wrap {
+    height: 36px;
+  }
+
+  .ticker-content {
+    font-size: 0.75rem;
+  }
+
+  .ticker-item {
+    padding: 0 24px;
+  }
+
+  /* Smaller buttons */
+  .btn-primary {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+    gap: 8px;
+  }
+
+  .btn-outline {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Floating badges */
+  .floating-badge {
+    padding: 12px 14px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
+  /* Tournament cards */
+  .tournament-card {
+    border-radius: 16px;
+  }
+
+  .tournament-card-content {
+    padding: 24px;
+    margin-top: -40px;
+  }
+
+  .tournament-card:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Background effects - less intensive on mobile */
+  .bg-glow-top {
+    filter: blur(80px);
+    opacity: 0.1;
+  }
+
+  .bg-grid {
+    background-size: 40px 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-container {
+    padding: 32px 12px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .btn-primary {
+    padding: 12px 20px;
+    font-size: 0.85rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-outline {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  .floating-badge {
+    padding: 10px 12px;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+
+  /* Disable hover transforms on touch devices */
+  .tournament-card:hover {
+    transform: none;
+  }
+
+  .btn-primary:hover {
+    transform: none;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .tournament-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-primary:hover {
+    transform: none;
+  }
+
+  .glass-panel:hover {
+    border-color: var(--glass-border);
+    box-shadow: none;
+  }
+}
