@@ -4,13 +4,13 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy workspace configuration
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json turbo.json ./
 
 # Copy all packages
 COPY packages ./packages
 
-# Install dependencies
-RUN npm install
+# Install dependencies (skip postinstall to avoid db:generate during build)
+RUN npm ci --ignore-scripts
 
 # Build both frontend and backend (no env vars needed at build time)
 RUN npm run build --workspaces --if-present
