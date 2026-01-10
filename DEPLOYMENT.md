@@ -48,29 +48,36 @@ npm run db:seed
 
 Once deployed, copy the Railway URL (e.g., `https://trade-arena-production.up.railway.app`)
 
-### Option 2: Deploy to Vercel
+### Option 2: Deploy Backend to Vercel
 
-1. **Go to [Vercel.com](https://vercel.com)** and sign up/login
-2. **Click "New Project"**
-3. **Import your `livetradingcoder/trade-cmp` repository**
-4. **Configure build settings**:
+**Important**: Deploy the backend as a **separate Vercel project** from your frontend.
+
+#### Backend Deployment Steps:
+
+1. **Go to [Vercel.com](https://vercel.com)** and create a **new project**
+2. **Import your `livetradingcoder/trade-cmp` repository**
+3. **Configure build settings**:
    - **Root Directory**: `packages/server`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
+   - **Build Command**: `npm run build:server` (includes Prisma generation)
    - **Install Command**: `npm install`
 
-### Vercel Database Setup
+#### Vercel Database Setup
 
-1. **Add Vercel Postgres**: In your project settings → Storage → Create Database → Postgres
-2. **Environment Variables** (in Vercel project settings):
+1. **Add Vercel Postgres**: In project settings → Storage → Create Database → Postgres
+2. **Environment Variables** (in Vercel backend project settings):
    ```
    DATABASE_URL=your_postgres_connection_string_from_vercel
+   PORT=3001
    ```
-3. **The start script will handle everything automatically**, but if needed, run commands individually:
+3. **Database Migration**: After deployment, run in Vercel terminal:
    ```bash
    npx prisma db push
    npx prisma db seed
    ```
+
+#### Vercel API Structure
+
+The `packages/server/vercel.json` is already configured for Vercel deployment with proper routing.
 
 ### Vercel API Structure
 
@@ -107,17 +114,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 ## Frontend Deployment
 
-### Update Frontend to Use Backend
+### Deploy Frontend to Vercel
+
+1. **Create a separate Vercel project** for the frontend
+2. **Import your `livetradingcoder/trade-cmp` repository**
+3. **Configure build settings**:
+   - **Root Directory**: `packages/web`
+   - **Build Command**: `npm run build` (or leave default)
+   - **Output Directory**: `dist` (configured in vercel.json)
+
+### Connect Frontend to Backend
 
 1. **Get your backend URL** from either:
-
    - Railway: `https://your-app-name.up.railway.app`
-   - Vercel: `https://your-project.vercel.app`
+   - Vercel Backend: `https://your-backend-project.vercel.app`
 
 2. **In Vercel frontend project settings**, add environment variable:
-
    - **Name**: `VITE_API_URL`
-   - **Value**: Your backend URL (Railway or Vercel)
+   - **Value**: Your backend URL
 
 3. **Redeploy the frontend** on Vercel
 

@@ -6,14 +6,15 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "npm run db:generate && npm run db:push && npm run db:seed && npm run start:server",
+    "start": "npm run start:server",
     "start:server": "npm run start -w @trade-arena/server",
+    "start:full": "npm run db:generate && npm run db:push && npm run db:seed && npm run start:server",
     "dev": "concurrently -n web,server -c cyan,magenta \"npm run dev:web\" \"npm run dev:server\"",
     "dev:web": "npm run dev -w @trade-arena/web",
     "dev:server": "npm run dev -w @trade-arena/server",
     "build": "npm run build --workspaces --if-present",
     "build:web": "npm run build -w @trade-arena/web",
-    "build:server": "npm run build -w @trade-arena/server",
+    "build:server": "npm run db:generate && npm run build -w @trade-arena/server",
     "lint": "npm run lint -w @trade-arena/web",
     "db:generate": "npm run db:generate -w @trade-arena/server",
     "db:push": "npm run db:push -w @trade-arena/server",
