@@ -1,73 +1,138 @@
-# React + TypeScript + Vite
+# Trade Arena - Championship Trading Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack trading championship platform built with React, TypeScript, Node.js, Express, and PostgreSQL.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Tournament management system
+- Admin dashboard for tournament creation
+- Real-time leaderboard
+- Responsive React frontend
+- RESTful API backend with Prisma ORM
+- Docker containerization for easy deployment
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React, TypeScript, Vite
+- **Backend**: Node.js, Express, TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Deployment**: Docker & Docker Compose
 
-## Expanding the ESLint configuration
+## Quick Start
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Docker and Docker Compose
+- Node.js 20+ (for local development)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Environment Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Copy the environment template and configure your database:
+
+```bash
+cp env-example.txt .env
+# Edit .env with your database URL and other settings
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Docker Deployment (Recommended)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Build and run all services:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Build and start services
+docker-compose up --build -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+The application will be available at:
+- Frontend: http://localhost
+- Backend API: http://localhost:3001
+- Health Check: http://localhost:3001/api/health
+
+### 3. Local Development
+
+```bash
+# Install dependencies
+npm install
+
+# Generate Prisma client
+npm run db:generate
+
+# Push database schema
+npm run db:push
+
+# Seed initial data
+npm run db:seed
+
+# Start development servers
+npm run dev
+```
+
+## Deployment Options
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions including:
+
+- Railway (recommended)
+- Vercel
+- Render
+- Manual Docker deployment
+
+## API Endpoints
+
+- `GET /api/health` - Health check
+- `GET /api/tournaments` - Get all tournaments
+- `GET /api/tournaments/:id` - Get tournament by ID
+- `POST /api/tournaments` - Create tournament
+- `PUT /api/tournaments/:id` - Update tournament
+- `DELETE /api/tournaments/:id` - Delete tournament
+- `POST /api/admin/login` - Admin authentication
+
+## Database Schema
+
+The application uses Prisma with PostgreSQL. Key models:
+
+- `Tournament` - Championship tournaments
+- `Admin` - Administrative users
+
+## Troubleshooting
+
+### Database Connection Issues
+
+1. Verify your `DATABASE_URL` in `.env`
+2. Ensure the database is accessible
+3. Run `npm run db:push` to sync schema
+
+### Docker Issues
+
+1. Ensure Docker daemon is running
+2. Check container logs: `docker-compose logs`
+3. Rebuild if needed: `docker-compose up --build --force-recreate`
+
+### API Not Working
+
+1. Check backend health: `curl http://localhost:3001/api/health`
+2. Verify environment variables are loaded
+3. Check browser network tab for CORS issues
+
+## Project Structure
+
+```
+trade-cmp/
+├── packages/
+│   ├── server/          # Backend API
+│   │   ├── src/
+│   │   ├── prisma/      # Database schema & migrations
+│   │   └── dist/        # Built backend
+│   └── web/             # Frontend React app
+│       ├── src/
+│       └── dist/        # Built frontend
+├── docker-compose.yml   # Multi-service Docker setup
+├── Dockerfile          # Frontend container
+├── Dockerfile.backend  # Backend container
+└── nginx.conf          # Web server configuration
 ```

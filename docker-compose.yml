@@ -1,0 +1,35 @@
+services:
+  # Backend API Server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: trade-arena-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Web Server
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trade-arena-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
