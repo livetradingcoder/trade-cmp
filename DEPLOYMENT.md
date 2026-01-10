@@ -31,12 +31,14 @@ npm start
 ```
 
 This runs:
+
 - `npm run db:generate` - Generate Prisma client
 - `npm run db:push` - Push database schema
 - `npm run db:seed` - Seed initial data
 - `npm run start:server` - Start the server
 
 **Or run commands individually:**
+
 ```bash
 npm run db:push
 npm run db:seed
