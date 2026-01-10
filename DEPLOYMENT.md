@@ -224,24 +224,26 @@ This shows you the steps needed for Render deployment.
    - Name: `trade-arena-db`
    - Copy the connection string for later
 
-3. **Deploy Backend API**:
+3. **Deploy Backend API** (Web Service):
 
    - Click "New" → "Web Service"
    - Connect your `livetradingcoder/trade-cmp` repo
    - **Settings**:
      - **Name**: `trade-arena-api`
      - **Root Directory**: `packages/server`
+     - **Runtime**: `Node`
      - **Build Command**: `npm install && npm run build`
      - **Start Command**: `npm start`
    - **Environment Variables**:
      ```
      DATABASE_URL=your_postgres_connection_string
      NODE_ENV=production
+     PORT=10000
      ```
 
-4. **Deploy Frontend**:
+4. **Deploy Frontend** (Static Site):
 
-   - Click "New" → "Static Site"
+   - Click **"New" → "Static Site"**
    - Connect your `livetradingcoder/trade-cmp` repo
    - **Settings**:
      - **Name**: `trade-arena-web`
@@ -253,8 +255,19 @@ This shows you the steps needed for Render deployment.
      VITE_API_URL=https://your-backend-service.onrender.com
      ```
 
-5. **Database Setup**: Happens automatically on first start!
+5. **Database Setup**: Happens automatically when backend starts!
    - No manual commands needed ✅
+
+#### Alternative: Docker Deployment (Single Container)
+
+If you prefer deploying everything in one container:
+
+1. **Deploy as Web Service** with Docker:
+   - **Service Type**: Web Service
+   - **Build Type**: Docker
+   - **Dockerfile Path**: `./Dockerfile`
+   - Uses the included `Dockerfile` to build and serve only the frontend
+   - **Note**: Backend must be deployed separately for full functionality
 
 ## Testing
 
