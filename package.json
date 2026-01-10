@@ -6,6 +6,8 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "npm run db:generate && npm run db:push && npm run db:seed && npm run start:server",
+    "start:server": "npm run start -w @trade-arena/server",
     "dev": "concurrently -n web,server -c cyan,magenta \"npm run dev:web\" \"npm run dev:server\"",
     "dev:web": "npm run dev -w @trade-arena/web",
     "dev:server": "npm run dev -w @trade-arena/server",

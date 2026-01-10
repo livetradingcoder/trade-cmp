@@ -24,8 +24,19 @@ Railway will provide the actual DATABASE_URL in the database settings.
 
 ### 3. Database Setup
 
-After deployment, run these commands in Railway's terminal:
+The `npm start` command will automatically run all necessary setup commands:
 
+```bash
+npm start
+```
+
+This runs:
+- `npm run db:generate` - Generate Prisma client
+- `npm run db:push` - Push database schema
+- `npm run db:seed` - Seed initial data
+- `npm run start:server` - Start the server
+
+**Or run commands individually:**
 ```bash
 npm run db:push
 npm run db:seed
@@ -53,7 +64,7 @@ Once deployed, copy the Railway URL (e.g., `https://trade-arena-production.up.ra
    ```
    DATABASE_URL=your_postgres_connection_string_from_vercel
    ```
-3. **Run database commands** in Vercel functions terminal:
+3. **The start script will handle everything automatically**, but if needed, run commands individually:
    ```bash
    npx prisma db push
    npx prisma db seed
@@ -74,19 +85,20 @@ packages/server/api/
 ```
 
 Example `packages/server/api/tournaments/index.ts`:
-```typescript
-import { NextApiRequest, NextApiResponse } from 'next'
-import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+```typescript
+import { NextApiRequest, NextApiResponse } from "next";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    const tournaments = await prisma.tournament.findMany()
-    res.status(200).json(tournaments)
-  } else if (req.method === 'POST') {
-    const tournament = await prisma.tournament.create({ data: req.body })
-    res.status(201).json(tournament)
+  if (req.method === "GET") {
+    const tournaments = await prisma.tournament.findMany();
+    res.status(200).json(tournaments);
+  } else if (req.method === "POST") {
+    const tournament = await prisma.tournament.create({ data: req.body });
+    res.status(201).json(tournament);
   }
 }
 ```
@@ -96,10 +108,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 ### Update Frontend to Use Backend
 
 1. **Get your backend URL** from either:
+
    - Railway: `https://your-app-name.up.railway.app`
    - Vercel: `https://your-project.vercel.app`
 
 2. **In Vercel frontend project settings**, add environment variable:
+
    - **Name**: `VITE_API_URL`
    - **Value**: Your backend URL (Railway or Vercel)
 
@@ -126,13 +140,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 ## Platform Comparison
 
-| Feature | Railway | Vercel |
-|---------|---------|--------|
-| **Database** | Built-in PostgreSQL | Built-in PostgreSQL |
-| **Pricing** | Free tier available | Free tier available |
-| **Cold Starts** | No (persistent server) | Yes (serverless) |
-| **File Uploads** | Good support | Limited |
-| **Ease of Setup** | Very easy | Moderate |
+| Feature           | Railway                | Vercel              |
+| ----------------- | ---------------------- | ------------------- |
+| **Database**      | Built-in PostgreSQL    | Built-in PostgreSQL |
+| **Pricing**       | Free tier available    | Free tier available |
+| **Cold Starts**   | No (persistent server) | Yes (serverless)    |
+| **File Uploads**  | Good support           | Limited             |
+| **Ease of Setup** | Very easy              | Moderate            |
 
 **Recommendation**: Use Railway for backend if you need persistent connections. Use Vercel if you want everything in one platform.
 
@@ -148,20 +162,24 @@ After both are deployed:
 ## Troubleshooting
 
 ### Database Connection Issues
+
 - Check your `DATABASE_URL` environment variable
 - Run `npx prisma db push` in your deployment platform's terminal
 - Verify database credentials are correct
 
 ### CORS Errors
+
 - Railway: Already configured
 - Vercel: Add CORS headers to `vercel.json`
 
 ### API Not Working
+
 - Check deployment logs
 - Verify environment variables are set
 - Test endpoints directly in browser/Postman
 
 ### Frontend Not Loading Data
+
 - Check `VITE_API_URL` environment variable in Vercel
 - Verify backend URL is accessible
 - Check browser console for network errors
