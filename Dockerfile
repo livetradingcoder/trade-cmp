@@ -12,7 +12,13 @@ COPY packages ./packages
 # Install dependencies (skip postinstall to avoid db:generate during build)
 RUN npm ci --ignore-scripts
 
-# Build both frontend and backend (no env vars needed at build time)
+# Generate Prisma Client before building (no DATABASE_URL needed for generation)
+# This must happen before TypeScript compilation since PrismaClient is imported
+WORKDIR /app/packages/server
+RUN npx prisma generate
+WORKDIR /app
+
+# Build both frontend and backend
 RUN npm run build --workspaces --if-present
 
 # Production stage - Single container with both backend and frontend
@@ -27,17 +33,18 @@ RUN mkdir -p /run/nginx /var/log/nginx
 # Copy built frontend
 COPY --from=builder /app/packages/web/dist /usr/share/nginx/html
 
-# Copy backend source and rebuild (to include latest changes)
+# Copy built backend (already compiled in builder stage)
+COPY --from=builder /app/packages/server/dist ./packages/server/dist
+
+# Copy backend source (needed for seed script at runtime)
 COPY --from=builder /app/packages/server/src ./packages/server/src
+
+# Copy backend files needed for runtime
 COPY --from=builder /app/packages/server/package.json ./packages/server/
-COPY --from=builder /app/packages/server/tsconfig.json ./packages/server/
 COPY --from=builder /app/packages/server/prisma ./packages/server/prisma
 
-# Copy workspace node_modules (contains all dependencies for monorepo)
+# Copy workspace node_modules (contains all dependencies and generated Prisma Client)
 COPY --from=builder /app/node_modules ./packages/server/node_modules
-
-# Rebuild backend with latest source changes
-RUN cd packages/server && npm run build
 
 # Copy nginx config template (will be processed at runtime with Railway's PORT)
 COPY nginx.conf /etc/nginx/http.d/default.conf.template
