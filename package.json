@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "postinstall": "npm run db:generate",
-    "start": "npm run db:push && npm run db:seed && npm run start:server",
+    "start": "npm run db:push && npm run db:seed && concurrently -n web,server -c cyan,magenta \"npm run start:web\" \"npm run start:server\"",
+    "start:web": "npm run preview -w @trade-arena/web",
     "start:server": "npm run start -w @trade-arena/server",
     "start:full": "npm run db:generate && npm run db:push && npm run db:seed && npm run start:server",
     "dev": "concurrently -n web,server -c cyan,magenta \"npm run dev:web\" \"npm run dev:server\"",
