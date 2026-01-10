@@ -31,18 +31,20 @@ COPY --from=builder /app/packages/web/dist /usr/share/nginx/html
 COPY --from=builder /app/packages/server/dist ./packages/server/dist
 COPY --from=builder /app/packages/server/src ./packages/server/src
 COPY --from=builder /app/packages/server/package.json ./packages/server/
-COPY --from=builder /app/packages/server/node_modules ./packages/server/node_modules
+
+# Copy workspace node_modules (contains all dependencies for monorepo)
+COPY --from=builder /app/node_modules ./packages/server/node_modules
 COPY --from=builder /app/packages/server/prisma ./packages/server/prisma
 
 # Copy environment file
-COPY .env ./packages/server/.env
+COPY .env packages/server/.env
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/http.d/default.conf
 
 # Create startup script
 RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'cd /packages/server' >> /start.sh && \
+    echo 'cd packages/server' >> /start.sh && \
     echo 'npx prisma generate' >> /start.sh && \
     echo 'npx prisma db push --accept-data-loss' >> /start.sh && \
     echo 'npx tsx src/seed.ts' >> /start.sh && \
