@@ -4,13 +4,13 @@
 
 Choose one of the following options:
 
-| Feature                | Railway                | Vercel                     | Render                     |
-| ---------------------- | ---------------------- | -------------------------- | -------------------------- |
-| **Database**           | Built-in PostgreSQL    | Built-in PostgreSQL        | Built-in PostgreSQL        |
-| **Pricing**            | Free tier available    | Free tier available        | Free tier available        |
-| **Cold Starts**        | No (persistent server) | Yes (serverless)           | No (persistent server)     |
-| **File Uploads**       | Good support           | Limited                    | Good support               |
-| **Ease of Setup**      | Very easy              | Moderate                   | Easy                       |
+| Feature            | Railway                     | Vercel                      | Render                      |
+| ------------------ | --------------------------- | --------------------------- | --------------------------- |
+| **Database**       | Built-in PostgreSQL         | Built-in PostgreSQL         | Built-in PostgreSQL         |
+| **Pricing**        | Free tier available         | Free tier available         | Free tier available         |
+| **Cold Starts**    | No (persistent server)      | Yes (serverless)            | No (persistent server)      |
+| **File Uploads**   | Good support                | Limited                     | Good support                |
+| **Ease of Setup**  | Very easy                   | Moderate                    | Easy                        |
 | **Full App Start** | ✅ Both services auto-start | ✅ Both services auto-start | ✅ Both services auto-start |
 
 ### Option 1: Deploy to Railway (Recommended)
@@ -36,6 +36,7 @@ Railway will provide the actual DATABASE_URL in the database settings.
 **🎯 Everything happens automatically during build and start!**
 
 **What `npm start` does automatically:**
+
 - ✅ Generates Prisma client
 - ✅ Pushes database schema
 - ✅ Seeds initial tournament data

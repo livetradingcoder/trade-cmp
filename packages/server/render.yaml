@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: trade-arena-api
+    env: node
+    rootDir: packages/server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+  - type: pserv
+    name: trade-arena-db
+    env: postgres
+    plan: free
+
+  - type: web
+    name: trade-arena-web
+    env: static
+    rootDir: packages/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://trade-arena-api.onrender.com
