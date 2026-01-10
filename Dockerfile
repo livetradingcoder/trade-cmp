@@ -18,8 +18,8 @@ RUN npm run build
 # Production stage - Single container with both backend and frontend
 FROM node:20-alpine
 
-# Install nginx and tsx
-RUN apk add --no-cache nginx && npm install -g tsx
+# Install nginx, tsx, and OpenSSL 1.1 compatibility for Prisma
+RUN apk add --no-cache nginx openssl1.1-compat && npm install -g tsx
 
 # Create nginx directories
 RUN mkdir -p /run/nginx /var/log/nginx
@@ -54,17 +54,17 @@ EXPOSE 80
 
 # Create startup script with error handling
 RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'set -e' >> /start.sh && \
     echo 'echo "Starting application..."' >> /start.sh && \
     echo 'cd packages/server' >> /start.sh && \
     echo 'echo "Running prisma generate..."' >> /start.sh && \
-    echo 'npx prisma generate || echo "Prisma generate failed"' >> /start.sh && \
+    echo 'npx prisma generate || echo "Prisma generate failed, continuing..."' >> /start.sh && \
     echo 'echo "Running prisma db push..."' >> /start.sh && \
-    echo 'npx prisma db push --accept-data-loss || echo "Prisma db push failed"' >> /start.sh && \
+    echo 'npx prisma db push --accept-data-loss || echo "Prisma db push failed, continuing..."' >> /start.sh && \
     echo 'echo "Running seed script..."' >> /start.sh && \
-    echo 'npx tsx src/seed.ts || echo "Seeding failed"' >> /start.sh && \
-    echo 'echo "Starting backend server..."' >> /start.sh && \
+    echo 'npx tsx src/seed.ts || echo "Seeding failed, continuing..."' >> /start.sh && \
+    echo 'echo "Starting backend server on port 3001..."' >> /start.sh && \
     echo 'node dist/index.js &' >> /start.sh && \
+    echo 'sleep 2' >> /start.sh && \
     echo 'echo "Starting nginx..."' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh && \
     chmod +x /start.sh
