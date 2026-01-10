@@ -2,29 +2,29 @@
   "name": "trade-arena",
   "private": true,
   "version": "1.0.0",
+  "packageManager": "npm@10.9.0",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "postinstall": "npm run db:generate",
     "setup": "npm install && npm run db:generate",
-    "db:generate": "npm run db:generate -w @trade-arena/server",
-    "db:push": "npm run db:push -w @trade-arena/server",
-    "db:seed": "npm run db:seed -w @trade-arena/server",
-    "db:setup": "npm run db:push && npm run db:seed",
-    "dev": "concurrently -n web,server -c cyan,magenta \"npm run dev:web\" \"npm run dev:server\"",
-    "dev:web": "npm run dev -w @trade-arena/web",
-    "dev:server": "npm run dev -w @trade-arena/server",
-    "build": "npm run build --workspaces --if-present",
-    "build:web": "npm run build -w @trade-arena/web",
-    "build:server": "npm run build -w @trade-arena/server",
-    "start": "concurrently -n web,server -c cyan,magenta \"npm run start:web\" \"npm run start:server\"",
+    "clean-install": "rm -rf node_modules package-lock.json packages/*/node_modules && npm install && npm run db:generate",
+    "db:generate": "dotenv -e .env -- turbo run db:generate",
+    "db:push": "dotenv -e .env -- turbo run db:push",
+    "db:seed": "dotenv -e .env -- turbo run db:seed",
+    "db:setup": "dotenv -e .env -- npm run db:push && dotenv -e .env -- npm run db:seed",
+    "dev": "dotenv -e .env -- turbo run dev",
+    "build": "dotenv -e .env -- turbo run build",
+    "lint": "turbo run lint",
+    "start": "dotenv -e .env -- concurrently -n web,server -c cyan,magenta \"npm run start:web\" \"npm run start:server\"",
     "start:web": "npm run preview -w @trade-arena/web",
     "start:server": "npm run start -w @trade-arena/server",
-    "lint": "npm run lint -w @trade-arena/web",
     "info:railway": "echo '🚂 Railway Deployment Instructions:' && echo '1. Go to https://railway.app' && echo '2. Connect your GitHub repository' && echo '3. Railway will auto-detect railway.toml configuration' && echo '4. Add PostgreSQL database' && echo '5. Deploy!' && echo '' && echo 'Configuration files:' && echo '- railway.toml (deployment config)' && echo '- .railwayignore (files to exclude)' && echo '- Dockerfile (monorepo build)'"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "dotenv-cli": "^11.0.0",
+    "turbo": "^2.3.3"
   }
 }

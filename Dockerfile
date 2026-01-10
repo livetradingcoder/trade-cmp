@@ -12,8 +12,8 @@ COPY packages ./packages
 # Install dependencies
 RUN npm install
 
-# Build both frontend and backend
-RUN npm run build
+# Build both frontend and backend (no env vars needed at build time)
+RUN npm run build --workspaces --if-present
 
 # Production stage - Single container with both backend and frontend
 FROM node:20-alpine
