@@ -1,7 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Use relative URLs in production (nginx proxies /api to backend)
+// Only use full URL for local development
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
 export interface Tournament {
   id: number;

@@ -15,39 +15,51 @@ Choose one of the following options:
 
 ### Option 1: Deploy to Railway (Recommended)
 
+#### Quick Setup:
+
 1. Go to [Railway.app](https://railway.app) and sign up/login
 2. Click "New Project" → "Deploy from GitHub repo"
 3. Connect your `livetradingcoder/trade-cmp` repository
-4. Select "Add Database" → PostgreSQL
+4. Railway will automatically detect the `railway.toml` configuration
+5. Select "Add Database" → PostgreSQL
 
-### 2. Environment Variables
+#### Configuration Files Created:
 
-Set these environment variables in Railway:
+The project now includes Railway-specific configuration:
 
-```
-DATABASE_URL=postgresql://postgres:password@containers-us-west-1.railway.app:xxxx/railway
-PORT=3001
-```
+- `railway.toml` - Railway deployment configuration
+- `.railwayignore` - Files to exclude from deployment
 
-Railway will provide the actual DATABASE_URL in the database settings.
+#### Environment Variables:
 
-### 3. Database Setup & Startup
+Railway automatically sets these environment variables:
+
+- `DATABASE_URL` - Automatically provided when you add PostgreSQL database (no manual setup needed!)
+- `PORT` - Automatically set by Railway at runtime (nginx will use this dynamically)
+- `NODE_ENV` - Can be set to "production" in Railway dashboard (optional)
+
+**Note**: The frontend uses relative URLs (`/api/*`) which automatically work with Railway since nginx proxies all `/api/*` requests to the backend. No `VITE_API_URL` configuration needed!
+
+**No manual environment variable setup required!** 🎉
+
+#### Database Setup & Startup:
 
 **🎯 Everything happens automatically during build and start!**
 
-**What `npm start` does automatically:**
+Railway's deployment process:
 
-- ✅ Generates Prisma client
-- ✅ Pushes database schema
-- ✅ Seeds initial tournament data
-- ✅ **Starts both frontend & backend servers concurrently**
+1. ✅ Builds the Docker container using the provided Dockerfile
+2. ✅ Generates Prisma client
+3. ✅ Pushes database schema
+4. ✅ Seeds initial tournament data
+5. ✅ Starts both frontend (nginx) & backend (Node.js) servers
 
-**For all platforms (Railway, Vercel, Render):**
-Just deploy and both services start automatically! 🚀
+#### Deployment URL:
 
-### 4. Get Backend URL
+Once deployed, your Railway URL will be something like:
+`https://trade-arena-production.up.railway.app`
 
-Once deployed, copy the Railway URL (e.g., `https://trade-arena-production.up.railway.app`)
+The frontend will be served from the root URL, and API endpoints will be available at `/api/*`.
 
 ### Option 2: Deploy Backend to Vercel
 

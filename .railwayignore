@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Development files
+.env.local
+.env.development
+
+# Build artifacts (these will be built in Docker)
+packages/*/dist/
+packages/*/build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Documentation (optional - remove if you want to keep in deployment)
+*.md
+!README.md
+
+# Deployment files for other platforms
+vercel.json
+render.yaml
+packages/*/vercel.json
+packages/*/render.yaml

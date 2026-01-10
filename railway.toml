@@ -1,0 +1,24 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "./Dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+restartPolicyType = "ON_FAILURE"
+startCommand = "/start.sh"
+
+[build.watchPatterns]
+# Watch for changes in both packages
+packages = ["packages/**/*"]
+
+# Note: Environment variables should be set in Railway dashboard:
+# - DATABASE_URL will be automatically set when you add PostgreSQL database
+# - PORT is automatically set by Railway
+# - NODE_ENV=production can be set manually if needed
+
+# Health check configuration
+[deploy.healthcheck]
+path = "/api/health"
+interval = 30
+timeout = 10
+retries = 3

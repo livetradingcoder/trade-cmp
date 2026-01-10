@@ -23,6 +23,7 @@
     "db:seed": "npm run db:seed -w @trade-arena/server",
     "setup": "npm install && npm run db:generate",
     "deploy": "node scripts/deploy.js",
+    "deploy:railway": "echo '🚂 Railway Deployment Instructions:' && echo '1. Go to https://railway.app' && echo '2. Connect your GitHub repository' && echo '3. Railway will auto-detect railway.toml configuration' && echo '4. Add PostgreSQL database' && echo '5. Deploy!' && echo '' && echo 'Configuration files:' && echo '- railway.toml (deployment config)' && echo '- .railwayignore (files to exclude)' && echo '- Dockerfile (monorepo build)'",
     "deploy:vercel": "echo 'Deploying backend...' && npm run deploy:backend && echo 'Deploying frontend...' && npm run deploy:frontend",
     "deploy:backend": "cd packages/server && vercel --prod --yes --name trade-arena-api",
     "deploy:frontend": "cd packages/web && vercel --prod --yes --name trade-arena-web",
