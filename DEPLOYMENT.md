@@ -61,6 +61,7 @@ npm run deploy:vercel
 ```
 
 This will:
+
 1. ✅ Deploy backend API to `trade-arena-api` project
 2. ✅ Deploy frontend to `trade-arena-web` project
 3. ✅ Set up proper project names and configurations
@@ -68,6 +69,7 @@ This will:
 #### Manual Deployment (Alternative):
 
 1. **Deploy Backend:**
+
    ```bash
    npm run deploy:backend
    ```
@@ -129,6 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 ### Deploy Frontend to Vercel
 
 **Use the automated deployment:**
+
 ```bash
 npm run deploy:vercel
 ```
@@ -138,6 +141,7 @@ This automatically deploys both frontend and backend with proper configuration.
 ### Manual Frontend Deployment (Alternative):
 
 1. **Deploy with script:**
+
    ```bash
    npm run deploy:frontend
    ```
@@ -153,6 +157,7 @@ This automatically deploys both frontend and backend with proper configuration.
 **Automated:** The deployment script handles environment variables automatically.
 
 **Manual:** In Vercel frontend project settings, add:
+
 - **Name**: `VITE_API_URL`
 - **Value**: Your backend URL (e.g., `https://trade-arena-api.vercel.app`)
 
