@@ -36,10 +36,10 @@ cp env-example.txt .env
 
 ### 2. Docker Deployment (Recommended)
 
-Build and run all services:
+#### Option A: Multi-service with Docker Compose (Development)
 
 ```bash
-# Build and start services
+# Build and start all services
 docker-compose up --build -d
 
 # View logs
@@ -49,10 +49,22 @@ docker-compose logs -f
 docker-compose down
 ```
 
+#### Option B: Single Container (Production/Render)
+
+For platforms like Render that deploy single containers:
+
+```bash
+# Build the single container
+docker build -t trade-arena .
+
+# Run locally for testing
+docker run -p 80:80 --env-file .env trade-arena
+```
+
 The application will be available at:
 - Frontend: http://localhost
-- Backend API: http://localhost:3001
-- Health Check: http://localhost:3001/api/health
+- Backend API: Runs internally on port 3001
+- Health Check: http://localhost/api/health (proxied through nginx)
 
 ### 3. Local Development
 
