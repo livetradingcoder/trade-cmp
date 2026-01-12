@@ -9,6 +9,8 @@ export interface Tournament {
     timeLeft: string;
     cover: string;
     registrationLink: string;
+    startingBalance?: string;
+    playersJoined?: number;
 }
 
 export interface Trader {

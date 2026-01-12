@@ -11,9 +11,12 @@ const Navbar = ({ onOpenManager }: NavbarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
+  const leaderboardUrl = import.meta.env.VITE_LEADERBOARD_URL || "/leaderboard";
+
   const navLinks = [
-    { path: "/tournaments", label: "Tournaments" },
-    { path: "/leaderboard", label: "Leaderboard" },
+    { path: "/", label: "Home" },
+    { path: "/tournaments", label: "Competitions" },
+    { path: leaderboardUrl, label: "Leaderboard", isExternal: !leaderboardUrl.startsWith("/") },
     { path: "/#about", label: "About", isHash: true },
   ];
 
@@ -34,6 +37,10 @@ const Navbar = ({ onOpenManager }: NavbarProps) => {
               {navLinks.map((link) =>
                 link.isHash ? (
                   <a key={link.path} href={link.path} className='nav-link'>
+                    {link.label}
+                  </a>
+                ) : link.isExternal ? (
+                  <a key={link.path} href={link.path} target='_blank' rel='noopener noreferrer' className='nav-link'>
                     {link.label}
                   </a>
                 ) : (
@@ -70,6 +77,17 @@ const Navbar = ({ onOpenManager }: NavbarProps) => {
             {navLinks.map((link) =>
               link.isHash ? (
                 <a key={link.path} href={link.path} className='mobile-nav-link' onClick={() => setMobileMenuOpen(false)}>
+                  {link.label}
+                </a>
+              ) : link.isExternal ? (
+                <a
+                  key={link.path}
+                  href={link.path}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='mobile-nav-link'
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   {link.label}
                 </a>
               ) : (

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 const stats = [
     { label: "Total Paid Out", value: "$2.4M+" },
     { label: "Active Traders", value: "14,240" },
-    { label: "Tournaments", value: "152" },
+    { label: "Competitions", value: "152" },
     { label: "Avg. ROI", value: "+28.5%" }
 ];
 

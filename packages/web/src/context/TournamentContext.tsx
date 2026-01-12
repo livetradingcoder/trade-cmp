@@ -17,6 +17,8 @@ export interface Tournament {
   cover: string;
   image?: string;
   registrationLink: string;
+  startingBalance?: string;
+  playersJoined?: number;
 }
 
 interface TournamentContextType {

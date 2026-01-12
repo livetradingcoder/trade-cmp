@@ -1,104 +1,96 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, ArrowRight } from 'lucide-react';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, X } from "lucide-react";
 
 interface FAQItemProps {
-    question: string;
-    answer: string;
-    isOpen: boolean;
-    onClick: () => void;
+  question: string;
+  answer: string;
+  isOpen: boolean;
+  onClick: () => void;
 }
 
 const FAQItem = ({ question, answer, isOpen, onClick }: FAQItemProps) => {
-    return (
-        <div className="faq-item">
-            <button onClick={onClick} className={`faq-button ${isOpen ? 'open' : ''}`}>
-                <span className="faq-question">{question}</span>
-                <span className={`faq-icon ${isOpen ? 'open' : ''}`}>
-                    {isOpen ? <X size={18} /> : <Plus size={18} />}
-                </span>
-            </button>
+  return (
+    <div className='faq-item'>
+      <button onClick={onClick} className={`faq-button ${isOpen ? "open" : ""}`}>
+        <span className='faq-question'>{question}</span>
+        <span className={`faq-icon ${isOpen ? "open" : ""}`}>{isOpen ? <X size={18} /> : <Plus size={18} />}</span>
+      </button>
 
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        style={{ overflow: 'hidden' }}
-                    >
-                        <p className="faq-answer">{answer}</p>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <p className='faq-answer'>{answer}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 export default function FAQ() {
-    const [openIndex, setOpenIndex] = useState<number | null>(1);
+  const [openIndex, setOpenIndex] = useState<number | null>(1);
 
-    const faqs = [
-        {
-            question: "What Is Livetradingleague?",
-            answer: "Livetradingleague is a premier competitive trading platform where traders can showcase their skills in simulated environments, compete in leagues, and earn real rewards based on their performance."
-        },
-        {
-            question: "What Is a Trading Challenge?",
-            answer: "The Trading Challenge is an evaluation program designed to help you learn trading and demonstrate your skills on demo accounts. Our challenges are structured with specific rules, allowing us to identify the most skilled traders for our evaluation program."
-        },
-        {
-            question: "What Are the Leverages?",
-            answer: "We offer competitive leverage options up to 1:100 for Forex pairs and varied leverage for other instruments, ensuring you have the flexibility to execute your trading strategies effectively while managing risk."
-        },
-        {
-            question: "Holding Trades Over the Weekend",
-            answer: "Yes, you are allowed to hold trades over the weekend. We understand that swing trading strategies often require longer holding periods, and we want to support diverse trading styles."
-        }
-    ];
+  const faqs = [
+    {
+      question: "What Is Livetradingleague?",
+      answer:
+        "Livetradingleague is a premier competitive trading platform where traders can showcase their skills in simulated environments, compete in leagues, and earn real rewards based on their performance.",
+    },
+    {
+      question: "What is the Leverage?",
+      answer: "Options up to 1:100 and 1:500 for Forex.",
+    },
+    {
+      question: "Do I need to pay a trading fee?",
+      answer:
+        "No, there is no entry fee. To participate, you only need to fund your trading account with the required starting balance. This balance remains fully yours at all times.",
+    },
+  ];
 
-    const toggleFAQ = (index: number) => {
-        setOpenIndex(openIndex === index ? null : index);
-    };
+  const toggleFAQ = (index: number) => {
+    setOpenIndex(openIndex === index ? null : index);
+  };
 
-    return (
-        <section className="faq-section section-container">
-            <div className="faq-grid">
-                {/* Left Side: Header */}
-                <div className="faq-header">
-                    <div className="faq-header-inner">
-                        <h2 className="faq-title">
-                            Frequently Asked <br />
-                            <span className="text-gradient">Questions</span>
-                        </h2>
-                        <p className="faq-subtitle">
-                            Something left unanswered? Check out the full FAQs for detailed information about our platform and rules.
-                        </p>
-                        <button className="btn-primary">
-                            <span>More FAQs</span>
-                            <ArrowRight size={18} />
-                        </button>
-                    </div>
-                </div>
+  return (
+    <section className='faq-section section-container'>
+      <div className='faq-grid'>
+        {/* Left Side: Header */}
+        <div className='faq-header'>
+          <div className='faq-header-inner'>
+            <h2 className='faq-title'>
+              Frequently Asked <br />
+              <span className='text-gradient'>Questions</span>
+            </h2>
+            <p className='faq-subtitle'>
+              Something left unanswered? Check out the full FAQs for detailed information about our platform and rules.
+            </p>
+          </div>
+        </div>
 
-                {/* Right Side: Accordion */}
-                <div className="faq-content">
-                    <div className="glass-panel faq-panel">
-                        {faqs.map((faq, index) => (
-                            <FAQItem
-                                key={index}
-                                question={faq.question}
-                                answer={faq.answer}
-                                isOpen={openIndex === index}
-                                onClick={() => toggleFAQ(index)}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </div>
+        {/* Right Side: Accordion */}
+        <div className='faq-content'>
+          <div className='glass-panel faq-panel'>
+            {faqs.map((faq, index) => (
+              <FAQItem
+                key={index}
+                question={faq.question}
+                answer={faq.answer}
+                isOpen={openIndex === index}
+                onClick={() => toggleFAQ(index)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
 
-            <style>{`
+      <style>{`
                 .faq-section {
                     position: relative;
                     z-index: 10;
@@ -223,6 +215,6 @@ export default function FAQ() {
                     }
                 }
             `}</style>
-        </section>
-    );
+    </section>
+  );
 }

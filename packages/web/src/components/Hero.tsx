@@ -19,18 +19,14 @@ const Hero = () => {
             >
               <span className='hero-badge'>Real Competition. Real Rewards.</span>
               <h1 className='text-gradient hero-title'>
-                Your Capital. <br />
-                Your Profits.
+                Trade. Compete. <br /> Win Real Money.
               </h1>
-              <p className='hero-description'>
-                Compete in global trading tournaments, prove your skills, and win real rewards. Trade with your own capital — keep 100% of
-                your profits.
-              </p>
+              <p className='hero-description'>No funded accounts. No profit splits.</p>
 
               <div className='hero-cta'>
                 <Link to='/tournaments'>
-                  <button className='btn-primary hero-btn`'>
-                    <Gamepad2 size={24} /> Join Tournament
+                  <button className='btn-primary hero-btn'>
+                    <Gamepad2 size={24} /> Enter the competition
                   </button>
                 </Link>
                 <div className='hero-traders'>
@@ -44,6 +40,28 @@ const Hero = () => {
                   <span>14k+ Active Traders</span>
                 </div>
               </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+                className='hero-bullets'
+              >
+                {["Trade with your own capital", "Keep 100% of your profits", "Win real money — not demo points"].map((text, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 + index * 0.08 }}
+                    className='hero-bullet-item'
+                  >
+                    <div className='bullet-checkmark'>
+                      <span>✔</span>
+                    </div>
+                    <span className='bullet-text'>{text}</span>
+                  </motion.div>
+                ))}
+              </motion.div>
             </motion.div>
           </div>
 
@@ -305,6 +323,12 @@ const Hero = () => {
             justify-content: center;
           }
 
+          .hero-bullets {
+            align-items: center;
+            margin-top: 32px;
+            gap: 14px;
+          }
+
           .hero-visual {
             order: 0;
             width: 100%;
@@ -371,9 +395,55 @@ const Hero = () => {
             font-size: 0.9rem;
           }
 
-          .hero-traders span {
-            font-size: 0.8rem;
-          }
+        .hero-traders span {
+          font-size: 0.8rem;
+        }
+
+        .hero-bullets {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-top: 40px;
+        }
+
+        .hero-bullet-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .bullet-checkmark {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          transition: all 0.3s ease;
+        }
+
+        .bullet-checkmark span {
+          color: #ffffff;
+          font-size: 14px;
+          line-height: 1;
+          display: block;
+        }
+
+        .bullet-text {
+          color: var(--text-dim);
+          font-size: 1rem;
+          font-weight: 500;
+          letter-spacing: -0.01em;
+          line-height: 1.5;
+        }
+
+        .hero-bullet-item:hover .bullet-checkmark {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.12);
+        }
 
           .floating-badge {
             padding: 10px 14px;
@@ -464,6 +534,25 @@ const Hero = () => {
 
           .hero-traders span {
             font-size: 0.75rem;
+          }
+
+          .hero-bullets {
+            margin-top: 24px;
+            gap: 12px;
+          }
+
+          .bullet-checkmark {
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+          }
+
+          .bullet-checkmark span {
+            font-size: 12px;
+          }
+
+          .bullet-text {
+            font-size: 0.9rem;
           }
 
           .floating-element {

@@ -1,11 +1,77 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, X, Lock, User, Edit3, Trash2, ExternalLink, Save, XCircle, LogOut, Trophy, Plus } from "lucide-react";
+import { ShieldCheck, X, Lock, User, Edit3, Trash2, ExternalLink, Save, XCircle, LogOut, Trophy, Plus, Info } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 
 interface ManagerPortalProps {
   onClose: () => void;
 }
+
+interface FieldWithTooltipProps {
+  label: string;
+  tooltip: string;
+  children: React.ReactNode;
+}
+
+const FieldWithTooltip = ({ label, tooltip, children }: FieldWithTooltipProps) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+        <label style={{ fontSize: "0.85rem", color: "var(--text-dim)", fontWeight: 500 }}>{label}</label>
+        <div
+          style={{ position: "relative", display: "inline-flex" }}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          <Info size={14} color='var(--text-muted)' style={{ cursor: "help" }} />
+          {showTooltip && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              style={{
+                position: "absolute",
+                bottom: "100%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                marginBottom: "8px",
+                background: "rgba(0, 0, 0, 0.95)",
+                color: "#fff",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                fontSize: "0.75rem",
+                zIndex: 1000,
+                pointerEvents: "none",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
+                maxWidth: "250px",
+                whiteSpace: "normal",
+                textAlign: "left",
+              }}
+            >
+              {tooltip}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 0,
+                  height: 0,
+                  borderLeft: "6px solid transparent",
+                  borderRight: "6px solid transparent",
+                  borderTop: "6px solid rgba(0, 0, 0, 0.95)",
+                }}
+              />
+            </motion.div>
+          )}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+};
 
 const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
   const { tournaments, isAdmin, login, logout, updateTournament, createTournament, deleteTournament } = useTournaments();
@@ -30,6 +96,8 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
     image: "",
     registrationLink: "",
+    startingBalance: "",
+    playersJoined: 0,
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -62,6 +130,8 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       timeLabel: tournament.timeLabel,
       timeLeft: tournament.timeLeft,
       image: tournament.image || "",
+      startingBalance: tournament.startingBalance || "",
+      playersJoined: tournament.playersJoined ?? 0,
     });
   };
 
@@ -79,7 +149,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this tournament?")) {
+    if (confirm("Are you sure you want to delete this competition?")) {
       await deleteTournament(id);
     }
   };
@@ -100,6 +170,8 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
           "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
         image: "",
         registrationLink: "",
+        startingBalance: "",
+        playersJoined: 0,
       });
     }
   };
@@ -109,7 +181,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="portal-overlay"
+      className='portal-overlay'
       style={{
         position: "fixed",
         top: 0,
@@ -141,7 +213,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       >
         {/* Header */}
         <div
-          className="portal-header"
+          className='portal-header'
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -165,7 +237,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
               {isAdmin && <p style={{ color: "var(--success)", fontSize: "0.85rem", fontWeight: 600 }}>● Authenticated</p>}
             </div>
           </div>
-          <div className="header-buttons" style={{ display: "flex", gap: "12px" }}>
+          <div className='header-buttons' style={{ display: "flex", gap: "12px" }}>
             {isAdmin && (
               <button
                 onClick={handleLogout}
@@ -205,7 +277,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
         </div>
 
         {/* Content */}
-        <div className="portal-content">
+        <div className='portal-content'>
           <AnimatePresence mode='wait'>
             {!isAdmin ? (
               /* Login Form */
@@ -218,7 +290,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                 style={{ display: "flex", flexDirection: "column", gap: "20px" }}
               >
                 <p style={{ color: "var(--text-dim)", textAlign: "center", marginBottom: "8px" }}>
-                  Enter your admin credentials to manage tournaments
+                  Enter your admin credentials to manage competitions
                 </p>
 
                 <div style={{ position: "relative" }}>
@@ -303,17 +375,17 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
             ) : (
               /* Admin Dashboard */
               <motion.div key='dashboard' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-                <div className="dashboard-header" style={{ marginBottom: "24px" }}>
+                <div className='dashboard-header' style={{ marginBottom: "24px" }}>
                   <h3 style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "10px" }}>
                     <Trophy size={22} color='var(--primary)' />
-                    Manage Tournaments
+                    Manage Competitions
                   </h3>
                   <button onClick={() => setIsCreating(true)} className='btn-primary' style={{ padding: "10px 20px", fontSize: "0.85rem" }}>
-                    <Plus size={18} /> Add Tournament
+                    <Plus size={18} /> Add Competition
                   </button>
                 </div>
 
-                {/* Create Tournament Form */}
+                {/* Create Competition Form */}
                 <AnimatePresence>
                   {isCreating && (
                     <motion.div
@@ -329,51 +401,106 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                         overflow: "hidden",
                       }}
                     >
-                      <h4 style={{ marginBottom: "16px", color: "var(--primary)" }}>New Tournament</h4>
-                      <div className="portal-grid">
-                        <input
-                          type='text'
-                          placeholder='Title'
-                          value={newTournament.title}
-                          onChange={(e) => setNewTournament({ ...newTournament, title: e.target.value })}
-                          style={inputStyle}
-                        />
-                        <select
-                          value={newTournament.tier}
-                          onChange={(e) => setNewTournament({ ...newTournament, tier: e.target.value })}
-                          style={inputStyle}
+                      <h4 style={{ marginBottom: "16px", color: "var(--primary)" }}>New Competition</h4>
+                      <div className='portal-grid'>
+                        <FieldWithTooltip
+                          label='Title'
+                          tooltip='The name of the competition that will be displayed to users (e.g., "January Clash", "Wednesday Clash")'
                         >
-                          <option value='Weekly'>Weekly</option>
-                          <option value='Monthly'>Monthly</option>
-                        </select>
-                        <input
-                          type='text'
-                          placeholder='Prize (e.g., 50K Challenge)'
-                          value={newTournament.prize}
-                          onChange={(e) => setNewTournament({ ...newTournament, prize: e.target.value })}
-                          style={inputStyle}
-                        />
-                        <input
-                          type='text'
-                          placeholder='Entry Fee (e.g., $10)'
-                          value={newTournament.fee}
-                          onChange={(e) => setNewTournament({ ...newTournament, fee: e.target.value })}
-                          style={inputStyle}
-                        />
-                        <input
-                          type='text'
-                          placeholder='Registration Link'
-                          value={newTournament.registrationLink}
-                          onChange={(e) => setNewTournament({ ...newTournament, registrationLink: e.target.value })}
-                          style={{ ...inputStyle, gridColumn: "1 / -1" }}
-                        />
-                        <input
-                          type='text'
-                          placeholder='Image URL (optional)'
-                          value={newTournament.image || ""}
-                          onChange={(e) => setNewTournament({ ...newTournament, image: e.target.value })}
-                          style={{ ...inputStyle, gridColumn: "1 / -1" }}
-                        />
+                          <input
+                            type='text'
+                            placeholder='Title'
+                            value={newTournament.title}
+                            onChange={(e) => setNewTournament({ ...newTournament, title: e.target.value })}
+                            style={inputStyle}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Tier'
+                          tooltip='The competition frequency type. Weekly competitions run every week, Monthly competitions run once per month.'
+                        >
+                          <select
+                            value={newTournament.tier}
+                            onChange={(e) => setNewTournament({ ...newTournament, tier: e.target.value })}
+                            style={inputStyle}
+                          >
+                            <option value='Weekly'>Weekly</option>
+                            <option value='Monthly'>Monthly</option>
+                          </select>
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Prize'
+                          tooltip='The prize or challenge description shown to participants (e.g., "50K Challenge", "$5,000 Prize Pool")'
+                        >
+                          <input
+                            type='text'
+                            placeholder='Prize (e.g., 50K Challenge)'
+                            value={newTournament.prize}
+                            onChange={(e) => setNewTournament({ ...newTournament, prize: e.target.value })}
+                            style={inputStyle}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Required Participants'
+                          tooltip='The minimum number of participants needed for the competition to start. Can be a number or formatted text (e.g., "10", "$10", "10 participants")'
+                        >
+                          <input
+                            type='text'
+                            placeholder='Required Participants (e.g., 10)'
+                            value={newTournament.fee}
+                            onChange={(e) => setNewTournament({ ...newTournament, fee: e.target.value })}
+                            style={inputStyle}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Registration Link'
+                          tooltip='The full URL where users can register for this competition. This link will be displayed and used for registration.'
+                        >
+                          <input
+                            type='text'
+                            placeholder='Registration Link'
+                            value={newTournament.registrationLink}
+                            onChange={(e) => setNewTournament({ ...newTournament, registrationLink: e.target.value })}
+                            style={{ ...inputStyle, gridColumn: "1 / -1" }}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Image URL (optional)'
+                          tooltip='A direct URL to an image that will be displayed for this competition. If not provided, a default cover image will be used.'
+                        >
+                          <input
+                            type='text'
+                            placeholder='Image URL (optional)'
+                            value={newTournament.image || ""}
+                            onChange={(e) => setNewTournament({ ...newTournament, image: e.target.value })}
+                            style={{ ...inputStyle, gridColumn: "1 / -1" }}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Starting Balance'
+                          tooltip='The initial trading balance each participant starts with in the competition (e.g., "$10,000", "10K", "$50,000").'
+                        >
+                          <input
+                            type='text'
+                            placeholder='Starting Balance (e.g., $10,000)'
+                            value={newTournament.startingBalance || ""}
+                            onChange={(e) => setNewTournament({ ...newTournament, startingBalance: e.target.value })}
+                            style={inputStyle}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Players Joined'
+                          tooltip='The number of players who have joined this competition. This field can be manually updated to reflect the current participation count.'
+                        >
+                          <input
+                            type='number'
+                            placeholder='Players Joined (e.g., 0)'
+                            value={newTournament.playersJoined ?? 0}
+                            onChange={(e) => setNewTournament({ ...newTournament, playersJoined: parseInt(e.target.value) || 0 })}
+                            style={inputStyle}
+                            min='0'
+                          />
+                        </FieldWithTooltip>
                       </div>
                       <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
                         <button onClick={handleCreate} className='btn-primary' style={{ padding: "10px 20px", fontSize: "0.85rem" }}>
@@ -398,7 +525,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                   )}
                 </AnimatePresence>
 
-                {/* Tournament List */}
+                {/* Competition List */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {tournaments.map((tournament) => (
                     <motion.div
@@ -414,50 +541,105 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                       {editingId === tournament.id ? (
                         /* Edit Mode */
                         <div>
-                          <div className="portal-grid" style={{ marginBottom: "16px" }}>
-                            <input
-                              type='text'
-                              placeholder='Title'
-                              value={editData.title || ""}
-                              onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                              style={inputStyle}
-                            />
-                            <select
-                              value={editData.tier || "Weekly"}
-                              onChange={(e) => setEditData({ ...editData, tier: e.target.value })}
-                              style={inputStyle}
+                          <div className='portal-grid' style={{ marginBottom: "16px" }}>
+                            <FieldWithTooltip
+                              label='Title'
+                              tooltip='The name of the competition that will be displayed to users (e.g., "January Clash", "Wednesday Clash")'
                             >
-                              <option value='Weekly'>Weekly</option>
-                              <option value='Monthly'>Monthly</option>
-                            </select>
-                            <input
-                              type='text'
-                              placeholder='Prize'
-                              value={editData.prize || ""}
-                              onChange={(e) => setEditData({ ...editData, prize: e.target.value })}
-                              style={inputStyle}
-                            />
-                            <input
-                              type='text'
-                              placeholder='Entry Fee'
-                              value={editData.fee || ""}
-                              onChange={(e) => setEditData({ ...editData, fee: e.target.value })}
-                              style={inputStyle}
-                            />
-                            <input
-                              type='text'
-                              placeholder='Registration Link'
-                              value={editData.registrationLink || ""}
-                              onChange={(e) => setEditData({ ...editData, registrationLink: e.target.value })}
-                              style={{ ...inputStyle, gridColumn: "1 / -1" }}
-                            />
-                            <input
-                              type='text'
-                              placeholder='Image URL (optional)'
-                              value={editData.image || ""}
-                              onChange={(e) => setEditData({ ...editData, image: e.target.value })}
-                              style={{ ...inputStyle, gridColumn: "1 / -1" }}
-                            />
+                              <input
+                                type='text'
+                                placeholder='Title'
+                                value={editData.title || ""}
+                                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                                style={inputStyle}
+                              />
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Tier'
+                              tooltip='The competition frequency type. Weekly competitions run every week, Monthly competitions run once per month.'
+                            >
+                              <select
+                                value={editData.tier || "Weekly"}
+                                onChange={(e) => setEditData({ ...editData, tier: e.target.value })}
+                                style={inputStyle}
+                              >
+                                <option value='Weekly'>Weekly</option>
+                                <option value='Monthly'>Monthly</option>
+                              </select>
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Prize'
+                              tooltip='The prize or challenge description shown to participants (e.g., "50K Challenge", "$5,000 Prize Pool")'
+                            >
+                              <input
+                                type='text'
+                                placeholder='Prize'
+                                value={editData.prize || ""}
+                                onChange={(e) => setEditData({ ...editData, prize: e.target.value })}
+                                style={inputStyle}
+                              />
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Required Participants'
+                              tooltip='The minimum number of participants needed for the competition to start. Can be a number or formatted text (e.g., "10", "$10", "10 participants")'
+                            >
+                              <input
+                                type='text'
+                                placeholder='Required Participants'
+                                value={editData.fee || ""}
+                                onChange={(e) => setEditData({ ...editData, fee: e.target.value })}
+                                style={inputStyle}
+                              />
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Registration Link'
+                              tooltip='The full URL where users can register for this competition. This link will be displayed and used for registration.'
+                            >
+                              <input
+                                type='text'
+                                placeholder='Registration Link'
+                                value={editData.registrationLink || ""}
+                                onChange={(e) => setEditData({ ...editData, registrationLink: e.target.value })}
+                                style={{ ...inputStyle, gridColumn: "1 / -1" }}
+                              />
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Image URL (optional)'
+                              tooltip='A direct URL to an image that will be displayed for this competition. If not provided, a default cover image will be used.'
+                            >
+                              <input
+                                type='text'
+                                placeholder='Image URL (optional)'
+                                value={editData.image || ""}
+                                onChange={(e) => setEditData({ ...editData, image: e.target.value })}
+                                style={{ ...inputStyle, gridColumn: "1 / -1" }}
+                              />
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Starting Balance'
+                              tooltip='The initial trading balance each participant starts with in the competition (e.g., "$10,000", "10K", "$50,000").'
+                            >
+                              <input
+                                type='text'
+                                placeholder='Starting Balance (e.g., $10,000)'
+                                value={editData.startingBalance || ""}
+                                onChange={(e) => setEditData({ ...editData, startingBalance: e.target.value })}
+                                style={inputStyle}
+                              />
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Players Joined'
+                              tooltip='The number of players who have joined this competition. This field can be manually updated to reflect the current participation count.'
+                            >
+                              <input
+                                type='number'
+                                placeholder='Players Joined (e.g., 0)'
+                                value={editData.playersJoined ?? 0}
+                                onChange={(e) => setEditData({ ...editData, playersJoined: parseInt(e.target.value) || 0 })}
+                                style={inputStyle}
+                                min='0'
+                              />
+                            </FieldWithTooltip>
                           </div>
                           <div style={{ display: "flex", gap: "10px" }}>
                             <button
@@ -499,8 +681,8 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                         </div>
                       ) : (
                         /* View Mode */
-                        <div className="tournament-item-view">
-                          <div className="tournament-info">
+                        <div className='tournament-item-view'>
+                          <div className='tournament-info'>
                             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
                               <span style={{ fontWeight: 800, fontSize: "1.1rem" }}>{tournament.title}</span>
                               <span
@@ -516,12 +698,20 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                                 {tournament.tier}
                               </span>
                             </div>
-                            <div className="tournament-meta" style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
+                            <div className='tournament-meta' style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
                               <span>
                                 Prize: <strong style={{ color: "var(--success)" }}>{tournament.prize}</strong>
                               </span>
                               <span>
                                 Entry: <strong>{tournament.fee}</strong>
+                              </span>
+                              {tournament.startingBalance && (
+                                <span>
+                                  Starting Balance: <strong>{tournament.startingBalance}</strong>
+                                </span>
+                              )}
+                              <span>
+                                Players Joined: <strong>{tournament.playersJoined ?? 0}</strong>
                               </span>
                             </div>
                             <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -533,7 +723,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                               </span>
                             </div>
                           </div>
-                          <div className="portal-actions">
+                          <div className='portal-actions'>
                             <button
                               onClick={() => startEditing(tournament)}
                               style={{
@@ -575,7 +765,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                       color: "var(--text-dim)",
                     }}
                   >
-                    No tournaments yet. Click "Add Tournament" to create one.
+                    No competitions yet. Click "Add Competition" to create one.
                   </div>
                 )}
               </motion.div>
@@ -614,7 +804,12 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
         .portal-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
+          gap: 16px;
+        }
+        
+        .portal-grid > div {
+          display: flex;
+          flex-direction: column;
         }
         
         .portal-actions {

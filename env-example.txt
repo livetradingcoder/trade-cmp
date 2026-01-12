@@ -7,3 +7,5 @@ NODE_ENV=production
 
 # Frontend Configuration (only needed for local development)
 VITE_API_URL=http://localhost:3001
+VITE_DISCORD_URL=https://discord.gg/your-server
+VITE_LEADERBOARD_URL=https://your-leaderboard-url.com

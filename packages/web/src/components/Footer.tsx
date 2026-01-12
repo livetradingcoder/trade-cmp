@@ -11,7 +11,7 @@ const Footer = () => {
               <img src={logoImage} alt='Live Trading League' className='footer-logo-image' />
             </Link>
             <p className='footer-description'>
-              Revolutionizing the trading arena with decentralized competition and institutional-grade rewards. Prove your edge, climb the
+              Revolutionizing the trading league with decentralized competition and institutional-grade rewards. Prove your edge, climb the
               ranks.
             </p>
           </div>
@@ -21,16 +21,15 @@ const Footer = () => {
               <h4>Ecosystem</h4>
               <ul>
                 <li>
-                  <Link to='/tournaments'>Tournaments</Link>
+                  <Link to='/tournaments'>Competitions</Link>
                 </li>
                 <li>
-                  <Link to='/leaderboard'>Leaderboards</Link>
+                  <a href={import.meta.env.VITE_LEADERBOARD_URL || "/leaderboard"} target='_blank' rel='noopener noreferrer'>
+                    Leaderboards
+                  </a>
                 </li>
                 <li>
                   <a href='/#goal'>Protocol</a>
-                </li>
-                <li>
-                  <span>Academy</span>
                 </li>
               </ul>
             </div>
@@ -38,16 +37,12 @@ const Footer = () => {
               <h4>Company</h4>
               <ul>
                 <li>
-                  <Link to='/terms'>Terms</Link>
+                  <Link to='/terms'>Terms & Privacy</Link>
                 </li>
                 <li>
-                  <span>Privacy</span>
-                </li>
-                <li>
-                  <span>X (Twitter)</span>
-                </li>
-                <li>
-                  <span>Telegram</span>
+                  <a href={import.meta.env.VITE_DISCORD_URL || "#"} target='_blank' rel='noopener noreferrer'>
+                    Discord
+                  </a>
                 </li>
               </ul>
             </div>

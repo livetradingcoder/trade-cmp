@@ -1,117 +1,117 @@
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, ArrowUpRight, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useTournaments } from '../context/TournamentContext';
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, ArrowUpRight, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useTournaments } from "../context/TournamentContext";
 
 const ChampionshipHub = () => {
-    const { tournaments } = useTournaments();
-    const [activeTab, setActiveTab] = useState('Weekly');
+  const { tournaments } = useTournaments();
+  const [activeTab, setActiveTab] = useState("Weekly");
 
-    const filteredChampionships = useMemo(() =>
-        tournaments.filter(c => c.tier === activeTab),
-        [activeTab, tournaments]
-    );
+  const filteredChampionships = useMemo(() => tournaments.filter((c) => c.tier === activeTab), [activeTab, tournaments]);
 
-    return (
-        <section id="tournaments" className="championship-section">
-            <div className="section-container">
-                <div className="ch-header">
-                    <div className="ch-title-area">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                        >
-                            <span className="ch-badge">Competitive Hub</span>
-                            <h2 className="ch-title">Trading battles</h2>
-                        </motion.div>
-                    </div>
+  return (
+    <section id='tournaments' className='championship-section'>
+      <div className='section-container'>
+        <div className='ch-header'>
+          <div className='ch-title-area'>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+              <span className='ch-badge'>Competitive Hub</span>
+              <h2 className='ch-title'>Trading battles</h2>
+            </motion.div>
+          </div>
 
-                    <div className="ch-tabs">
-                        {['Weekly', 'Monthly'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`ch-tab ${activeTab === tab ? 'active' : ''}`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
+          <div className='ch-tabs'>
+            {["Weekly", "Monthly"].map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)} className={`ch-tab ${activeTab === tab ? "active" : ""}`}>
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={`ch-grid ${filteredChampionships.length === 1 ? "single" : ""}`}>
+          <AnimatePresence mode='popLayout'>
+            {filteredChampionships.map((camp) => (
+              <motion.div
+                key={camp.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                whileHover={{ y: -8, boxShadow: "0 20px 40px -10px rgba(0, 102, 255, 0.3)" }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className='tournament-card'
+              >
+                <div className='card-image-wrapper'>
+                  <img src={camp.image || camp.cover} alt={camp.title} className='tournament-card-image' />
+                  <div className='live-badge'>
+                    <div className='live-dot' />
+                    LIVE BATTLE
+                  </div>
                 </div>
 
-                <div className={`ch-grid ${filteredChampionships.length === 1 ? 'single' : ''}`}>
-                    <AnimatePresence mode="popLayout">
-                        {filteredChampionships.map((camp) => (
-                            <motion.div
-                                key={camp.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                whileHover={{ y: -8, boxShadow: '0 20px 40px -10px rgba(0, 102, 255, 0.3)' }}
-                                transition={{ duration: 0.4, ease: "easeOut" }}
-                                className="tournament-card"
-                            >
-                                <div className="card-image-wrapper">
-                                    <img src={camp.image || camp.cover} alt={camp.title} className="tournament-card-image" />
-                                    <div className="live-badge">
-                                        <div className="live-dot" />
-                                        LIVE BATTLE
-                                    </div>
-                                </div>
+                <div className='tournament-card-content'>
+                  <h3 className='card-title'>{camp.title}</h3>
 
-                                <div className="tournament-card-content">
-                                    <h3 className="card-title">{camp.title}</h3>
+                  <div className='card-stats'>
+                    {[
+                      { label: "Reward", value: camp.prize, color: "#fff" },
+                      { label: "Required Participants", value: camp.fee, color: "#fff" },
+                      { label: camp.timeLabel, value: camp.timeLeft.split(" ")[0], color: "var(--primary)" },
+                    ]
+                      .filter((item) => item.value)
+                      .map((item, idx) => (
+                        <div key={idx} className='card-stat'>
+                          <div className='card-stat-label'>{item.label}</div>
+                          <div className='card-stat-value' style={{ color: item.color }}>
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
 
-                                    <div className="card-stats">
-                                        {[
-                                            { label: 'Reward', value: camp.prize, color: '#fff' },
-                                            { label: 'Entry Fee', value: camp.fee, color: '#fff' },
-                                            { label: camp.timeLabel, value: camp.timeLeft.split(' ')[0], color: 'var(--primary)' }
-                                        ].map((item, idx) => (
-                                            <div key={idx} className="card-stat">
-                                                <div className="card-stat-label">{item.label}</div>
-                                                <div className="card-stat-value" style={{ color: item.color }}>
-                                                    {item.value}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                  {(camp.startingBalance || camp.playersJoined !== undefined) && (
+                    <div className='card-additional-info'>
+                      {camp.startingBalance && (
+                        <div className='card-info-item'>
+                          <span className='card-info-label'>Starting Balance:</span>
+                          <span className='card-info-value'>{camp.startingBalance}</span>
+                        </div>
+                      )}
+                      {camp.playersJoined !== undefined && (
+                        <div className='card-info-item'>
+                          <span className='card-info-label'>Players Joined:</span>
+                          <span className='card-info-value'>{camp.playersJoined}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                                    <button
-                                        className="btn-primary card-btn"
-                                        onClick={() => window.open(camp.registrationLink, '_blank')}
-                                    >
-                                        Join Tournament <ArrowUpRight size={20} />
-                                    </button>
+                  <button className='btn-primary card-btn' onClick={() => window.open(camp.registrationLink, "_blank")}>
+                    Join Competition <ArrowUpRight size={20} />
+                  </button>
 
-                                    <div className="card-participants">
-                                        <Users size={18} color="var(--primary)" />
-                                        Players Joined: <span>{camp.participants.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
+                  <div className='card-participants'>
+                    <Users size={18} color='var(--primary)' />
+                    Participants: <span>{camp.participants.toLocaleString()}</span>
+                  </div>
                 </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="ch-view-all"
-                >
-                    <Link to="/tournaments">
-                        <button className="btn-outline view-all-btn">
-                            View All Tournaments <ArrowRight size={18} />
-                        </button>
-                    </Link>
-                </motion.div>
-            </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='ch-view-all'>
+          <Link to='/tournaments'>
+            <button className='btn-outline view-all-btn'>
+              View All Competitions <ArrowRight size={18} />
+            </button>
+          </Link>
+        </motion.div>
+      </div>
 
-            <style>{`
+      <style>{`
                 .championship-section {
                     background: linear-gradient(180deg, var(--bg-color) 0%, #0a0a0c 100%);
                 }
@@ -270,6 +270,36 @@ const ChampionshipHub = () => {
                     font-weight: 800;
                 }
 
+                .card-additional-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-bottom: 20px;
+                    padding: 12px;
+                    background: rgba(0, 102, 255, 0.05);
+                    border: 1px solid rgba(0, 102, 255, 0.1);
+                    border-radius: 12px;
+                }
+
+                .card-info-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .card-info-label {
+                    color: var(--text-dim);
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                }
+
+                .card-info-value {
+                    color: var(--text-main);
+                    font-size: 0.85rem;
+                    font-weight: 700;
+                }
+
                 .ch-view-all {
                     text-align: center;
                     margin-top: 40px;
@@ -313,8 +343,8 @@ const ChampionshipHub = () => {
                     }
                 }
             `}</style>
-        </section>
-    );
+    </section>
+  );
 };
 
 export default ChampionshipHub;

@@ -1,75 +1,70 @@
-import { motion } from 'framer-motion';
-import { Wallet, Unlock, Brain, Crown } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Wallet, Unlock, Brain, Crown } from "lucide-react";
 
 const features = [
-    {
-        icon: Wallet,
-        title: "Low Entry Barrier",
-        description: "Affordable entry fees with massive prize pools. Pure skill-based competition."
-    },
-    {
-        icon: Unlock,
-        title: "Flexible Rules",
-        description: "Freedom to trade your way. No arbitrary drawdowns or complex constraints."
-    },
-    {
-        icon: Brain,
-        title: "Trade Your Strategy",
-        description: "Scalping, swinging, or hedging—your style, your rules."
-    },
-    {
-        icon: Crown,
-        title: "100% Autonomy",
-        description: "Complete control over your trading decisions and account management."
-    },
+  {
+    icon: Wallet,
+    title: "No Entry Barrier",
+    description: "Trade with your own capital. Pure skill-based competition.",
+  },
+  {
+    icon: Unlock,
+    title: "Flexible Rules",
+    description: "Freedom to trade your way. No arbitrary drawdowns or complex constraints.",
+  },
+  {
+    icon: Brain,
+    title: "Trade Your Strategy",
+    description: "Scalping, swinging, or hedging—your style, your rules.",
+  },
+  {
+    icon: Crown,
+    title: "100% Autonomy",
+    description: "Complete control over your trading decisions and account management.",
+  },
 ];
 
 const KeyFeatures = () => {
-    return (
-        <section id="about" className="key-features-section">
-            <div className="section-container">
-                <div className="kf-header">
-                    <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        className="kf-title"
-                    >
-                        Why Top Traders <br />
-                        <span className="text-gradient">Choose The Arena</span>
-                    </motion.h2>
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.1 }}
-                        className="kf-subtitle"
-                    >
-                        Experience the freedom of true trading competition. Skill-based rewards for top performers.
-                    </motion.p>
-                </div>
+  return (
+    <section id='about' className='key-features-section'>
+      <div className='section-container'>
+        <div className='kf-header'>
+          <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='kf-title'>
+            Why Top Traders <br />
+            <span className='text-gradient'>Choose The League</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className='kf-subtitle'
+          >
+            Experience the freedom of true trading competition. Skill-based rewards for top performers.
+          </motion.p>
+        </div>
 
-                <div className="kf-grid">
-                    {features.map((feature, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: index * 0.1 }}
-                            className="glass-panel kf-card"
-                        >
-                            <div className="kf-icon">
-                                <feature.icon size={28} />
-                            </div>
-                            <h3 className="kf-card-title">{feature.title}</h3>
-                            <p className="kf-card-desc">{feature.description}</p>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
+        <div className='kf-grid'>
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              className='glass-panel kf-card'
+            >
+              <div className='kf-icon'>
+                <feature.icon size={28} />
+              </div>
+              <h3 className='kf-card-title'>{feature.title}</h3>
+              <p className='kf-card-desc'>{feature.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
 
-            <style>{`
+      <style>{`
                 .key-features-section {
                     position: relative;
                     z-index: 10;
@@ -154,8 +149,8 @@ const KeyFeatures = () => {
                     }
                 }
             `}</style>
-        </section>
-    );
+    </section>
+  );
 };
 
 export default KeyFeatures;

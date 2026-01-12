@@ -12,7 +12,7 @@ const steps = [
   {
     icon: Wallet,
     number: "02",
-    title: "Choose a Tournament",
+    title: "Choose a Competition",
     desc: "Browse daily, weekly, or monthly competitions. Various entry tiers with prize pools up to $50K.",
     details: ["Multiple tiers", "Various durations", "Flexible entry"],
   },
@@ -119,7 +119,7 @@ const HowItWorks = () => {
           <p>Ready to start your trading journey?</p>
           <a href='/tournaments'>
             <button className='btn-primary'>
-              View Tournaments <ArrowRight size={18} />
+              View Competitions <ArrowRight size={18} />
             </button>
           </a>
         </motion.div>

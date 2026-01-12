@@ -42,9 +42,9 @@ const TournamentsPage = () => {
                   fontSize: "0.8rem",
                 }}
               >
-                Competitive Arena
+                Competitive League
               </span>
-              <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)" }}>All Tournaments</h1>
+              <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)" }}>All Competitions</h1>
             </div>
           </div>
           <p style={{ color: "var(--text-dim)", fontSize: "1.1rem", maxWidth: "600px" }}>
@@ -120,7 +120,7 @@ const TournamentsPage = () => {
             <Search size={20} color='var(--text-muted)' />
             <input
               type='text'
-              placeholder='Search tournaments...'
+              placeholder='Search competitions...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -136,7 +136,7 @@ const TournamentsPage = () => {
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-dim)" }}>
             <Filter size={18} />
-            <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>{filteredChampionships.length} tournaments</span>
+            <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>{filteredChampionships.length} competitions</span>
           </div>
         </motion.div>
 
@@ -236,38 +236,82 @@ const TournamentsPage = () => {
                       { icon: Trophy, label: "Reward", value: camp.prize },
                       { icon: Calendar, label: "Entry", value: camp.fee },
                       { icon: Clock, label: camp.timeLabel, value: camp.timeLeft.split(" ")[0] },
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          background: "rgba(18, 18, 22, 0.8)",
-                          padding: "16px 8px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <item.icon size={16} color='var(--primary)' style={{ marginBottom: "8px" }} />
+                    ]
+                      .filter((item) => item.value)
+                      .map((item, idx) => (
                         <div
+                          key={idx}
                           style={{
-                            fontSize: "0.6rem",
-                            color: "var(--text-muted)",
-                            fontWeight: 700,
-                            textTransform: "uppercase",
-                            marginBottom: "4px",
+                            background: "rgba(18, 18, 22, 0.8)",
+                            padding: "16px 8px",
+                            textAlign: "center",
                           }}
                         >
-                          {item.label}
+                          <item.icon size={16} color='var(--primary)' style={{ marginBottom: "8px" }} />
+                          <div
+                            style={{
+                              fontSize: "0.6rem",
+                              color: "var(--text-muted)",
+                              fontWeight: 700,
+                              textTransform: "uppercase",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            {item.label}
+                          </div>
+                          <div style={{ fontSize: "0.95rem", fontWeight: 800 }}>{item.value}</div>
                         </div>
-                        <div style={{ fontSize: "0.95rem", fontWeight: 800 }}>{item.value}</div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
+
+                  {(camp.startingBalance || camp.playersJoined !== undefined) && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                        marginBottom: "20px",
+                        padding: "12px",
+                        background: "rgba(0, 102, 255, 0.05)",
+                        border: "1px solid rgba(0, 102, 255, 0.1)",
+                        borderRadius: "12px",
+                      }}
+                    >
+                      {camp.startingBalance && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "12px",
+                          }}
+                        >
+                          <span style={{ color: "var(--text-dim)", fontSize: "0.8rem", fontWeight: 600 }}>Starting Balance:</span>
+                          <span style={{ color: "var(--text-main)", fontSize: "0.85rem", fontWeight: 700 }}>{camp.startingBalance}</span>
+                        </div>
+                      )}
+                      {camp.playersJoined !== undefined && (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "12px",
+                          }}
+                        >
+                          <span style={{ color: "var(--text-dim)", fontSize: "0.8rem", fontWeight: 600 }}>Players Joined:</span>
+                          <span style={{ color: "var(--text-main)", fontSize: "0.85rem", fontWeight: 700 }}>{camp.playersJoined}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     className='btn-primary'
                     style={{ width: "100%", height: "56px", fontSize: "1rem" }}
                     onClick={() => window.open(camp.registrationLink, "_blank")}
                   >
-                    Join Tournament <ArrowUpRight size={18} />
+                    Join Competition <ArrowUpRight size={18} />
                   </button>
 
                   <div
@@ -284,7 +328,7 @@ const TournamentsPage = () => {
                     }}
                   >
                     <Users size={16} color='var(--primary)' />
-                    {camp.participants.toLocaleString()} joined
+                    Participants: {camp.participants.toLocaleString()}
                   </div>
                 </div>
               </motion.div>
@@ -303,7 +347,7 @@ const TournamentsPage = () => {
             }}
           >
             <Trophy size={64} color='var(--text-muted)' style={{ marginBottom: "24px", opacity: 0.5 }} />
-            <h3 style={{ marginBottom: "8px" }}>No tournaments found</h3>
+            <h3 style={{ marginBottom: "8px" }}>No competitions found</h3>
             <p>Try adjusting your search or filter criteria</p>
           </motion.div>
         )}

@@ -1,7 +1,7 @@
 import Hero from "../components/Hero";
 import StatsBar from "../components/StatsBar";
 import KeyFeatures from "../components/KeyFeatures";
-import ChampionshipHub from "../components/ChampionshipHub";
+import WhyDifferent from "../components/WhyDifferent";
 import HowItWorks from "../components/HowItWorks";
 import TheGoal from "../components/TheGoal";
 import FAQ from "../components/FAQ";
@@ -11,7 +11,7 @@ const HomePage = () => {
     <>
       <Hero />
       <StatsBar />
-      <ChampionshipHub />
+      <WhyDifferent />
       <HowItWorks />
       <KeyFeatures />
       <TheGoal />

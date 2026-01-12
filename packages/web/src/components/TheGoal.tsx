@@ -21,10 +21,10 @@ const TheGoal = () => {
                 <span className='text-gradient'>Simple!</span>
               </h2>
               <div className='goal-text'>
-                <p>Achieve the highest percentage gain by trading the instruments listed on the tournament's banner.</p>
+                <p>Achieve the highest percentage gain by trading the instruments listed on the competition's banner.</p>
                 <p>
-                  When the tournament ends at the specified time, the <span className='highlight'>top performers</span> with the best
-                  results will win prizes.
+                  When the competition ends at the specified time, the <span className='highlight'>top performers</span> with the best
+                  results win the prizes.
                 </p>
               </div>
 
