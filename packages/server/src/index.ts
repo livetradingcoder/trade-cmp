@@ -14,8 +14,9 @@ import { sendPasswordResetEmail } from "./utils/email";
 dotenv.config({ path: "../../.env" });
 
 const app = express();
-// Use fixed internal port for container, Railway handles external port mapping
-const PORT = process.env.PORT || 3001;
+// Use fixed internal port 3001 for backend - nginx proxies to this
+// Don't use process.env.PORT as that's for the main container (nginx)
+const PORT = process.env.BACKEND_PORT || 3001;
 
 app.use(cors());
 app.use(express.json());

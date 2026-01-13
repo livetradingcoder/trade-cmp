@@ -44,8 +44,9 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy nginx config template
 COPY nginx.conf /etc/nginx/http.d/default.conf.template
 
-# Default port (Railway will override with PORT env var)
+# Default port (Railway/Render will override with PORT env var)
 ENV PORT=80
+ENV BACKEND_PORT=3001
 ENV NODE_ENV=production
 
 # Create startup script
@@ -66,7 +67,7 @@ cd /app/server
 
 # Start backend server in background (seed is done in the app startup)
 echo "🔧 Starting backend server on port 3001..."
-NODE_ENV=production node dist/index.js &
+BACKEND_PORT=3001 NODE_ENV=production node dist/index.js &
 BACKEND_PID=$!
 
 # Wait for backend to start
