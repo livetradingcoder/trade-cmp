@@ -24,7 +24,7 @@ const TheGoal = () => {
                 <p>Achieve the highest percentage gain by trading the instruments listed on the competition's banner.</p>
                 <p>
                   When the competition ends at the specified time, the <span className='highlight'>top performers</span> with the best
-                  results win the prizes.
+                  results will win prizes.
                 </p>
               </div>
 
@@ -84,6 +84,7 @@ const TheGoal = () => {
         .the-goal-section {
           position: relative;
           overflow: hidden;
+          padding: 80px 24px;
         }
 
         .goal-container {

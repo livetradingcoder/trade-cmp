@@ -94,6 +94,7 @@ export default function FAQ() {
                 .faq-section {
                     position: relative;
                     z-index: 10;
+                    padding: 80px 24px;
                 }
 
                 .faq-grid {

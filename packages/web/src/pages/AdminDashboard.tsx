@@ -149,24 +149,24 @@ const AdminDashboard = () => {
       if (viewMode === "create") {
         const success = await createTournament(formData);
         if (success) {
-          setSaveMessage({ type: "success", text: "Tournament created successfully!" });
+          setSaveMessage({ type: "success", text: "Competition created successfully!" });
           setTimeout(() => {
             setViewMode("list");
             resetForm();
           }, 1500);
         } else {
-          setSaveMessage({ type: "error", text: "Failed to create tournament" });
+          setSaveMessage({ type: "error", text: "Failed to create competition" });
         }
       } else if (viewMode === "edit" && editingTournament) {
         const success = await updateTournament(editingTournament.id, formData);
         if (success) {
-          setSaveMessage({ type: "success", text: "Tournament updated successfully!" });
+          setSaveMessage({ type: "success", text: "Competition updated successfully!" });
           setTimeout(() => {
             setViewMode("list");
             setEditingTournament(null);
           }, 1500);
         } else {
-          setSaveMessage({ type: "error", text: "Failed to update tournament" });
+          setSaveMessage({ type: "error", text: "Failed to update competition" });
         }
       }
     } catch {
@@ -177,10 +177,10 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (id: string | number) => {
-    if (confirm("Are you sure you want to delete this tournament? This action cannot be undone.")) {
+    if (confirm("Are you sure you want to delete this competition? This action cannot be undone.")) {
       const success = await deleteTournament(id);
       if (!success) {
-        alert("Failed to delete tournament");
+        alert("Failed to delete competition");
       }
     }
   };
@@ -251,7 +251,7 @@ const AdminDashboard = () => {
               <Shield size={40} />
             </div>
             <h1>Admin Portal</h1>
-            <p>Sign in to manage tournaments</p>
+            <p>Sign in to manage competitions</p>
           </div>
 
           <form onSubmit={handleLogin} className='login-form'>
@@ -311,14 +311,14 @@ const AdminDashboard = () => {
         <div className='sidebar-header'>
           <div className='logo'>
             <Trophy size={24} />
-            <span>Tournament Admin</span>
+            <span>Competition Admin</span>
           </div>
         </div>
 
         <nav className='sidebar-nav'>
           <button className={`nav-item ${viewMode === "list" ? "active" : ""}`} onClick={() => cancelAction()}>
             <Trophy size={20} />
-            <span>Tournaments</span>
+            <span>Competitions</span>
           </button>
           <button className={`nav-item ${viewMode === "password" ? "active" : ""}`} onClick={() => setViewMode("password")}>
             <Key size={20} />
@@ -351,12 +351,12 @@ const AdminDashboard = () => {
             >
               <div className='section-header'>
                 <div>
-                  <h1>Tournaments</h1>
+                  <h1>Competitions</h1>
                   <p>Manage your trading competitions</p>
                 </div>
                 <button className='create-btn' onClick={startCreate}>
                   <Plus size={20} />
-                  <span>Create Tournament</span>
+                  <span>Create Competition</span>
                 </button>
               </div>
 
@@ -405,11 +405,11 @@ const AdminDashboard = () => {
                 {tournaments.length === 0 && (
                   <div className='empty-state'>
                     <Sparkles size={48} />
-                    <h3>No Tournaments Yet</h3>
-                    <p>Create your first tournament to get started</p>
+                    <h3>No Competitions Yet</h3>
+                    <p>Create your first competition to get started</p>
                     <button className='create-btn' onClick={startCreate}>
                       <Plus size={20} />
-                      Create Tournament
+                      Create Competition
                     </button>
                   </div>
                 )}
@@ -427,7 +427,7 @@ const AdminDashboard = () => {
             >
               <div className='section-header'>
                 <div>
-                  <h1>{viewMode === "create" ? "Create Tournament" : "Edit Tournament"}</h1>
+                  <h1>{viewMode === "create" ? "Create Competition" : "Edit Competition"}</h1>
                   <p>{viewMode === "create" ? "Set up a new trading competition" : `Editing: ${editingTournament?.title}`}</p>
                 </div>
                 <button className='cancel-btn' onClick={cancelAction}>
@@ -445,7 +445,7 @@ const AdminDashboard = () => {
                     </h3>
 
                     <div className='form-group'>
-                      <label>Tournament Title *</label>
+                      <label>Competition Title *</label>
                       <input
                         type='text'
                         value={formData.title}
@@ -592,7 +592,7 @@ const AdminDashboard = () => {
                     ) : (
                       <>
                         <Save size={18} />
-                        {viewMode === "create" ? "Create Tournament" : "Save Changes"}
+                        {viewMode === "create" ? "Create Competition" : "Save Changes"}
                       </>
                     )}
                   </button>

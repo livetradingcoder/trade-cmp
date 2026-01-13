@@ -92,7 +92,7 @@ const HowItWorks = () => {
 
       <style>{`
         .how-it-works-section {
-          padding: 100px 24px;
+          padding: 80px 24px;
           position: relative;
           overflow: hidden;
         }

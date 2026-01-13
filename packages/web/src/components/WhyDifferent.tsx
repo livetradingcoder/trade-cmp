@@ -17,12 +17,7 @@ const WhyDifferent = () => {
       </div>
 
       <div className='section-container'>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className='wd-header'
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='wd-header'>
           <div className='wd-badge'>
             <Sparkles size={14} />
             <span>The Difference</span>
@@ -97,7 +92,7 @@ const WhyDifferent = () => {
       <style>{`
         .why-different-section {
           position: relative;
-          padding: 100px 24px;
+          padding: 0px 24px 0px 24px;
           overflow: hidden;
         }
 

@@ -1,30 +1,7 @@
 import { motion } from "framer-motion";
-import { Gamepad2, User, Wallet, Unlock, Brain, Crown } from "lucide-react";
+import { Gamepad2, User, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ASSETS } from "../constants";
-
-const features = [
-  {
-    icon: Wallet,
-    title: "No Entry Barrier",
-    description: "Trade with your own capital. Pure skill-based competition.",
-  },
-  {
-    icon: Unlock,
-    title: "Flexible Rules",
-    description: "Freedom to trade your way. No arbitrary drawdowns.",
-  },
-  {
-    icon: Brain,
-    title: "Trade Your Strategy",
-    description: "Scalping, swinging, or hedging—your style, your rules.",
-  },
-  {
-    icon: Crown,
-    title: "100% Autonomy",
-    description: "Complete control over your trading decisions.",
-  },
-];
 
 const Hero = () => {
   return (
@@ -33,8 +10,7 @@ const Hero = () => {
       <div className='bg-grid'></div>
 
       <div className='section-container hero-container'>
-        {/* Main Hero Content */}
-        <div className='hero-main'>
+        <div className='hero-content'>
           <div className='hero-text'>
             <motion.div
               initial={{ opacity: 0, x: -50 }}
@@ -71,83 +47,148 @@ const Hero = () => {
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
                 className='hero-bullets'
               >
-                {["Trade with your own capital", "Keep 100% of your profits", "Win real money — not demo points"].map((text, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 + index * 0.08 }}
-                    className='hero-bullet-item'
-                  >
-                    <div className='bullet-checkmark'>
-                      <span>✔</span>
-                    </div>
-                    <span className='bullet-text'>{text}</span>
-                  </motion.div>
-                ))}
+                <div className='hero-bullet-row'>
+                  {["Trade with your own capital", "Keep 100% of your profits"].map((text, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.5 + index * 0.08 }}
+                      className='hero-bullet-item'
+                    >
+                      <div className='bullet-checkmark'>
+                        <Check size={14} color='#fff' />
+                      </div>
+                      <span className='bullet-text'>{text}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.7 }}
+                  className='hero-bullet-item'
+                >
+                  <div className='bullet-checkmark'>
+                    <Check size={14} color='#fff' />
+                  </div>
+                  <span className='bullet-text'>Win real money — not demo points</span>
+                </motion.div>
               </motion.div>
             </motion.div>
           </div>
 
           <div className='hero-visual'>
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
               className='hero-visual-inner'
+              style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
             >
-              <div className='hero-image-wrapper'>
-                <img src={ASSETS.HERO_IMAGE} alt='Trading Platform' className='hero-image' />
-                <div className='hero-image-glow'></div>
+              <div className='hero-image-container'>
+                <motion.div
+                  animate={{
+                    y: [0, -12, 0],
+                    rotate: [0, 1, 0, -1, 0],
+                  }}
+                  transition={{
+                    duration: 6,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <img src={ASSETS.HERO_IMAGE} alt='Platform' className='hero-image' />
+                </motion.div>
               </div>
+
+              {/* Stats Grid Embedded */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.8 }}
+                className='hero-stats'
+              >
+                {[
+                  { label: "Total Paid Out", value: "$2.4M+" },
+                  { label: "Active Traders", value: "14,240" },
+                  { label: "Competitions", value: "152" },
+                  { label: "Avg. ROI", value: "+28.5%" },
+                ].map((stat, i) => (
+                  <div key={i} className='hero-stat-item'>
+                    <div className='hero-stat-value'>{stat.value}</div>
+                    <div className='hero-stat-label'>{stat.label}</div>
+                  </div>
+                ))}
+              </motion.div>
+
+              {/* Background Glow behind image */}
+              <div className='hero-glow'></div>
             </motion.div>
           </div>
         </div>
-
-        {/* Feature Cards Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.6 }}
-          className='hero-features-grid'
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
-              className='hero-feature-card'
-            >
-              <div className='feature-icon'>
-                <feature.icon size={24} />
-              </div>
-              <div className='feature-content'>
-                <h3>{feature.title}</h3>
-                <p>{feature.description}</p>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
       </div>
 
       <style>{`
+        .hero-stats {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+          width: 100%;
+          max-width: 440px;
+          margin-top: -60px;
+          position: relative;
+          z-index: 5;
+        }
+
+        .hero-stat-item {
+          background: rgba(18, 18, 22, 0.6);
+          border: 1px solid var(--panel-border);
+          padding: 16px 20px;
+          border-radius: 16px;
+          text-align: center;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .hero-stat-value {
+          font-size: clamp(1.2rem, 2vw, 1.8rem);
+          font-weight: 900;
+          color: #fff;
+          margin-bottom: 2px;
+          background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .hero-stat-label {
+          font-size: 0.7rem;
+          color: var(--text-dim);
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
         .hero-section {
           position: relative;
           overflow: visible;
+          padding-bottom: 40px;
         }
 
         .hero-container {
           padding-top: 40px;
-          padding-bottom: 60px;
+          padding-bottom: 0;
+          min-height: 70vh;
+          display: flex;
+          align-items: center;
         }
 
-        .hero-main {
+        .hero-content {
           display: flex;
           align-items: center;
           gap: 60px;
           width: 100%;
-          margin-bottom: 60px;
         }
 
         .hero-text {
@@ -217,58 +258,17 @@ const Hero = () => {
           place-items: center;
         }
 
-        .hero-visual {
-          flex: 1;
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .hero-visual-inner {
-          position: relative;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .hero-image-wrapper {
-          position: relative;
-          width: 100%;
-          max-width: 550px;
-        }
-
-        .hero-image {
-          width: 100%;
-          height: auto;
-          border-radius: 20px;
-          object-fit: cover;
-          position: relative;
-          z-index: 1;
-          box-shadow: 0 25px 80px rgba(0, 102, 255, 0.15),
-                      0 10px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        .hero-image-glow {
-          position: absolute;
-          inset: -20%;
-          background: radial-gradient(circle, rgba(0, 102, 255, 0.2) 0%, transparent 60%);
-          z-index: 0;
-          filter: blur(40px);
-        }
-
         .hero-bullets {
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          margin-top: 40px;
+          gap: 12px;
+          margin-top: 24px;
         }
 
         .hero-bullet-item {
           display: flex;
           align-items: center;
-          gap: 14px;
+          gap: 12px;
         }
 
         .bullet-checkmark {
@@ -284,13 +284,6 @@ const Hero = () => {
           transition: all 0.3s ease;
         }
 
-        .bullet-checkmark span {
-          color: #ffffff;
-          font-size: 14px;
-          line-height: 1;
-          display: block;
-        }
-
         .bullet-text {
           color: var(--text-dim);
           font-size: 1rem;
@@ -304,71 +297,120 @@ const Hero = () => {
           border-color: rgba(255, 255, 255, 0.12);
         }
 
-        /* Feature Cards Grid - 2x2 */
-        .hero-features-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 20px;
-          max-width: 100%;
-        }
-
-        .hero-feature-card {
-          display: flex;
-          align-items: flex-start;
-          gap: 16px;
-          padding: 24px;
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
-          transition: all 0.3s ease;
-        }
-
-        .hero-feature-card:hover {
-          background: rgba(255, 255, 255, 0.04);
-          border-color: rgba(0, 102, 255, 0.2);
-          transform: translateY(-2px);
-        }
-
-        .feature-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          background: linear-gradient(135deg, rgba(0, 102, 255, 0.15) 0%, rgba(102, 126, 234, 0.1) 100%);
+        .hero-visual {
+          flex: 1.2;
+          position: relative;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: var(--primary);
-          flex-shrink: 0;
         }
 
-        .feature-content h3 {
-          font-size: 1.1rem;
+        .hero-visual-inner {
+          position: relative;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .hero-image-container {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .hero-image {
+          width: 100%;
+          max-width: 600px;
+          height: auto;
+          object-fit: contain;
+          filter: drop-shadow(0 0 100px rgba(0, 102, 255, 0.15)) saturate(0.8) brightness(1.1);
+          /* Blend with background */
+          mix-blend-mode: screen;
+          /* Deeper fade edges */
+          -webkit-mask-image: radial-gradient(circle at center, black 15%, transparent 90%);
+          mask-image: radial-gradient(circle at center, black 15%, transparent 90%);
+          opacity: 0.65;
+          display: block;
+        }
+
+        .floating-element {
+          position: absolute;
+          z-index: 2;
+        }
+
+        .floating-top {
+          top: -5%;
+          left: -5%;
+        }
+
+        .floating-bottom {
+          bottom: 5%;
+          right: 5%;
+        }
+
+        .badge-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          display: grid;
+          place-items: center;
+        }
+
+        .badge-icon.gold {
+          background: linear-gradient(135deg, #ffcc00, #ff9900);
+          box-shadow: 0 8px 16px rgba(255, 204, 0, 0.3);
+        }
+
+        .badge-icon.surface {
+          background: var(--surface);
+          border: 1px solid var(--panel-border);
+        }
+
+        .badge-title {
+          font-weight: 900;
+          color: #fff;
+        }
+
+        .badge-subtitle {
+          font-size: 0.8rem;
           font-weight: 700;
-          color: var(--text-main);
-          margin-bottom: 6px;
+          color: var(--text-dim);
         }
 
-        .feature-content p {
-          font-size: 0.9rem;
-          color: var(--text-dim);
-          line-height: 1.5;
+        .badge-subtitle.success {
+          color: var(--success);
+        }
+
+        .hero-glow {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 120%;
+          height: 120%;
+          background: radial-gradient(circle, var(--primary-glow) 0%, transparent 60%);
+          z-index: 0;
+          opacity: 0.4;
         }
 
         @media (max-width: 1024px) {
           .hero-container {
+            min-height: auto;
             padding-top: 40px;
             padding-bottom: 40px;
           }
 
-          .hero-main {
+          .hero-content {
             flex-direction: column;
             gap: 40px;
-            margin-bottom: 40px;
           }
 
           .hero-text {
             text-align: center;
-            order: 1;
+            order: 0; /* Text first on mobile */
           }
 
           .hero-description {
@@ -387,15 +429,40 @@ const Hero = () => {
           }
 
           .hero-visual {
-            order: 0;
+            order: 1; /* Visual second on mobile */
             width: 100%;
-            max-width: 450px;
+            max-width: 440px;
             margin: 0 auto;
           }
 
-          .hero-features-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+          .hero-image {
+            width: 100%;
+            margin-right: 0;
+          }
+
+          .floating-top {
+            top: 5%;
+            left: 0;
+            transform: scale(0.85);
+          }
+
+          .floating-bottom {
+            bottom: 15%;
+            right: 0;
+            transform: scale(0.85);
+          }
+
+          .hero-stats {
+            margin-top: -30px;
+            max-width: 440px;
+            padding: 0 20px;
+          }
+
+          .hero-bullet-row {
+            display: flex;
+            gap: 8px; /* Tighter gap for small screens */
+            flex-wrap: wrap;
+            justify-content: center;
           }
         }
 
@@ -407,9 +474,8 @@ const Hero = () => {
             padding-right: 20px;
           }
 
-          .hero-main {
+          .hero-content {
             gap: 24px;
-            margin-bottom: 32px;
           }
 
           .hero-text {
@@ -417,7 +483,7 @@ const Hero = () => {
           }
 
           .hero-visual {
-            max-width: 350px;
+            max-width: 320px;
           }
 
           .hero-badge {
@@ -441,30 +507,87 @@ const Hero = () => {
             font-size: 0.9rem;
           }
 
-          .hero-traders span {
-            font-size: 0.8rem;
+        .hero-traders span {
+          font-size: 0.8rem;
+        }
+
+        .hero-bullets {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          margin-top: 32px;
+        }
+
+        .hero-bullet-item {
+          display: flex;
+          align-items: center; /* Ensures vertical centering */
+          gap: 12px; /* Consistent gap between icon and text */
+          margin-bottom: 12px;
+        }
+
+        .bullet-checkmark {
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex; /* Flexbox for the checkmark container */
+          align-items: center; /* Center icon vertically */
+          justify-content: center; /* Center icon horizontally */
+          flex-shrink: 0;
+          transition: all 0.3s ease;
+        }
+
+        /* Removed .bullet-checkmark span rule as we are now using an SVG icon directly */
+
+        .bullet-text {
+          color: var(--text-dim);
+          font-size: 1rem;
+          font-weight: 500;
+          letter-spacing: -0.01em;
+          line-height: 1.5;
+        }
+
+        .hero-bullet-item:hover .bullet-checkmark {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.12);
+        }
+
+          .floating-badge {
+            padding: 10px 14px;
+            gap: 10px;
           }
 
-          .hero-features-grid {
-            grid-template-columns: 1fr;
-            gap: 12px;
+          .badge-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
           }
 
-          .hero-feature-card {
-            padding: 20px;
+          .badge-icon svg {
+            width: 18px;
+            height: 18px;
           }
 
-          .feature-icon {
-            width: 44px;
-            height: 44px;
+          .badge-title {
+            font-size: 0.75rem;
           }
 
-          .feature-content h3 {
-            font-size: 1rem;
+          .badge-subtitle {
+            font-size: 0.65rem;
           }
 
-          .feature-content p {
-            font-size: 0.85rem;
+          .floating-top {
+            left: -5px;
+            top: 0;
+            transform: scale(0.8);
+          }
+
+          .floating-bottom {
+            right: -5px;
+            bottom: 10%;
+            transform: scale(0.8);
           }
         }
 
@@ -476,13 +599,12 @@ const Hero = () => {
             padding-right: 16px;
           }
 
-          .hero-main {
+          .hero-content {
             gap: 16px;
-            margin-bottom: 24px;
           }
 
           .hero-visual {
-            max-width: 300px;
+            max-width: 280px;
           }
 
           .hero-title {
@@ -542,6 +664,21 @@ const Hero = () => {
             font-size: 0.9rem;
           }
 
+          .floating-element {
+            transform: scale(0.65);
+            transform-origin: center;
+          }
+
+          .floating-top {
+            left: -15px;
+            top: 5%;
+          }
+
+          .floating-bottom {
+            right: -15px;
+            bottom: 15%;
+          }
+
           .trader-avatar {
             width: 26px;
             height: 26px;
@@ -550,30 +687,6 @@ const Hero = () => {
 
           .traders-avatars {
             margin-left: 8px;
-          }
-
-          .hero-feature-card {
-            padding: 16px;
-            gap: 12px;
-          }
-
-          .feature-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-          }
-
-          .feature-icon svg {
-            width: 20px;
-            height: 20px;
-          }
-
-          .feature-content h3 {
-            font-size: 0.95rem;
-          }
-
-          .feature-content p {
-            font-size: 0.8rem;
           }
         }
       `}</style>
