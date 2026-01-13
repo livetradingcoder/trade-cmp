@@ -264,48 +264,6 @@ const TournamentsPage = () => {
                       ))}
                   </div>
 
-                  {(camp.startingBalance || camp.playersJoined !== undefined) && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                        marginBottom: "20px",
-                        padding: "12px",
-                        background: "rgba(0, 102, 255, 0.05)",
-                        border: "1px solid rgba(0, 102, 255, 0.1)",
-                        borderRadius: "12px",
-                      }}
-                    >
-                      {camp.startingBalance && (
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "12px",
-                          }}
-                        >
-                          <span style={{ color: "var(--text-dim)", fontSize: "0.8rem", fontWeight: 600 }}>Starting Balance:</span>
-                          <span style={{ color: "var(--text-main)", fontSize: "0.85rem", fontWeight: 700 }}>{camp.startingBalance}</span>
-                        </div>
-                      )}
-                      {camp.playersJoined !== undefined && (
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: "12px",
-                          }}
-                        >
-                          <span style={{ color: "var(--text-dim)", fontSize: "0.8rem", fontWeight: 600 }}>Players Joined:</span>
-                          <span style={{ color: "var(--text-main)", fontSize: "0.85rem", fontWeight: 700 }}>{camp.playersJoined}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   <button
                     className='btn-primary'
                     style={{ width: "100%", height: "56px", fontSize: "1rem" }}

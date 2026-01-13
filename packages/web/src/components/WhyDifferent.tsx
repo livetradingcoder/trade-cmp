@@ -1,12 +1,21 @@
 import { motion } from "framer-motion";
-import { X, Check, ArrowRight } from "lucide-react";
+import { X, Check, Sparkles } from "lucide-react";
 
 const WhyDifferent = () => {
-  const negatives = ["No funded accounts", "No profit splits", "No fake payouts", "No demo competitions"];
-  const positives = ["Real traders", "Real capital", "Real rewards"];
+  const comparisons = [
+    { negative: "Funded accounts", positive: "Your own capital" },
+    { negative: "Profit splits", positive: "Keep 100% profits" },
+    { negative: "Fake payouts", positive: "Real cash rewards" },
+    { negative: "Demo competitions", positive: "Real trading" },
+  ];
 
   return (
     <section className='why-different-section'>
+      <div className='wd-bg-elements'>
+        <div className='wd-glow-left' />
+        <div className='wd-glow-right' />
+      </div>
+
       <div className='section-container'>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -14,285 +23,364 @@ const WhyDifferent = () => {
           viewport={{ once: true }}
           className='wd-header'
         >
-          <span className='wd-badge'>The Difference</span>
+          <div className='wd-badge'>
+            <Sparkles size={14} />
+            <span>The Difference</span>
+          </div>
           <h2 className='wd-title'>
-            Why This is <span className='text-gradient'>Different?</span>
+            This Is <span className='text-gradient-alt'>Not</span> a Prop Firm
           </h2>
-          <p className='wd-subtitle'>This Is Not a Prop Firm.</p>
+          <p className='wd-subtitle'>We're building something completely different</p>
         </motion.div>
 
-        <div className='wd-content'>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className='wd-column wd-negatives'
-          >
-            <div className='wd-list'>
-              {negatives.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.2 + index * 0.1 }}
-                  className='wd-item wd-item-negative'
-                >
+        {/* Comparison Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2 }}
+          className='wd-comparison'
+        >
+          <div className='wd-comparison-header'>
+            <div className='wd-header-cell wd-header-negative'>
+              <X size={18} />
+              <span>Others</span>
+            </div>
+            <div className='wd-header-cell wd-header-positive'>
+              <Check size={18} />
+              <span>Live Trading League</span>
+            </div>
+          </div>
+
+          <div className='wd-comparison-body'>
+            {comparisons.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 + index * 0.1 }}
+                className='wd-row'
+              >
+                <div className='wd-cell wd-cell-negative'>
                   <div className='wd-icon-negative'>
-                    <X size={18} />
+                    <X size={14} />
                   </div>
-                  <span className='wd-text'>{item}</span>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className='wd-column wd-positives'
-          >
-            <div className='wd-list'>
-              {positives.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: 10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.2 + index * 0.1 }}
-                  className='wd-item wd-item-positive'
-                >
+                  <span>{item.negative}</span>
+                </div>
+                <div className='wd-cell wd-cell-positive'>
                   <div className='wd-icon-positive'>
-                    <Check size={18} />
+                    <Check size={14} />
                   </div>
-                  <span className='wd-text'>{item}</span>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
+                  <span>{item.positive}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
 
+        {/* Bottom Message */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
           className='wd-footer'
         >
-          <div className='wd-footer-content'>
-            <ArrowRight size={20} className='wd-arrow' />
-            <p className='wd-footer-text'>
-              Trade on a globally regulated, award-winning broker known for institutional-grade execution.
-            </p>
+          <div className='wd-footer-icon'>
+            <Sparkles size={24} />
           </div>
+          <p>Trade on a globally regulated, award-winning broker with institutional-grade execution</p>
         </motion.div>
       </div>
 
       <style>{`
         .why-different-section {
           position: relative;
-          padding: 80px 24px 0;
-          background: linear-gradient(180deg, #0a0a0c 0%, var(--bg-color) 100%);
+          padding: 100px 24px;
+          overflow: hidden;
         }
 
-        .why-different-section .section-container {
-          padding-bottom: 40px;
+        .wd-bg-elements {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+        }
+
+        .wd-glow-left {
+          position: absolute;
+          top: 20%;
+          left: -10%;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(255, 100, 100, 0.08) 0%, transparent 70%);
+          filter: blur(60px);
+        }
+
+        .wd-glow-right {
+          position: absolute;
+          bottom: 20%;
+          right: -10%;
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(0, 255, 136, 0.08) 0%, transparent 70%);
+          filter: blur(60px);
         }
 
         .wd-header {
           text-align: center;
           margin-bottom: 60px;
+          position: relative;
+          z-index: 1;
         }
 
         .wd-badge {
-          color: var(--primary);
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.2em;
-          font-size: 0.8rem;
-          display: block;
-          margin-bottom: 16px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--text-dim);
+          padding: 10px 20px;
+          border-radius: 50px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          margin-bottom: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .wd-title {
-          font-size: clamp(2rem, 5vw, 3rem);
+          font-size: clamp(2.2rem, 5vw, 3.5rem);
           font-weight: 800;
           margin-bottom: 16px;
           line-height: 1.1;
         }
 
+        .text-gradient-alt {
+          background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
         .wd-subtitle {
           color: var(--text-dim);
-          font-size: clamp(1.1rem, 2vw, 1.4rem);
-          font-weight: 600;
+          font-size: 1.15rem;
         }
 
-        .wd-content {
+        .wd-comparison {
+          max-width: 800px;
+          margin: 0 auto 60px;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 24px;
+          overflow: hidden;
+          position: relative;
+          z-index: 1;
+        }
+
+        .wd-comparison-header {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 40px;
-          max-width: 900px;
-          margin: 0 auto 40px;
         }
 
-        .wd-column {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .wd-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .wd-item {
+        .wd-header-cell {
           display: flex;
           align-items: center;
-          gap: 16px;
+          justify-content: center;
+          gap: 10px;
+          padding: 20px;
+          font-weight: 700;
+          font-size: 1rem;
+        }
+
+        .wd-header-negative {
+          background: rgba(255, 100, 100, 0.1);
+          color: #ff6b6b;
+          border-bottom: 2px solid rgba(255, 100, 100, 0.3);
+        }
+
+        .wd-header-positive {
+          background: rgba(0, 255, 136, 0.1);
+          color: var(--success);
+          border-bottom: 2px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .wd-comparison-body {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .wd-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+          transition: background 0.2s ease;
+        }
+
+        .wd-row:last-child {
+          border-bottom: none;
+        }
+
+        .wd-row:hover {
+          background: rgba(255, 255, 255, 0.02);
+        }
+
+        .wd-cell {
+          display: flex;
+          align-items: center;
+          gap: 12px;
           padding: 20px 24px;
-          background: rgba(18, 18, 22, 0.6);
-          backdrop-filter: blur(20px);
-          border: 1px solid var(--glass-border);
-          border-radius: 16px;
-          transition: var(--transition-smooth);
         }
 
-        .wd-item:hover {
-          border-color: rgba(255, 255, 255, 0.15);
-          transform: translateX(4px);
+        .wd-cell-negative {
+          border-right: 1px solid rgba(255, 255, 255, 0.04);
         }
 
-        .wd-item-negative:hover {
-          border-color: rgba(255, 100, 100, 0.3);
+        .wd-cell span {
+          font-size: 0.95rem;
+          font-weight: 500;
         }
 
-        .wd-item-positive:hover {
-          border-color: rgba(0, 255, 136, 0.3);
+        .wd-cell-negative span {
+          color: var(--text-dim);
+          text-decoration: line-through;
+          text-decoration-color: rgba(255, 100, 100, 0.5);
+        }
+
+        .wd-cell-positive span {
+          color: var(--text-main);
         }
 
         .wd-icon-negative {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
           background: rgba(255, 100, 100, 0.15);
-          border: 1px solid rgba(255, 100, 100, 0.3);
           display: flex;
           align-items: center;
           justify-content: center;
+          color: #ff6b6b;
           flex-shrink: 0;
-          color: #ff6464;
         }
 
         .wd-icon-positive {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
           background: rgba(0, 255, 136, 0.15);
-          border: 1px solid rgba(0, 255, 136, 0.3);
           display: flex;
           align-items: center;
           justify-content: center;
-          flex-shrink: 0;
           color: var(--success);
-        }
-
-        .wd-text {
-          color: var(--text-main);
-          font-size: 1rem;
-          font-weight: 600;
-          letter-spacing: -0.01em;
+          flex-shrink: 0;
         }
 
         .wd-footer {
-          max-width: 800px;
-          margin: 0 auto 0;
-        }
-
-        .wd-footer-content {
           display: flex;
           align-items: center;
-          gap: 20px;
-          padding: 32px 40px;
-          background: rgba(0, 102, 255, 0.1);
-          border: 1px solid rgba(0, 102, 255, 0.3);
-          border-radius: 20px;
-          backdrop-filter: blur(20px);
+          justify-content: center;
+          gap: 16px;
+          max-width: 700px;
+          margin: 0 auto;
+          padding: 24px 32px;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+          border: 1px solid rgba(102, 126, 234, 0.2);
+          border-radius: 16px;
+          position: relative;
+          z-index: 1;
         }
 
-        .wd-arrow {
-          color: var(--primary);
+        .wd-footer-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
           flex-shrink: 0;
         }
 
-        .wd-footer-text {
+        .wd-footer p {
           color: var(--text-main);
-          font-size: 1.1rem;
+          font-size: 1rem;
           font-weight: 500;
-          line-height: 1.6;
+          line-height: 1.5;
           margin: 0;
         }
 
         @media (max-width: 768px) {
           .why-different-section {
-            padding: 60px 16px 0;
-          }
-
-          .why-different-section .section-container {
-            padding-bottom: 30px;
+            padding: 60px 16px;
           }
 
           .wd-header {
             margin-bottom: 40px;
           }
 
-          .wd-content {
-            grid-template-columns: 1fr;
-            gap: 32px;
-            margin-bottom: 40px;
+          .wd-header-cell {
+            padding: 16px;
+            font-size: 0.9rem;
           }
 
-          .wd-item {
-            padding: 16px 20px;
+          .wd-header-cell span {
+            display: none;
           }
 
-          .wd-footer-content {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 24px;
-            gap: 16px;
+          .wd-header-negative::after {
+            content: 'Others';
           }
 
-          .wd-arrow {
-            transform: rotate(90deg);
+          .wd-header-positive::after {
+            content: 'Us';
           }
 
-          .wd-footer-text {
-            font-size: 1rem;
+          .wd-cell {
+            padding: 16px;
+            gap: 10px;
           }
-        }
 
-        @media (max-width: 480px) {
-          .wd-item {
-            padding: 14px 18px;
-            gap: 12px;
+          .wd-cell span {
+            font-size: 0.85rem;
           }
 
           .wd-icon-negative,
           .wd-icon-positive {
-            width: 32px;
-            height: 32px;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
           }
 
-          .wd-text {
+          .wd-footer {
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+            gap: 12px;
+          }
+
+          .wd-footer-icon {
+            width: 40px;
+            height: 40px;
+          }
+
+          .wd-footer p {
             font-size: 0.9rem;
           }
+        }
 
-          .wd-footer-content {
-            padding: 20px;
+        @media (max-width: 480px) {
+          .wd-badge {
+            font-size: 0.75rem;
+            padding: 8px 16px;
+          }
+
+          .wd-cell {
+            padding: 14px 12px;
+          }
+
+          .wd-cell span {
+            font-size: 0.8rem;
           }
         }
       `}</style>

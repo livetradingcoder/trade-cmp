@@ -16,6 +16,8 @@ timeout = 10
 retries = 3
 
 # Note: Environment variables should be set in Railway dashboard:
-# - DATABASE_URL will be automatically set when you add PostgreSQL database
+# - MONGODB_URI or DATABASE_URL should be set to your MongoDB connection string
+#   Example: mongodb+srv://username:password@cluster.mongodb.net/trade_arena
+#   Or use Railway MongoDB plugin if available
 # - PORT is automatically set by Railway
 # - NODE_ENV=production can be set manually if needed

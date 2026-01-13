@@ -1,26 +1,32 @@
-import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 // Layout Components
 import Ticker from "./components/Ticker";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import ManagerPortal from "./components/ManagerPortal";
 
 // Pages
 import HomePage from "./pages/HomePage";
 import TournamentsPage from "./pages/TournamentsPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import TermsPage from "./pages/TermsPage";
+import AdminDashboard from "./pages/AdminDashboard";
 
 export default function App() {
-  const [showManager, setShowManager] = useState(false);
+  const location = useLocation();
+
+  // Check if we're on the admin page
+  const isAdminPage = location.pathname === "/admin";
+
+  // Render admin dashboard without layout
+  if (isAdminPage) {
+    return <AdminDashboard />;
+  }
 
   return (
     <div className='app-container'>
       <Ticker />
-      <Navbar onOpenManager={() => setShowManager(true)} />
+      <Navbar />
 
       <main>
         <Routes>
@@ -32,8 +38,6 @@ export default function App() {
       </main>
 
       <Footer />
-
-      <AnimatePresence>{showManager && <ManagerPortal onClose={() => setShowManager(false)} />}</AnimatePresence>
     </div>
   );
 }

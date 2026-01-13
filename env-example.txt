@@ -1,11 +1,37 @@
 # Database Configuration
-DATABASE_URL=postgresql://postgres:password@localhost:5432/trade_arena
+# For local development with MongoDB
+MONGODB_URI=mongodb://localhost:27017/trade_arena
+
+# Or use DATABASE_URL (both work, MONGODB_URI takes precedence)
+DATABASE_URL=mongodb://localhost:27017/trade_arena
+
+# For MongoDB Atlas (cloud):
+# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/trade_arena?retryWrites=true&w=majority
 
 # Server Configuration
 PORT=3001
-NODE_ENV=production
+NODE_ENV=development
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+
+# Cloudinary Configuration (for image uploads)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Email Configuration (for password reset)
+# For development, you can leave these empty (emails will be logged to console)
+# For production, use services like SendGrid, AWS SES, Gmail, etc.
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+EMAIL_FROM=Trade Arena <noreply@tradearena.com>
 
 # Frontend Configuration (only needed for local development)
 VITE_API_URL=http://localhost:3001
+FRONTEND_URL=http://localhost:5173
 VITE_DISCORD_URL=https://discord.gg/your-server
 VITE_LEADERBOARD_URL=https://your-leaderboard-url.com

@@ -1,5 +1,6 @@
 export const ASSETS = {
     LAPTOP: "https://cdn.prod.website-files.com/6744517d5c3f38b0075a477b/6744517d5c3f38b0075a506c_a.avif",
+    HERO_IMAGE: "/hero.avif",
     LEADERBOARD_SNIPPET: "https://cdn.prod.website-files.com/6744517d5c3f38b0075a477b/68a5c31442709f17bf863a4e_dsvds.avif",
     REWARD_TIERS: "https://cdn.prod.website-files.com/6744517d5c3f38b0075a477b/6744517d5c3f38b0075a4cd8_klwkls.avif",
     USER_BADGE: "https://cdn.prod.website-files.com/6744517d5c3f38b0075a477b/6744517d5c3f38b0075a4f72_kmdcs.avif",

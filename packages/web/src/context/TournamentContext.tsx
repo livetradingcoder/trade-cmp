@@ -6,7 +6,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
 export interface Tournament {
-  id: number;
+  id: string | number; // MongoDB returns string ID
   title: string;
   tier: string;
   prize: string;
@@ -17,8 +17,6 @@ export interface Tournament {
   cover: string;
   image?: string;
   registrationLink: string;
-  startingBalance?: string;
-  playersJoined?: number;
 }
 
 interface TournamentContextType {
@@ -27,9 +25,9 @@ interface TournamentContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateTournament: (id: number, data: Partial<Tournament>) => Promise<boolean>;
+  updateTournament: (id: string | number, data: Partial<Tournament>) => Promise<boolean>;
   createTournament: (data: Omit<Tournament, "id">) => Promise<boolean>;
-  deleteTournament: (id: number) => Promise<boolean>;
+  deleteTournament: (id: string | number) => Promise<boolean>;
   refreshTournaments: () => Promise<void>;
 }
 
@@ -100,12 +98,27 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchTournaments();
-    // Check if admin session exists
-    const adminSession = sessionStorage.getItem("isAdmin");
-    if (adminSession === "true") {
-      setIsAdmin(true);
+    // Check if admin token exists and verify it
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      verifyToken(token);
     }
   }, []);
+
+  const verifyToken = async (token: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/verify`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setIsAdmin(true);
+      } else {
+        localStorage.removeItem("adminToken");
+      }
+    } catch {
+      localStorage.removeItem("adminToken");
+    }
+  };
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
@@ -116,20 +129,19 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("adminToken", data.token);
         setIsAdmin(true);
-        sessionStorage.setItem("isAdmin", "true");
         return true;
       } else if (response.status === 401) {
-        // Invalid credentials from backend
         return false;
       }
-      // For other errors (500, etc), try fallback
       throw new Error("Server error");
     } catch {
-      // Fallback: check hardcoded credentials when backend is down or has errors
-      if (username === "admin" && password === "admin") {
+      // Fallback: check hardcoded credentials when backend is down
+      if (username === "admin" && password === "admin123") {
         setIsAdmin(true);
-        sessionStorage.setItem("isAdmin", "true");
+        localStorage.setItem("adminToken", "fallback-token");
         return true;
       }
     }
@@ -138,14 +150,18 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setIsAdmin(false);
-    sessionStorage.removeItem("isAdmin");
+    localStorage.removeItem("adminToken");
   };
 
-  const updateTournament = async (id: number, data: Partial<Tournament>): Promise<boolean> => {
+  const updateTournament = async (id: string | number, data: Partial<Tournament>): Promise<boolean> => {
     try {
+      const token = localStorage.getItem("adminToken");
       const response = await fetch(`${API_URL}/api/tournaments/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(data),
       });
 
@@ -163,9 +179,13 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
 
   const createTournament = async (data: Omit<Tournament, "id">): Promise<boolean> => {
     try {
+      const token = localStorage.getItem("adminToken");
       const response = await fetch(`${API_URL}/api/tournaments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(data),
       });
 
@@ -177,7 +197,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       // Fallback: add locally when backend is down
       const newTournament = {
         ...data,
-        id: Math.max(...tournaments.map((t) => t.id)) + 1,
+        id: `temp-${Date.now()}`, // Use temporary string ID for fallback
       };
       setTournaments((prev) => [...prev, newTournament]);
       return true;
@@ -185,10 +205,14 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const deleteTournament = async (id: number): Promise<boolean> => {
+  const deleteTournament = async (id: string | number): Promise<boolean> => {
     try {
+      const token = localStorage.getItem("adminToken");
       const response = await fetch(`${API_URL}/api/tournaments/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {

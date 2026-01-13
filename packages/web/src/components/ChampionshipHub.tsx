@@ -71,23 +71,6 @@ const ChampionshipHub = () => {
                       ))}
                   </div>
 
-                  {(camp.startingBalance || camp.playersJoined !== undefined) && (
-                    <div className='card-additional-info'>
-                      {camp.startingBalance && (
-                        <div className='card-info-item'>
-                          <span className='card-info-label'>Starting Balance:</span>
-                          <span className='card-info-value'>{camp.startingBalance}</span>
-                        </div>
-                      )}
-                      {camp.playersJoined !== undefined && (
-                        <div className='card-info-item'>
-                          <span className='card-info-label'>Players Joined:</span>
-                          <span className='card-info-value'>{camp.playersJoined}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   <button className='btn-primary card-btn' onClick={() => window.open(camp.registrationLink, "_blank")}>
                     Join Competition <ArrowUpRight size={20} />
                   </button>

@@ -81,7 +81,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [editData, setEditData] = useState<Partial<Tournament>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [newTournament, setNewTournament] = useState<Omit<Tournament, "id">>({
@@ -96,8 +96,6 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
     image: "",
     registrationLink: "",
-    startingBalance: "",
-    playersJoined: 0,
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -121,17 +119,18 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
 
   const startEditing = (tournament: Tournament) => {
     setEditingId(tournament.id);
+    // Copy ALL fields from the tournament to ensure nothing is lost
     setEditData({
       title: tournament.title,
-      registrationLink: tournament.registrationLink,
+      tier: tournament.tier,
       prize: tournament.prize,
       fee: tournament.fee,
-      tier: tournament.tier,
+      participants: tournament.participants,
       timeLabel: tournament.timeLabel,
       timeLeft: tournament.timeLeft,
+      cover: tournament.cover,
       image: tournament.image || "",
-      startingBalance: tournament.startingBalance || "",
-      playersJoined: tournament.playersJoined ?? 0,
+      registrationLink: tournament.registrationLink,
     });
   };
 
@@ -142,13 +141,23 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
 
   const saveEditing = async () => {
     if (editingId) {
-      await updateTournament(editingId, editData);
-      setEditingId(null);
-      setEditData({});
+      // Filter out undefined values but keep empty strings and zeros
+      const updateData = Object.entries(editData).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+
+      const success = await updateTournament(editingId, updateData);
+      if (success) {
+        setEditingId(null);
+        setEditData({});
+      }
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     if (confirm("Are you sure you want to delete this competition?")) {
       await deleteTournament(id);
     }
@@ -156,23 +165,23 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
 
   const handleCreate = async () => {
     if (newTournament.title && newTournament.registrationLink) {
-      await createTournament(newTournament);
-      setIsCreating(false);
-      setNewTournament({
-        title: "",
-        tier: "Weekly",
-        prize: "",
-        fee: "",
-        participants: 0,
-        timeLabel: "Starts in",
-        timeLeft: "",
-        cover:
-          "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
-        image: "",
-        registrationLink: "",
-        startingBalance: "",
-        playersJoined: 0,
-      });
+      const success = await createTournament(newTournament);
+      if (success) {
+        setIsCreating(false);
+        setNewTournament({
+          title: "",
+          tier: "Weekly",
+          prize: "",
+          fee: "",
+          participants: 0,
+          timeLabel: "Starts in",
+          timeLeft: "",
+          cover:
+            "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
+          image: "",
+          registrationLink: "",
+        });
+      }
     }
   };
 
@@ -441,12 +450,12 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                           />
                         </FieldWithTooltip>
                         <FieldWithTooltip
-                          label='Required Participants'
-                          tooltip='The minimum number of participants needed for the competition to start. Can be a number or formatted text (e.g., "10", "$10", "10 participants")'
+                          label='Entry Fee'
+                          tooltip='The entry fee or cost to join the competition (e.g., "$10", "Free", "$25")'
                         >
                           <input
                             type='text'
-                            placeholder='Required Participants (e.g., 10)'
+                            placeholder='Entry Fee (e.g., $10)'
                             value={newTournament.fee}
                             onChange={(e) => setNewTournament({ ...newTournament, fee: e.target.value })}
                             style={inputStyle}
@@ -465,40 +474,59 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                           />
                         </FieldWithTooltip>
                         <FieldWithTooltip
-                          label='Image URL (optional)'
-                          tooltip='A direct URL to an image that will be displayed for this competition. If not provided, a default cover image will be used.'
+                          label='Time Label'
+                          tooltip='The label showing the time status (e.g., "Starts in" for upcoming, "Ends in" for active)'
+                        >
+                          <select
+                            value={newTournament.timeLabel}
+                            onChange={(e) => setNewTournament({ ...newTournament, timeLabel: e.target.value })}
+                            style={inputStyle}
+                          >
+                            <option value='Starts in'>Starts in</option>
+                            <option value='Ends in'>Ends in</option>
+                          </select>
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
+                          label='Time Left'
+                          tooltip='The remaining time in format: "7d 12:30:45" (days hours:minutes:seconds)'
                         >
                           <input
                             type='text'
-                            placeholder='Image URL (optional)'
-                            value={newTournament.image || ""}
-                            onChange={(e) => setNewTournament({ ...newTournament, image: e.target.value })}
+                            placeholder='e.g., 7d 12:30:45'
+                            value={newTournament.timeLeft}
+                            onChange={(e) => setNewTournament({ ...newTournament, timeLeft: e.target.value })}
+                            style={inputStyle}
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip label='Participants' tooltip='The total number of participants'>
+                          <input
+                            type='number'
+                            placeholder='Participants'
+                            value={newTournament.participants}
+                            onChange={(e) => setNewTournament({ ...newTournament, participants: parseInt(e.target.value) || 0 })}
+                            style={inputStyle}
+                            min='0'
+                          />
+                        </FieldWithTooltip>
+                        <FieldWithTooltip label='Cover Image URL' tooltip='The main cover/banner image URL for the tournament card'>
+                          <input
+                            type='text'
+                            placeholder='Cover Image URL'
+                            value={newTournament.cover}
+                            onChange={(e) => setNewTournament({ ...newTournament, cover: e.target.value })}
                             style={{ ...inputStyle, gridColumn: "1 / -1" }}
                           />
                         </FieldWithTooltip>
                         <FieldWithTooltip
-                          label='Starting Balance'
-                          tooltip='The initial trading balance each participant starts with in the competition (e.g., "$10,000", "10K", "$50,000").'
+                          label='Additional Image URL (optional)'
+                          tooltip='An optional additional image. Leave empty to use only the cover image.'
                         >
                           <input
                             type='text'
-                            placeholder='Starting Balance (e.g., $10,000)'
-                            value={newTournament.startingBalance || ""}
-                            onChange={(e) => setNewTournament({ ...newTournament, startingBalance: e.target.value })}
-                            style={inputStyle}
-                          />
-                        </FieldWithTooltip>
-                        <FieldWithTooltip
-                          label='Players Joined'
-                          tooltip='The number of players who have joined this competition. This field can be manually updated to reflect the current participation count.'
-                        >
-                          <input
-                            type='number'
-                            placeholder='Players Joined (e.g., 0)'
-                            value={newTournament.playersJoined ?? 0}
-                            onChange={(e) => setNewTournament({ ...newTournament, playersJoined: parseInt(e.target.value) || 0 })}
-                            style={inputStyle}
-                            min='0'
+                            placeholder='Additional Image URL (optional)'
+                            value={newTournament.image || ""}
+                            onChange={(e) => setNewTournament({ ...newTournament, image: e.target.value })}
+                            style={{ ...inputStyle, gridColumn: "1 / -1" }}
                           />
                         </FieldWithTooltip>
                       </div>
@@ -580,12 +608,12 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                               />
                             </FieldWithTooltip>
                             <FieldWithTooltip
-                              label='Required Participants'
-                              tooltip='The minimum number of participants needed for the competition to start. Can be a number or formatted text (e.g., "10", "$10", "10 participants")'
+                              label='Entry Fee'
+                              tooltip='The entry fee or cost to join the competition (e.g., "$10", "Free", "$25")'
                             >
                               <input
                                 type='text'
-                                placeholder='Required Participants'
+                                placeholder='Entry Fee (e.g., $10)'
                                 value={editData.fee || ""}
                                 onChange={(e) => setEditData({ ...editData, fee: e.target.value })}
                                 style={inputStyle}
@@ -603,39 +631,58 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                                 style={{ ...inputStyle, gridColumn: "1 / -1" }}
                               />
                             </FieldWithTooltip>
+                            <FieldWithTooltip label='Cover Image URL' tooltip='The main cover/banner image URL for the tournament card'>
+                              <input
+                                type='text'
+                                placeholder='Cover Image URL'
+                                value={editData.cover || ""}
+                                onChange={(e) => setEditData({ ...editData, cover: e.target.value })}
+                                style={{ ...inputStyle, gridColumn: "1 / -1" }}
+                              />
+                            </FieldWithTooltip>
                             <FieldWithTooltip
-                              label='Image URL (optional)'
-                              tooltip='A direct URL to an image that will be displayed for this competition. If not provided, a default cover image will be used.'
+                              label='Additional Image URL (optional)'
+                              tooltip='An optional additional image that can be displayed. Leave empty to use only the cover image.'
                             >
                               <input
                                 type='text'
-                                placeholder='Image URL (optional)'
+                                placeholder='Additional Image URL (optional)'
                                 value={editData.image || ""}
                                 onChange={(e) => setEditData({ ...editData, image: e.target.value })}
                                 style={{ ...inputStyle, gridColumn: "1 / -1" }}
                               />
                             </FieldWithTooltip>
                             <FieldWithTooltip
-                              label='Starting Balance'
-                              tooltip='The initial trading balance each participant starts with in the competition (e.g., "$10,000", "10K", "$50,000").'
+                              label='Time Label'
+                              tooltip='The label showing the time status of the competition (e.g., "Starts in" for upcoming, "Ends in" for active)'
+                            >
+                              <select
+                                value={editData.timeLabel || "Starts in"}
+                                onChange={(e) => setEditData({ ...editData, timeLabel: e.target.value })}
+                                style={inputStyle}
+                              >
+                                <option value='Starts in'>Starts in</option>
+                                <option value='Ends in'>Ends in</option>
+                              </select>
+                            </FieldWithTooltip>
+                            <FieldWithTooltip
+                              label='Time Left'
+                              tooltip='The remaining time for the competition in format: "7d 12:30:45" (days hours:minutes:seconds)'
                             >
                               <input
                                 type='text'
-                                placeholder='Starting Balance (e.g., $10,000)'
-                                value={editData.startingBalance || ""}
-                                onChange={(e) => setEditData({ ...editData, startingBalance: e.target.value })}
+                                placeholder='e.g., 7d 12:30:45'
+                                value={editData.timeLeft || ""}
+                                onChange={(e) => setEditData({ ...editData, timeLeft: e.target.value })}
                                 style={inputStyle}
                               />
                             </FieldWithTooltip>
-                            <FieldWithTooltip
-                              label='Players Joined'
-                              tooltip='The number of players who have joined this competition. This field can be manually updated to reflect the current participation count.'
-                            >
+                            <FieldWithTooltip label='Participants' tooltip='The current number of participants in this competition'>
                               <input
                                 type='number'
-                                placeholder='Players Joined (e.g., 0)'
-                                value={editData.playersJoined ?? 0}
-                                onChange={(e) => setEditData({ ...editData, playersJoined: parseInt(e.target.value) || 0 })}
+                                placeholder='Participants'
+                                value={editData.participants ?? 0}
+                                onChange={(e) => setEditData({ ...editData, participants: parseInt(e.target.value) || 0 })}
                                 style={inputStyle}
                                 min='0'
                               />
@@ -705,13 +752,8 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                               <span>
                                 Entry: <strong>{tournament.fee}</strong>
                               </span>
-                              {tournament.startingBalance && (
-                                <span>
-                                  Starting Balance: <strong>{tournament.startingBalance}</strong>
-                                </span>
-                              )}
                               <span>
-                                Players Joined: <strong>{tournament.playersJoined ?? 0}</strong>
+                                Participants: <strong>{tournament.participants ?? 0}</strong>
                               </span>
                             </div>
                             <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
