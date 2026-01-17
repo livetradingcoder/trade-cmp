@@ -1152,6 +1152,8 @@ const dashboardStyles = `
 
   .card-content {
     padding: 20px;
+    position: relative;
+    z-index: 2;
   }
 
   .card-content h3 {
@@ -1183,6 +1185,8 @@ const dashboardStyles = `
   .card-actions {
     display: flex;
     gap: 10px;
+    position: relative;
+    z-index: 3;
   }
 
   .edit-btn, .delete-btn {
