@@ -17,26 +17,32 @@ async function main() {
 
     console.log("🌱 Starting database seed...\n");
 
+    // Get admin credentials from environment
+    const adminUsername = process.env.ADMIN_USERNAME || "ltl-admin-1";
+    const adminPassword = process.env.ADMIN_PASSWORD || "Adm!n2026";
+    const adminEmail = `${adminUsername}@livetradingleague.com`;
+
     // Check if admin already exists
-    const existingAdmin = await Admin.findOne({ username: "admin" });
+    const existingAdmin = await Admin.findOne({ username: adminUsername });
 
     if (existingAdmin) {
       console.log("⚠️  Admin user already exists");
-      console.log("   Username: admin");
+      console.log("   Username:", existingAdmin.username);
       console.log("   Email:", existingAdmin.email);
       console.log("   (Skipping admin creation)\n");
     } else {
       // Create default admin
       await Admin.create({
-        username: "admin",
-        email: "admin@tradearena.com",
-        password: "admin123",
+        username: adminUsername,
+        email: adminEmail,
+        password: adminPassword,
       });
 
       console.log("✅ Admin user created");
-      console.log("   Username: admin");
-      console.log("   Email: admin@tradearena.com");
-      console.log("   Password: admin123\n");
+      console.log("   Username:", adminUsername);
+      console.log("   Email:", adminEmail);
+      console.log("   Password:", adminPassword);
+      console.log("   ⚠️  Please change the password after first login!\n");
     }
 
     // Check existing tournaments
