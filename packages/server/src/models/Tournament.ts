@@ -22,7 +22,7 @@ const TournamentSchema: Schema = new Schema(
     prize: { type: String, default: "" },
     fee: { type: String, default: "" },
     participants: { type: Number, default: 0 },
-    timeLabel: { type: String, default: "Starts in" },
+    timeLabel: { type: String, default: "Seats Left" },
     timeLeft: { type: String, default: "" },
     cover: { type: String, required: true },
     image: { type: String, default: "" },

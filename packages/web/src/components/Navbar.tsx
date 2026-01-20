@@ -12,9 +12,9 @@ const Navbar = () => {
 
   const navLinks = [
     { path: "/", label: "Home" },
-    { path: "/tournaments", label: "Competitions" },
+    { path: "/competitions", label: "Competitions" },
     { path: leaderboardUrl, label: "Leaderboard", isExternal: !leaderboardUrl.startsWith("/") },
-    { path: "/#about", label: "About", isHash: true },
+    { path: "/terms", label: "Terms & Privacy", isHash: true },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -54,7 +54,7 @@ const Navbar = () => {
               <button onClick={() => navigate("/admin")} className='btn-outline'>
                 <ShieldCheck size={18} /> Portal
               </button>
-              <Link to='/tournaments'>
+              <Link to='/competitions'>
                 <button className='btn-primary'>Get Started</button>
               </Link>
             </div>
@@ -109,7 +109,7 @@ const Navbar = () => {
               >
                 <ShieldCheck size={18} /> Portal
               </button>
-              <Link to='/tournaments' style={{ width: "100%" }} onClick={() => setMobileMenuOpen(false)}>
+              <Link to='/competitions' style={{ width: "100%" }} onClick={() => setMobileMenuOpen(false)}>
                 <button className='btn-primary' style={{ width: "100%" }}>
                   Get Started
                 </button>

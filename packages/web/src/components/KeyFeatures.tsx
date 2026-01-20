@@ -5,29 +5,29 @@ import { Link } from "react-router-dom";
 const features = [
   {
     icon: Wallet,
-    title: "No Entry Barrier",
-    description: "Trade with your own capital. Pure skill-based competition.",
+    title: "No Entry Fees",
+    description: "No Entry Barriers. Trade your own capital. No artificial limits.",
     color: "#667eea",
     gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
   },
   {
     icon: Unlock,
-    title: "Flexible Rules",
-    description: "Freedom to trade your way. No arbitrary drawdowns or complex constraints.",
+    title: "Full Strategy Freedom",
+    description: "Scalp, swing, hedge — your rules.",
     color: "#00d9ff",
     gradient: "linear-gradient(135deg, #00d9ff 0%, #0066ff 100%)",
   },
   {
     icon: Brain,
-    title: "Trade Your Strategy",
-    description: "Scalping, swinging, or hedging—your style, your rules, your profits.",
+    title: "Transparent Competition",
+    description: "Clear rules. Fixed timelines.",
     color: "#f093fb",
     gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
   },
   {
     icon: Crown,
     title: "100% Autonomy",
-    description: "Complete control over your trading decisions and account management.",
+    description: "You control risk, execution, and capital.",
     color: "#ffd700",
     gradient: "linear-gradient(135deg, #ffd700 0%, #ff9500 100%)",
   },
@@ -41,12 +41,11 @@ const KeyFeatures = () => {
       <div className='section-container'>
         <div className='kf-header'>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className='kf-badge'>Why Choose Us</span>
             <h2 className='kf-title'>
               Why Top Traders <br />
               <span className='text-gradient'>Choose The League</span>
             </h2>
-            <p className='kf-subtitle'>Experience the freedom of true trading competition with skill-based rewards</p>
+            <p className='kf-subtitle'>Experience the freedom of live trading competition with skill-based rewards</p>
           </motion.div>
         </div>
 
@@ -78,7 +77,7 @@ const KeyFeatures = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='kf-cta'>
-          <Link to='/tournaments'>
+          <Link to='/competitions'>
             <button className='kf-cta-btn'>
               Start Trading Now
               <ArrowRight size={18} />

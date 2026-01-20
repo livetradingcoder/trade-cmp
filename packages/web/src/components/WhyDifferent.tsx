@@ -6,7 +6,7 @@ const WhyDifferent = () => {
     { negative: "Funded accounts", positive: "Your own capital" },
     { negative: "Profit splits", positive: "Keep 100% profits" },
     { negative: "Fake payouts", positive: "Real cash rewards" },
-    { negative: "Demo competitions", positive: "Real trading" },
+    { negative: "Artificial Rules", positive: "Market Executions" },
   ];
 
   return (
@@ -18,10 +18,6 @@ const WhyDifferent = () => {
 
       <div className='section-container'>
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='wd-header'>
-          <div className='wd-badge'>
-            <Sparkles size={14} />
-            <span>The Difference</span>
-          </div>
           <h2 className='wd-title'>
             This Is <span className='text-gradient-alt'>Not</span> a Prop Firm
           </h2>
@@ -82,9 +78,6 @@ const WhyDifferent = () => {
           transition={{ delay: 0.5 }}
           className='wd-footer'
         >
-          <div className='wd-footer-icon'>
-            <Sparkles size={24} />
-          </div>
           <p>Trade on a globally regulated, award-winning broker with institutional-grade execution</p>
         </motion.div>
       </div>
@@ -299,9 +292,9 @@ const WhyDifferent = () => {
 
         .wd-footer p {
           color: var(--text-main);
-          font-size: 1rem;
+          font-size: 1.1rem;
           font-weight: 500;
-          line-height: 1.5;
+          line-height: 1.6;
           margin: 0;
         }
 
@@ -360,7 +353,7 @@ const WhyDifferent = () => {
           }
 
           .wd-footer p {
-            font-size: 0.9rem;
+            font-size: 1rem;
           }
         }
 

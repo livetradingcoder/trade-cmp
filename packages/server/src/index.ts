@@ -313,7 +313,7 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
       prize: req.body.prize || "",
       fee: req.body.fee || "",
       participants: req.body.participants || 0,
-      timeLabel: req.body.timeLabel || "Starts in",
+      timeLabel: req.body.timeLabel || "Seats Left",
       timeLeft: req.body.timeLeft || "",
       image: req.body.image || "",
       cover:

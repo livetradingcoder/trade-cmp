@@ -21,7 +21,7 @@ const Footer = () => {
               <h4>Ecosystem</h4>
               <ul>
                 <li>
-                  <Link to='/tournaments'>Competitions</Link>
+                  <Link to='/competitions'>Competitions</Link>
                 </li>
                 <li>
                   <a href={import.meta.env.VITE_LEADERBOARD_URL || "/leaderboard"} target='_blank' rel='noopener noreferrer'>
@@ -47,6 +47,14 @@ const Footer = () => {
               </ul>
             </div>
           </div>
+        </div>
+
+        <div className='footer-disclaimer'>
+          <h4>Transparency & Risk Disclosure</h4>
+          <p>
+            LiveTradingLeague operates competition-based trading events. Participants trade using their own capital.
+            We do not provide investment advice, manage funds, or offer brokerage services. All results are based on individual trading performance. Trading involves risk. Only trade capital you can afford to lose.
+          </p>
         </div>
 
         <div className='footer-bottom'>
@@ -135,6 +143,27 @@ const Footer = () => {
                     color: var(--text-main);
                 }
 
+                .footer-disclaimer {
+                    margin-top: 60px;
+                    padding-top: 32px;
+                    border-top: 1px solid var(--panel-border);
+                    max-width: 900px;
+                }
+
+                .footer-disclaimer h4 {
+                    color: #fff;
+                    font-size: 1rem;
+                    font-weight: 800;
+                    margin-bottom: 16px;
+                }
+
+                .footer-disclaimer p {
+                    color: var(--text-dim);
+                    line-height: 1.8;
+                    font-size: 0.9rem;
+                    margin: 0;
+                }
+
                 .footer-bottom {
                     margin-top: 60px;
                     padding-top: 32px;
@@ -167,6 +196,10 @@ const Footer = () => {
                     }
                     .footer-links {
                         gap: 40px;
+                    }
+                    .footer-disclaimer {
+                        margin-top: 40px;
+                        padding-top: 24px;
                     }
                     .footer-bottom {
                         flex-direction: column;

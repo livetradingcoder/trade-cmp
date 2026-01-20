@@ -7,28 +7,28 @@ const steps = [
     icon: UserPlus,
     number: "01",
     title: "Create Account",
-    desc: "Sign up in seconds. Quick verification to start exploring.",
+    desc: "Register and verify.",
     color: "#667eea",
   },
   {
     icon: Wallet,
     number: "02",
-    title: "Choose Competition",
-    desc: "Browse daily, weekly, or monthly competitions with prizes up to $50K.",
+    title: "Choose a Competition",
+    desc: "Daily, weekly, or monthly events.",
     color: "#f093fb",
   },
   {
     icon: BarChart2,
     number: "03",
-    title: "Trade & Compete",
-    desc: "Execute trades with real-time tracking on the global leaderboard.",
+    title: "Trade Live Markets",
+    desc: "Your strategy. Real execution.",
     color: "#00d9ff",
   },
   {
     icon: Trophy,
     number: "04",
     title: "Win & Withdraw",
-    desc: "Top performers share the prize pool. Instant payouts to your wallet.",
+    desc: "Top performers share the prize pool.",
     color: "#ffd700",
   },
 ];
@@ -42,7 +42,6 @@ const HowItWorks = () => {
         {/* Header */}
         <div className='hiw-header'>
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <span className='hiw-badge'>Simple Process</span>
             <h2 className='hiw-title'>
               How It <span className='text-gradient'>Works</span>
             </h2>
@@ -84,7 +83,7 @@ const HowItWorks = () => {
 
         {/* CTA */}
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='hiw-cta'>
-          <Link to='/tournaments'>
+          <Link to='/competitions'>
             <button className='btn-primary hiw-btn'>Start Competing Now</button>
           </Link>
         </motion.div>

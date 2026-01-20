@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
@@ -24,6 +24,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Sparkles,
+  Info,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
@@ -53,7 +54,7 @@ const AdminDashboard = () => {
     prize: "",
     fee: "",
     participants: 0,
-    timeLabel: "Starts in",
+    timeLabel: "Seats Left",
     timeLeft: "",
     cover:
       "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
@@ -74,8 +75,21 @@ const AdminDashboard = () => {
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
+  const [showCapitalTooltip, setShowCapitalTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const infoIconRef = useRef<HTMLDivElement>(null);
 
   const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
+
+  useEffect(() => {
+    if (showCapitalTooltip && infoIconRef.current) {
+      const rect = infoIconRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top - 10,
+        left: rect.left + rect.width / 2,
+      });
+    }
+  }, [showCapitalTooltip]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +117,7 @@ const AdminDashboard = () => {
       prize: "",
       fee: "",
       participants: 0,
-      timeLabel: "Starts in",
+      timeLabel: "Seats Left",
       timeLeft: "",
       cover:
         "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
@@ -376,16 +390,20 @@ const AdminDashboard = () => {
                       <h3>{tournament.title}</h3>
                       <div className='card-stats'>
                         <div className='stat'>
-                          <DollarSign size={14} />
-                          <span>{tournament.prize}</span>
+                          <Trophy size={14} />
+                          <span>Prize: {tournament.prize}</span>
+                        </div>
+                        <div className='stat'>
+                          <Calendar size={14} />
+                          <span>Capital: {tournament.fee}</span>
                         </div>
                         <div className='stat'>
                           <Users size={14} />
-                          <span>{tournament.participants}</span>
+                          <span>Required: {tournament.participants}</span>
                         </div>
                         <div className='stat'>
                           <Clock size={14} />
-                          <span>{tournament.timeLeft}</span>
+                          <span>Seats Left: {tournament.timeLeft}</span>
                         </div>
                       </div>
                       <div className='card-actions'>
@@ -459,16 +477,18 @@ const AdminDashboard = () => {
                         <label>Tier</label>
                         <select value={formData.tier} onChange={(e) => setFormData({ ...formData, tier: e.target.value })}>
                           <option value='Weekly'>Weekly</option>
+                          <option value='Bi-Weekly'>Bi-Weekly</option>
                           <option value='Monthly'>Monthly</option>
                         </select>
                       </div>
                       <div className='form-group'>
-                        <label>Participants</label>
+                        <label>Required Participants</label>
                         <input
                           type='number'
                           value={formData.participants}
                           onChange={(e) => setFormData({ ...formData, participants: parseInt(e.target.value) || 0 })}
                           min='0'
+                          placeholder='e.g., 100'
                         />
                       </div>
                     </div>
@@ -477,53 +497,106 @@ const AdminDashboard = () => {
                   {/* Prize & Fee */}
                   <div className='form-section'>
                     <h3>
-                      <DollarSign size={18} /> Prize & Entry
+                      <DollarSign size={18} /> Prize Pool & Capital
                     </h3>
 
                     <div className='form-row'>
                       <div className='form-group'>
-                        <label>Prize</label>
+                        <label>Prize Pool</label>
                         <input
                           type='text'
                           value={formData.prize}
                           onChange={(e) => setFormData({ ...formData, prize: e.target.value })}
-                          placeholder='e.g., 50K Challenge'
+                          placeholder='e.g., $50,000'
                         />
                       </div>
                       <div className='form-group'>
-                        <label>Entry Fee</label>
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          Minimum Capital Required
+                          <div
+                            ref={infoIconRef}
+                            style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
+                            onMouseEnter={() => setShowCapitalTooltip(true)}
+                            onMouseLeave={() => setShowCapitalTooltip(false)}
+                          >
+                            <Info size={14} color='var(--text-muted)' style={{ cursor: "help" }} />
+                            {showCapitalTooltip && (
+                              <>
+                                <div
+                                  style={{
+                                    position: "fixed",
+                                    top: `${tooltipPosition.top}px`,
+                                    left: `${tooltipPosition.left}px`,
+                                    transform: "translate(-50%, -100%)",
+                                    marginBottom: "8px",
+                                    padding: "12px 16px",
+                                    background: "rgba(18, 18, 22, 0.98)",
+                                    backdropFilter: "blur(10px)",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "8px",
+                                    fontSize: "0.75rem",
+                                    color: "#fff",
+                                    maxWidth: "320px",
+                                    minWidth: "280px",
+                                    zIndex: 10000,
+                                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                                    whiteSpace: "normal",
+                                    lineHeight: "1.5",
+                                    pointerEvents: "none",
+                                  }}
+                                >
+                                  Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours.
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: "100%",
+                                      left: "50%",
+                                      transform: "translateX(-50%)",
+                                      width: 0,
+                                      height: 0,
+                                      borderLeft: "6px solid transparent",
+                                      borderRight: "6px solid transparent",
+                                      borderTop: "6px solid rgba(18, 18, 22, 0.98)",
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </label>
                         <input
                           type='text'
                           value={formData.fee}
                           onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
-                          placeholder='e.g., $10'
+                          placeholder='e.g., $500'
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* Timing */}
+                  {/* Seats Left */}
                   <div className='form-section'>
                     <h3>
-                      <Calendar size={18} /> Timing
+                      <Clock size={18} /> Seats Left
                     </h3>
 
                     <div className='form-row'>
                       <div className='form-group'>
-                        <label>Time Label</label>
-                        <select value={formData.timeLabel} onChange={(e) => setFormData({ ...formData, timeLabel: e.target.value })}>
-                          <option value='Starts in'>Starts in</option>
-                          <option value='Ends in'>Ends in</option>
-                        </select>
-                      </div>
-                      <div className='form-group'>
-                        <label>Time Left</label>
+                        <label>Seats Left</label>
                         <input
                           type='text'
                           value={formData.timeLeft}
                           onChange={(e) => setFormData({ ...formData, timeLeft: e.target.value })}
-                          placeholder='e.g., 7d 12:30:45'
+                          placeholder='e.g., 25'
                         />
+                      </div>
+                      <div className='form-group'>
+                        <label>Time Label (Legacy - Optional)</label>
+                        <select value={formData.timeLabel} onChange={(e) => setFormData({ ...formData, timeLabel: e.target.value })}>
+                          <option value='Seats Left'>Seats Left</option>
+                          <option value='Starts in'>Starts in</option>
+                          <option value='Ends in'>Ends in</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -1145,6 +1218,11 @@ const dashboardStyles = `
     color: white;
   }
 
+  .tier-badge.bi-weekly {
+    background: rgba(139, 92, 246, 0.9);
+    color: white;
+  }
+
   .tier-badge.monthly {
     background: rgba(240, 147, 43, 0.9);
     color: white;
@@ -1254,12 +1332,16 @@ const dashboardStyles = `
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
     padding: 32px;
+    position: relative;
+    overflow: visible;
   }
 
   .form-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 24px;
+    position: relative;
+    overflow: visible;
   }
 
   .form-section {
@@ -1267,6 +1349,8 @@ const dashboardStyles = `
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 16px;
     padding: 24px;
+    position: relative;
+    overflow: visible;
   }
 
   .form-section.full-width {

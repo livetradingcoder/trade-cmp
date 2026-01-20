@@ -24,7 +24,7 @@ const Hero = () => {
               <p className='hero-description'>No funded accounts. No profit splits.</p>
 
               <div className='hero-cta'>
-                <Link to='/tournaments'>
+                <Link to='/competitions'>
                   <button className='btn-primary hero-btn'>
                     <Gamepad2 size={24} /> Enter the competition
                   </button>
@@ -48,7 +48,7 @@ const Hero = () => {
                 className='hero-bullets'
               >
                 <div className='hero-bullet-row'>
-                  {["Trade with your own capital", "Keep 100% of your profits"].map((text, index) => (
+                  {["Trade with your own capital", "Keep 100% of your profits",'Win real money — not demo points'].map((text, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -10 }}
@@ -63,18 +63,6 @@ const Hero = () => {
                     </motion.div>
                   ))}
                 </div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.7 }}
-                  className='hero-bullet-item'
-                >
-                  <div className='bullet-checkmark'>
-                    <Check size={14} color='#fff' />
-                  </div>
-                  <span className='bullet-text'>Win real money — not demo points</span>
-                </motion.div>
               </motion.div>
             </motion.div>
           </div>
@@ -269,6 +257,7 @@ const Hero = () => {
           display: flex;
           align-items: center;
           gap: 12px;
+          margin-bottom: 8px;
         }
 
         .bullet-checkmark {
@@ -460,7 +449,7 @@ const Hero = () => {
 
           .hero-bullet-row {
             display: flex;
-            gap: 8px; /* Tighter gap for small screens */
+            gap: 14px; /* Tighter gap for small screens */
             flex-wrap: wrap;
             justify-content: center;
           }

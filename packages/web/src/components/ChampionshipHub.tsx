@@ -86,7 +86,7 @@ const ChampionshipHub = () => {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='ch-view-all'>
-          <Link to='/tournaments'>
+          <Link to='/competitions'>
             <button className='btn-outline view-all-btn'>
               View All Competitions <ArrowRight size={18} />
             </button>

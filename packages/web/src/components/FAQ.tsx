@@ -38,14 +38,20 @@ export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(1);
 
   const faqs = [
+
     {
-      question: "What Is Livetradingleague?",
+      question: "What is Live Trading League?",
       answer:
-        "Livetradingleague is a premier competitive trading platform where traders can showcase their skills in simulated environments, compete in leagues, and earn real rewards based on their performance.",
+        "LiveTradingLeague is a new approach for real trading competitions where traders compete using their own capital for real cash rewards.",
     },
     {
-      question: "What is the Leverage?",
-      answer: "Options up to 1:100 and 1:500 for Forex.",
+      question: "What is the minimum required capital to start with?",
+      answer:
+        "Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours.",
+    },
+    {
+      question: "What is the Leverage limit?",
+      answer: "Up to 1:500.",
     },
     {
       question: "Do I need to pay a trading fee?",

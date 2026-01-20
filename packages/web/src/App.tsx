@@ -31,7 +31,7 @@ export default function App() {
       <main>
         <Routes>
           <Route path='/' element={<HomePage />} />
-          <Route path='/tournaments' element={<TournamentsPage />} />
+          <Route path='/competitions' element={<TournamentsPage />} />
           <Route path='/leaderboard' element={<LeaderboardPage />} />
           <Route path='/terms' element={<TermsPage />} />
         </Routes>
