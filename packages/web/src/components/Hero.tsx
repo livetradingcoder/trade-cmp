@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Gamepad2, User, Check } from "lucide-react";
+import { Gamepad2, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ASSETS } from "../constants";
 
@@ -9,9 +9,9 @@ const Hero = () => {
       <div className='bg-glow-top'></div>
       <div className='bg-grid'></div>
 
-      <div className='section-container hero-container'>
+      <div className='section-container hero-container' >
         <div className='hero-content'>
-          <div className='hero-text'>
+          <div  className='hero-text'>
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -29,16 +29,7 @@ const Hero = () => {
                     <Gamepad2 size={24} /> Enter the competition
                   </button>
                 </Link>
-                <div className='hero-traders'>
-                  <div className='traders-avatars'>
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className='trader-avatar'>
-                        <User size={14} />
-                      </div>
-                    ))}
-                  </div>
-                  <span>14k+ Active Traders</span>
-                </div>
+             
               </div>
 
               <motion.div
@@ -99,14 +90,12 @@ const Hero = () => {
                 className='hero-stats'
               >
                 {[
-                  { label: "Total Paid Out", value: "$2.4M+" },
-                  { label: "Active Traders", value: "14,240" },
-                  { label: "Competitions", value: "152" },
-                  { label: "Avg. ROI", value: "+28.5%" },
+                  { label: "EARLY ACCESS SEASON", value: "Limited participants, access closes automatically" },
+
                 ].map((stat, i) => (
                   <div key={i} className='hero-stat-item'>
-                    <div className='hero-stat-value'>{stat.value}</div>
-                    <div className='hero-stat-label'>{stat.label}</div>
+                    <div className='hero-stat-value'>{stat.label}</div>
+                    <div className='hero-stat-label'>{stat.value}</div>
                   </div>
                 ))}
               </motion.div>
@@ -121,11 +110,11 @@ const Hero = () => {
       <style>{`
         .hero-stats {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(1, 1fr);
+          gap: 12px;
           width: 100%;
           max-width: 440px;
-          margin-top: -60px;
+          margin-top: -50px;
           position: relative;
           z-index: 5;
         }
@@ -133,15 +122,15 @@ const Hero = () => {
         .hero-stat-item {
           background: rgba(18, 18, 22, 0.6);
           border: 1px solid var(--panel-border);
-          padding: 16px 20px;
-          border-radius: 16px;
+          padding: 14px 18px;
+          border-radius: 14px;
           text-align: center;
           backdrop-filter: blur(20px);
-          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         }
 
         .hero-stat-value {
-          font-size: clamp(1.2rem, 2vw, 1.8rem);
+          font-size: clamp(1rem, 1.8vw, 1.5rem);
           font-weight: 900;
           color: #fff;
           margin-bottom: 2px;
@@ -152,11 +141,11 @@ const Hero = () => {
         }
 
         .hero-stat-label {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           color: var(--text-dim);
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.04em;
         }
         .hero-section {
           position: relative;
@@ -165,7 +154,7 @@ const Hero = () => {
         }
 
         .hero-container {
-          padding-top: 40px;
+          padding-top: 20px;
           padding-bottom: 0;
           min-height: 70vh;
           display: flex;
@@ -175,13 +164,14 @@ const Hero = () => {
         .hero-content {
           display: flex;
           align-items: center;
-          gap: 60px;
+          gap: 48px;
           width: 100%;
         }
 
         .hero-text {
           flex: 1;
           max-width: 100%;
+          margin-top: -100px;
         }
 
         .hero-badge {
@@ -191,7 +181,7 @@ const Hero = () => {
           letter-spacing: 0.2em;
           font-size: 0.8rem;
           display: block;
-          margin-bottom: 16px;
+          margin-bottom: 8px;
         }
 
         .hero-title {
@@ -201,15 +191,15 @@ const Hero = () => {
         .hero-description {
           color: var(--text-dim);
           font-size: clamp(1rem, 2vw, 1.25rem);
-          margin-top: 24px;
-          margin-bottom: 32px;
+          margin-top: 12px;
+          margin-bottom: 16px;
           max-width: 540px;
-          line-height: 1.5;
+          line-height: 1.4;
         }
 
         .hero-cta {
           display: flex;
-          gap: 20px;
+          gap: 16px;
           flex-wrap: wrap;
           align-items: center;
         }
@@ -219,7 +209,7 @@ const Hero = () => {
         }
 
         .hero-btn {
-          padding: 18px 36px;
+          padding: 16px 32px;
         }
 
         .hero-traders {
@@ -249,15 +239,21 @@ const Hero = () => {
         .hero-bullets {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          margin-top: 24px;
+          gap: 4px;
+          margin-top: 14px;
+        }
+
+        .hero-bullet-row {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
         }
 
         .hero-bullet-item {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 8px;
+          gap: 8px;
+          margin-bottom: 0;
         }
 
         .bullet-checkmark {
@@ -292,6 +288,7 @@ const Hero = () => {
           display: flex;
           align-items: center;
           justify-content: center;
+          margin-top: -230px;
         }
 
         .hero-visual-inner {
@@ -400,6 +397,7 @@ const Hero = () => {
           .hero-text {
             text-align: center;
             order: 0; /* Text first on mobile */
+            margin-top: 0;
           }
 
           .hero-description {
@@ -413,8 +411,15 @@ const Hero = () => {
 
           .hero-bullets {
             align-items: center;
-            margin-top: 32px;
-            gap: 14px;
+            margin-top: 24px;
+            gap: 10px;
+          }
+
+          .hero-bullet-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
           }
 
           .hero-visual {
@@ -422,6 +427,7 @@ const Hero = () => {
             width: 100%;
             max-width: 440px;
             margin: 0 auto;
+            margin-top: -80px;
           }
 
           .hero-image {
@@ -442,16 +448,23 @@ const Hero = () => {
           }
 
           .hero-stats {
-            margin-top: -30px;
-            max-width: 440px;
-            padding: 0 20px;
+            margin-top: -25px;
+            max-width: 400px;
+            padding: 0 16px;
+            gap: 10px;
           }
 
-          .hero-bullet-row {
-            display: flex;
-            gap: 14px; /* Tighter gap for small screens */
-            flex-wrap: wrap;
-            justify-content: center;
+          .hero-stat-item {
+            padding: 12px 16px;
+            border-radius: 12px;
+          }
+
+          .hero-stat-value {
+            font-size: clamp(0.95rem, 1.6vw, 1.3rem);
+          }
+
+          .hero-stat-label {
+            font-size: 0.6rem;
           }
         }
 
@@ -473,6 +486,7 @@ const Hero = () => {
 
           .hero-visual {
             max-width: 320px;
+            margin-top: -60px;
           }
 
           .hero-badge {
@@ -504,43 +518,63 @@ const Hero = () => {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 16px;
-          margin-top: 32px;
+          gap: 8px;
+          margin-top: 20px;
+        }
+
+        .hero-bullet-row {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          align-items: center;
         }
 
         .hero-bullet-item {
           display: flex;
-          align-items: center; /* Ensures vertical centering */
-          gap: 12px; /* Consistent gap between icon and text */
-          margin-bottom: 12px;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 0;
         }
 
         .bullet-checkmark {
-          width: 24px;
-          height: 24px;
-          border-radius: 6px;
+          width: 22px;
+          height: 22px;
+          border-radius: 5px;
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.08);
-          display: flex; /* Flexbox for the checkmark container */
-          align-items: center; /* Center icon vertically */
-          justify-content: center; /* Center icon horizontally */
+          display: flex;
+          align-items: center;
+          justify-content: center;
           flex-shrink: 0;
           transition: all 0.3s ease;
         }
 
-        /* Removed .bullet-checkmark span rule as we are now using an SVG icon directly */
-
         .bullet-text {
           color: var(--text-dim);
-          font-size: 1rem;
+          font-size: 0.95rem;
           font-weight: 500;
           letter-spacing: -0.01em;
-          line-height: 1.5;
+          line-height: 1.4;
         }
 
-        .hero-bullet-item:hover .bullet-checkmark {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.12);
+        .hero-stat-item {
+          padding: 10px 14px;
+          border-radius: 10px;
+        }
+
+        .hero-stats {
+          margin-top: -20px;
+          max-width: 360px;
+          padding: 0 12px;
+          gap: 8px;
+        }
+
+        .hero-stat-value {
+          font-size: clamp(0.9rem, 1.4vw, 1.2rem);
+        }
+
+        .hero-stat-label {
+          font-size: 0.55rem;
         }
 
           .floating-badge {
@@ -594,6 +628,7 @@ const Hero = () => {
 
           .hero-visual {
             max-width: 280px;
+            margin-top: -40px;
           }
 
           .hero-title {
@@ -635,22 +670,46 @@ const Hero = () => {
           }
 
           .hero-bullets {
-            margin-top: 24px;
-            gap: 12px;
+            margin-top: 16px;
+            gap: 6px;
+          }
+
+          .hero-bullet-row {
+            gap: 4px;
+          }
+
+          .hero-bullet-item {
+            gap: 8px;
           }
 
           .bullet-checkmark {
-            width: 22px;
-            height: 22px;
-            border-radius: 5px;
-          }
-
-          .bullet-checkmark span {
-            font-size: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
           }
 
           .bullet-text {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+          }
+
+          .hero-stats {
+            margin-top: -15px;
+            max-width: 300px;
+            padding: 0 10px;
+            gap: 6px;
+          }
+
+          .hero-stat-item {
+            padding: 8px 12px;
+            border-radius: 8px;
+          }
+
+          .hero-stat-value {
+            font-size: 0.85rem;
+          }
+
+          .hero-stat-label {
+            font-size: 0.5rem;
           }
 
           .floating-element {

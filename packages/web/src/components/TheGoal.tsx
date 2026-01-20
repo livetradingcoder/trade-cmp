@@ -84,17 +84,17 @@ const TheGoal = () => {
         .the-goal-section {
           position: relative;
           overflow: hidden;
-          padding: 80px 24px;
+          padding: 50px 24px;
         }
 
         .goal-container {
           background: rgba(18, 18, 22, 0.4);
           backdrop-filter: blur(30px);
-          border-radius: 40px;
+          border-radius: 32px;
           border: 1px solid var(--panel-border);
-          padding: 80px 0px 0px 60px;
+          padding: 50px 0px 0px 50px;
           display: flex;
-          gap: 60px;
+          gap: 40px;
           align-items: flex-end;
           position: relative;
           overflow: hidden;
@@ -117,21 +117,21 @@ const TheGoal = () => {
         }
 
         .goal-title {
-          font-size: clamp(2.5rem, 6vw, 4.5rem);
+          font-size: clamp(2rem, 5vw, 3.5rem);
           line-height: 1;
-          margin-bottom: 40px;
+          margin-bottom: 28px;
         }
 
         .goal-text {
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 16px;
         }
 
         .goal-text p {
           color: var(--text-dim);
-          font-size: clamp(1rem, 2vw, 1.4rem);
-          line-height: 1.6;
+          font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+          line-height: 1.5;
         }
 
         .goal-text .highlight {
@@ -142,21 +142,21 @@ const TheGoal = () => {
         }
 
         .goal-stats {
-          margin-top: 48px;
+          margin-top: 32px;
           display: flex;
-          padding-bottom: 60px;
-          gap: 40px;
+          padding-bottom: 40px;
+          gap: 32px;
           align-items: center;
         }
 
         .goal-stat-value {
-          font-size: clamp(1.75rem, 4vw, 2.5rem);
+          font-size: clamp(1.5rem, 3.5vw, 2rem);
           font-weight: 900;
           color: var(--primary);
         }
 
         .goal-stat-label {
-          font-size: 0.9rem;
+          font-size: 0.8rem;
           color: var(--text-muted);
           font-weight: 700;
           text-transform: uppercase;
@@ -164,28 +164,34 @@ const TheGoal = () => {
 
         .goal-divider {
           width: 1px;
-          height: 60px;
+          height: 48px;
           background: var(--panel-border);
         }
 
         .goal-visual {
-          flex: 1.4;
+          flex: 1.3;
           position: relative;
           z-index: 1;
           display: flex;
           align-items: flex-end;
-          margin-bottom: -0px;
+          justify-content: flex-end;
+          margin-bottom: 0;
+          margin-right: 0;
         }
 
         .goal-visual-inner {
           position: relative;
           display: flex;
           align-items: flex-end;
+          justify-content: flex-end;
         }
 
         .goal-main-image {
           width: 100%;
-          filter: drop-shadow(0 20px 40px rgba(0,0,0,0.4));
+          max-height: 320px;
+          object-fit: contain;
+          object-position: right bottom;
+          filter: drop-shadow(0 16px 32px rgba(0,0,0,0.4));
           margin-bottom: 0;
         }
 
@@ -196,74 +202,100 @@ const TheGoal = () => {
 
         .goal-floating-image.leaderboard {
           top: -10%;
-          left: 10%;
-          width: clamp(150px, 25vw, 250px);
+          right: 60%;
+          left: auto;
+          width: clamp(120px, 20vw, 200px);
         }
 
         .goal-floating-image.badge {
           bottom: -10%;
-          left: -15%;
-          width: clamp(120px, 18vw, 220px);
+          right: 70%;
+          left: auto;
+          width: clamp(100px, 15vw, 180px);
         }
 
         .goal-floating-image.chest {
           bottom: 0;
-          right: 40px;
-          width: clamp(100px, 16vw, 160px);
-          filter: drop-shadow(0 30px 60px rgba(0,0,0,0.6));
+          right: 20px;
+          width: clamp(80px, 14vw, 130px);
+          filter: drop-shadow(0 24px 48px rgba(0,0,0,0.6));
         }
 
         @media (max-width: 1024px) {
+          .the-goal-section {
+            padding: 40px 24px;
+          }
           .goal-container {
             flex-direction: column;
-            padding: 60px 40px 0 40px;
-            gap: 40px;
+            padding: 40px 32px 0 32px;
+            gap: 32px;
+            border-radius: 24px;
           }
           .goal-content {
             text-align: center;
           }
           .goal-stats {
             justify-content: center;
+            padding-bottom: 32px;
           }
           .goal-visual {
             width: 100%;
-            max-width: 500px;
-            margin-bottom: -60px;
+            max-width: 400px;
+            margin-bottom: -40px;
+            margin: 0 auto -40px auto;
+            justify-content: center;
+          }
+          .goal-visual-inner {
+            justify-content: center;
+          }
+          .goal-main-image {
+            max-height: 280px;
+            object-position: center bottom;
           }
           .goal-floating-image.leaderboard {
             top: -10%;
-            left: -%;
+            left: 0;
+            right: auto;
           }
           .goal-floating-image.badge {
             bottom: -5%;
             left: -5%;
+            right: auto;
           }
           .goal-floating-image.chest {
-            bottom: -20px;
-            right: -20px;
+            bottom: -15px;
+            right: -15px;
           }
         }
 
         @media (max-width: 768px) {
+          .the-goal-section {
+            padding: 32px 16px;
+          }
           .goal-container {
-            padding: 40px 24px 0 24px;
-            border-radius: 24px;
+            padding: 32px 20px 0 20px;
+            border-radius: 20px;
           }
           .goal-visual {
-            margin-bottom: -40px;
+            margin-bottom: -32px;
+            max-width: 350px;
+          }
+          .goal-main-image {
+            max-height: 240px;
           }
           .goal-title {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
           }
           .goal-text {
-            gap: 16px;
+            gap: 12px;
           }
           .goal-stats {
-            margin-top: 32px;
-            gap: 24px;
+            margin-top: 24px;
+            gap: 20px;
+            padding-bottom: 24px;
           }
           .goal-divider {
-            height: 40px;
+            height: 36px;
           }
           .goal-floating-image.leaderboard,
           .goal-floating-image.badge,
@@ -273,11 +305,26 @@ const TheGoal = () => {
         }
 
         @media (max-width: 480px) {
+          .the-goal-section {
+            padding: 24px 12px;
+          }
           .goal-container {
-            padding: 32px 20px 0 20px;
+            padding: 24px 16px 0 16px;
+            border-radius: 16px;
           }
           .goal-visual {
-            margin-bottom: -32px;
+            margin-bottom: -24px;
+            max-width: 300px;
+          }
+          .goal-main-image {
+            max-height: 200px;
+          }
+          .goal-title {
+            margin-bottom: 16px;
+          }
+          .goal-stats {
+            margin-top: 20px;
+            padding-bottom: 20px;
           }
         }
       `}</style>

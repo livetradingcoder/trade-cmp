@@ -1,41 +1,86 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, Trophy, Calendar, Clock, Filter, Search, Info } from "lucide-react";
+import { ArrowUpRight, Trophy, Calendar, Clock, Filter, Search, Info, Gift, Copy, Check, Users } from "lucide-react";
 import { useTournaments } from "../context/TournamentContext";
 
 const TournamentsPage = () => {
-  const { tournaments } = useTournaments();
+  const { tournaments, settings } = useTournaments();
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [tooltipIndex, setTooltipIndex] = useState<{ cardIndex: number; tooltip: string; position: { top: number; left: number } } | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const Tooltip = ({ text, cardIndex, tooltip }: { text: string; cardIndex: number; tooltip: string }) => {
-    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTooltipIndex({
-        cardIndex,
-        tooltip,
-        position: {
-          top: rect.top - 10,
-          left: rect.left + rect.width / 2,
-        },
-      });
+  const affiliateCode = settings.affiliateCode;
+
+  // Clean up timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+      if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
+    };
+  }, []);
+
+  const handleCopyCode = () => {
+    if (affiliateCode) {
+      navigator.clipboard.writeText(affiliateCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const TooltipTrigger = ({ text, tooltipKey }: { text: string; tooltipKey: string; tooltipContent?: string }) => {
+    const triggerRef = useRef<HTMLDivElement>(null);
+
+    const handleMouseEnter = () => {
+      // Clear any pending hide timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
+      
+      // Small delay before showing to prevent flicker
+      showTimeoutRef.current = setTimeout(() => {
+        if (triggerRef.current) {
+          const rect = triggerRef.current.getBoundingClientRect();
+          setTooltipPosition({
+            top: rect.top - 8,
+            left: rect.left + rect.width / 2,
+          });
+          setActiveTooltip(tooltipKey);
+        }
+      }, 50);
     };
 
     const handleMouseLeave = () => {
-      setTooltipIndex(null);
+      // Clear any pending show timeout
+      if (showTimeoutRef.current) {
+        clearTimeout(showTimeoutRef.current);
+        showTimeoutRef.current = null;
+      }
+      
+      // Delay hiding to allow smooth transition
+      hideTimeoutRef.current = setTimeout(() => {
+        setActiveTooltip(null);
+        setTooltipPosition(null);
+      }, 150);
     };
-    
+
     return (
-      <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+      <div
+        ref={triggerRef}
+        className="tooltip-trigger"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <span>{text}</span>
-        <div
-          style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          <Info size={14} color='var(--text-muted)' style={{ cursor: "help", flexShrink: 0 }} />
-        </div>
+        <Info 
+          size={14} 
+          color={activeTooltip === tooltipKey ? 'var(--primary)' : 'var(--text-muted)'} 
+          className="tooltip-icon"
+        />
       </div>
     );
   };
@@ -49,10 +94,10 @@ const TournamentsPage = () => {
   });
 
   return (
-    <section style={{ minHeight: "100vh", paddingTop: "80px" }}>
+    <section className="tournaments-section">
       <div className='section-container'>
         {/* Page Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: "48px" }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
             <div
               style={{
@@ -162,6 +207,36 @@ const TournamentsPage = () => {
           </div>
         </motion.div>
 
+        {/* Affiliate Code Banner - Only show if affiliate code is set */}
+        {affiliateCode && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="affiliate-banner"
+          >
+            <div className="affiliate-icon">
+              <Gift size={24} />
+            </div>
+            <div className="affiliate-content">
+              <span className="affiliate-text">
+                New to our platform? Use our affiliate code when signing up for exclusive benefits!
+              </span>
+              <div className="affiliate-code-wrapper">
+                <span className="affiliate-code">{affiliateCode}</span>
+                <button 
+                  className="copy-btn"
+                  onClick={handleCopyCode}
+                  title="Copy code"
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Tournament Grid */}
         <div
           className='tournaments-grid'
@@ -243,102 +318,49 @@ const TournamentsPage = () => {
                 <div className='tournament-card-content'>
                   <h3 style={{ fontSize: "1.75rem", marginBottom: "20px", fontWeight: 900 }}>{camp.title}</h3>
 
-                  {/* Required Participants and Seats Left - Left side info */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "24px",
-                      marginBottom: "24px",
-                      padding: "12px 16px",
-                      background: "rgba(0, 102, 255, 0.05)",
-                      border: "1px solid rgba(0, 102, 255, 0.1)",
-                      borderRadius: "12px",
-                    }}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-                        Required Participants
-                      </div>
-                      <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--text-main)" }}>
-                        {camp.fee || camp.participants?.toLocaleString() || "N/A"}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                      <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>
-                        Seats Left
-                      </div>
-                      <div style={{ fontSize: "1rem", fontWeight: 800, color: "var(--primary)" }}>
-                        {camp.timeLeft?.split(" ")[0] || "N/A"}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: "2px",
-                      background: "var(--panel-border)",
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      marginBottom: "24px",
-                    }}
-                  >
+                  <div className="card-stats-grid">
                     {[
-                      { icon: Trophy, label: "Prize Pool", value: camp.prize, tooltip: null },
+                      { icon: Trophy, label: "Prize Pool", value: camp.prize, tooltipKey: null, tooltipContent: "" },
+                      {
+                        icon: Users,
+                        label: "Required Participants",
+                        value: camp.participants?.toString() || "N/A",
+                        tooltipKey: null,
+                        tooltipContent: "",
+                      },
                       {
                         icon: Calendar,
-                        label: "Minimum Capital Required",
+                        label: "Minimum Capital",
                         value: camp.fee,
-                        tooltip: "capital",
+                        tooltipKey: `capital-${camp.id}`,
+                        tooltipContent: "Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours.",
                       },
                       {
                         icon: Clock,
                         label: "Seats Left",
                         value: camp.timeLeft?.split(" ")[0] || camp.timeLeft,
-                        tooltip: null,
+                        tooltipKey: null,
+                        tooltipContent: "",
                       },
                     ]
                       .filter((item) => item.value)
                       .map((item, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            background: "rgba(18, 18, 22, 0.8)",
-                            padding: "16px 8px",
-                            textAlign: "center",
-                            position: "relative",
-                          }}
-                        >
-                          <item.icon size={16} color='var(--primary)' style={{ marginBottom: "8px" }} />
-                          <div
-                            style={{
-                              fontSize: "0.6rem",
-                              color: "var(--text-muted)",
-                              fontWeight: 700,
-                              textTransform: "uppercase",
-                              marginBottom: "4px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: "4px",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {item.tooltip ? (
-                              <Tooltip text={item.label} cardIndex={index} tooltip={item.tooltip} />
+                        <div key={idx} className="card-stat-cell">
+                          <item.icon size={16} color='var(--primary)' className="stat-icon" />
+                          <div className="stat-label">
+                            {item.tooltipKey ? (
+                              <TooltipTrigger text={item.label} tooltipKey={item.tooltipKey} tooltipContent={item.tooltipContent} />
                             ) : (
                               <span>{item.label}</span>
                             )}
                           </div>
-                          <div style={{ fontSize: "0.95rem", fontWeight: 800 }}>{item.value}</div>
+                          <div className="stat-value">{item.value}</div>
                         </div>
                       ))}
                   </div>
 
                   <button
-                    className='btn-primary'
-                    style={{ width: "100%", height: "56px", fontSize: "1rem" }}
+                    className='btn-primary card-join-btn'
                     onClick={() => window.open(camp.registrationLink, "_blank")}
                   >
                     Join Competition <ArrowUpRight size={18} />
@@ -366,47 +388,34 @@ const TournamentsPage = () => {
         </div>
 
         {/* Tooltip Portal */}
-        {tooltipIndex && (
-          <div
-            style={{
-              position: "fixed",
-              top: `${tooltipIndex.position.top}px`,
-              left: `${tooltipIndex.position.left}px`,
-              transform: "translate(-50%, -100%)",
-              marginBottom: "8px",
-              padding: "12px 16px",
-              background: "rgba(18, 18, 22, 0.98)",
-              backdropFilter: "blur(10px)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: "8px",
-              fontSize: "0.75rem",
-              color: "#fff",
-              maxWidth: "320px",
-              minWidth: "280px",
-              zIndex: 10000,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-              whiteSpace: "normal",
-              lineHeight: "1.5",
-              pointerEvents: "none",
-            }}
-          >
-            {tooltipIndex.tooltip === "capital" &&
-              "Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours."}
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: 0,
-                height: 0,
-                borderLeft: "6px solid transparent",
-                borderRight: "6px solid transparent",
-                borderTop: "6px solid rgba(18, 18, 22, 0.98)",
+        <AnimatePresence>
+          {activeTooltip && tooltipPosition && (
+            <motion.div
+              key={activeTooltip}
+              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              transition={{ 
+                duration: 0.2, 
+                ease: [0.4, 0, 0.2, 1]
               }}
-            />
-          </div>
-        )}
+              className="tooltip-popup"
+              style={{
+                position: "fixed",
+                top: `${tooltipPosition.top}px`,
+                left: `${tooltipPosition.left}px`,
+                transform: "translate(-50%, -100%)",
+                zIndex: 10000,
+                pointerEvents: "none",
+              }}
+            >
+              <div className="tooltip-content">
+                Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours.
+              </div>
+              <div className="tooltip-arrow" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {filteredChampionships.length === 0 && (
           <motion.div
@@ -424,6 +433,389 @@ const TournamentsPage = () => {
           </motion.div>
         )}
       </div>
+
+      <style>{`
+        .tournaments-section {
+          min-height: 100vh;
+          padding-top: 60px;
+        }
+
+        .page-header {
+          margin-bottom: 32px;
+        }
+
+        .filters-bar {
+          margin-bottom: 16px !important;
+        }
+
+        .affiliate-banner {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px 24px;
+          margin-bottom: 28px;
+          background: linear-gradient(135deg, rgba(0, 102, 255, 0.08) 0%, rgba(112, 0, 255, 0.08) 100%);
+          border: 1px solid rgba(0, 102, 255, 0.2);
+          border-radius: 14px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .affiliate-banner::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(0, 102, 255, 0.5), transparent);
+        }
+
+        .affiliate-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, var(--primary), var(--secondary));
+          border-radius: 12px;
+          flex-shrink: 0;
+          color: #fff;
+          box-shadow: 0 4px 16px var(--primary-glow);
+        }
+
+        .affiliate-content {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex: 1;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .affiliate-text {
+          color: var(--text-dim);
+          font-size: 0.95rem;
+          font-weight: 500;
+          line-height: 1.4;
+        }
+
+        .affiliate-code-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(0, 0, 0, 0.3);
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .affiliate-code {
+          font-family: var(--font-mono);
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: var(--primary);
+          letter-spacing: 0.1em;
+        }
+
+        .copy-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: var(--primary);
+          border: none;
+          border-radius: 6px;
+          color: #fff;
+          font-size: 0.8rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+          background: #005ce6;
+          transform: translateY(-1px);
+        }
+
+        .tournaments-grid {
+          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important;
+        }
+
+        .card-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 2px;
+          background: var(--panel-border);
+          border-radius: 12px;
+          overflow: hidden;
+          margin-bottom: 24px;
+        }
+
+        .card-stat-cell {
+          background: rgba(18, 18, 22, 0.8);
+          padding: 14px 6px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .card-stat-cell .stat-icon {
+          margin-bottom: 6px;
+        }
+
+        .stat-label {
+          font-size: clamp(0.5rem, 1.5vw, 0.6rem);
+          color: var(--text-muted);
+          font-weight: 700;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          flex-wrap: wrap;
+          text-align: center;
+          line-height: 1.3;
+        }
+
+        .stat-value {
+          font-size: clamp(0.8rem, 2vw, 0.95rem);
+          font-weight: 800;
+          text-align: center;
+        }
+
+        .card-join-btn {
+          width: 100%;
+          height: 56px;
+          font-size: clamp(0.85rem, 2vw, 1rem);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        @media (max-width: 1024px) {
+          .tournaments-section {
+            padding-top: 50px;
+          }
+
+          .page-header {
+            margin-bottom: 28px;
+          }
+
+          .tournaments-grid {
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            gap: 20px !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .tournaments-section {
+            padding-top: 40px;
+          }
+
+          .page-header {
+            margin-bottom: 24px;
+          }
+
+          .filters-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            padding: 16px !important;
+          }
+
+          .filters-bar > div:first-child {
+            width: 100%;
+            overflow-x: auto;
+          }
+
+          .filters-bar > div:nth-child(2) {
+            max-width: 100% !important;
+          }
+
+          .affiliate-banner {
+            flex-direction: column;
+            text-align: center;
+            padding: 20px 16px;
+            gap: 12px;
+          }
+
+          .affiliate-content {
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .affiliate-text {
+            font-size: 0.9rem;
+          }
+
+          .tournaments-grid {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+
+          .card-stats-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+          }
+
+          .card-stat-cell {
+            padding: 12px 4px;
+          }
+
+          .stat-label {
+            font-size: 0.5rem;
+          }
+
+          .stat-value {
+            font-size: 0.85rem;
+          }
+
+          .card-join-btn {
+            height: 52px;
+            font-size: 0.9rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .tournaments-section {
+            padding-top: 30px;
+          }
+
+          .page-header {
+            margin-bottom: 20px;
+          }
+
+          .page-header h1 {
+            font-size: 1.75rem !important;
+          }
+
+          .page-header p {
+            font-size: 0.95rem !important;
+          }
+
+          .filters-bar {
+            padding: 12px !important;
+            gap: 10px !important;
+          }
+
+          .filters-bar button {
+            padding: 8px 16px !important;
+            font-size: 0.8rem !important;
+          }
+
+          .affiliate-banner {
+            padding: 16px 12px;
+          }
+
+          .affiliate-icon {
+            width: 40px;
+            height: 40px;
+          }
+
+          .affiliate-icon svg {
+            width: 20px;
+            height: 20px;
+          }
+
+          .affiliate-text {
+            font-size: 0.85rem;
+          }
+
+          .affiliate-code {
+            font-size: 1rem;
+          }
+
+          .copy-btn {
+            padding: 5px 10px;
+            font-size: 0.75rem;
+          }
+
+          .card-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+          }
+
+          .card-stat-cell {
+            padding: 10px 6px;
+          }
+
+          .stat-label {
+            font-size: 0.55rem;
+          }
+
+          .stat-value {
+            font-size: 0.8rem;
+          }
+
+          .card-join-btn {
+            height: 48px;
+            font-size: 0.85rem;
+          }
+        }
+
+        /* Tooltip Styles */
+        .tooltip-trigger {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          cursor: help;
+        }
+
+        .tooltip-icon {
+          flex-shrink: 0;
+          transition: color 0.2s ease;
+        }
+
+        .tooltip-trigger:hover .tooltip-icon {
+          color: var(--primary) !important;
+        }
+
+        .tooltip-popup {
+          max-width: 300px;
+          min-width: 260px;
+        }
+
+        .tooltip-content {
+          padding: 14px 16px;
+          background: linear-gradient(135deg, rgba(20, 20, 26, 0.98), rgba(28, 28, 36, 0.98));
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          font-size: 0.8rem;
+          color: var(--text-dim);
+          line-height: 1.6;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 102, 255, 0.1);
+        }
+
+        .tooltip-arrow {
+          position: absolute;
+          bottom: -6px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 8px solid rgba(24, 24, 31, 0.98);
+        }
+
+        @media (max-width: 480px) {
+          .tooltip-popup {
+            max-width: 260px;
+            min-width: 220px;
+          }
+
+          .tooltip-content {
+            padding: 12px 14px;
+            font-size: 0.75rem;
+          }
+        }
+      `}</style>
     </section>
   );
 };

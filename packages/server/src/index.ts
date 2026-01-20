@@ -6,6 +6,7 @@ import connectDB from "./config/database";
 import cloudinary from "./config/cloudinary";
 import Tournament from "./models/Tournament";
 import Admin from "./models/Admin";
+import Settings from "./models/Settings";
 import { generateToken, verifyToken, AuthRequest } from "./middleware/auth";
 import { upload } from "./middleware/upload";
 import { sendPasswordResetEmail } from "./utils/email";
@@ -396,6 +397,54 @@ app.delete("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) =>
   } catch (error) {
     console.error("Delete tournament error:", error);
     res.status(500).json({ error: "Failed to delete tournament" });
+  }
+});
+
+// ==================== SETTINGS ENDPOINTS ====================
+
+// Get all settings (public)
+app.get("/api/settings", async (req, res) => {
+  try {
+    const settings = await Settings.find();
+    const settingsObj: Record<string, string> = {};
+    settings.forEach((s) => {
+      settingsObj[s.key] = s.value;
+    });
+    res.json(settingsObj);
+  } catch (error) {
+    console.error("Fetch settings error:", error);
+    res.status(500).json({ error: "Failed to fetch settings" });
+  }
+});
+
+// Get specific setting (public)
+app.get("/api/settings/:key", async (req, res) => {
+  try {
+    const setting = await Settings.findOne({ key: req.params.key });
+    if (setting) {
+      res.json({ key: setting.key, value: setting.value });
+    } else {
+      res.json({ key: req.params.key, value: "" });
+    }
+  } catch (error) {
+    console.error("Fetch setting error:", error);
+    res.status(500).json({ error: "Failed to fetch setting" });
+  }
+});
+
+// Update setting (protected)
+app.put("/api/settings/:key", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const { value } = req.body;
+    const setting = await Settings.findOneAndUpdate(
+      { key: req.params.key },
+      { value },
+      { new: true, upsert: true }
+    );
+    res.json({ key: setting.key, value: setting.value });
+  } catch (error) {
+    console.error("Update setting error:", error);
+    res.status(500).json({ error: "Failed to update setting" });
   }
 });
 

@@ -79,7 +79,7 @@ const KeyFeatures = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className='kf-cta'>
           <Link to='/competitions'>
             <button className='kf-cta-btn'>
-              Start Trading Now
+Start Competing Now
               <ArrowRight size={18} />
             </button>
           </Link>

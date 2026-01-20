@@ -60,8 +60,8 @@ const Footer = () => {
         <div className='footer-bottom'>
           <span>© 2026 Livetradingleague. All rights reserved.</span>
           <div className='footer-bottom-links'>
-            <span>Risk Warning</span>
-            <span>Security</span>
+            <Link to='/risk-warning'>Risk Warning</Link>
+            <Link to='/security'>Security</Link>
           </div>
         </div>
       </div>
@@ -181,6 +181,16 @@ const Footer = () => {
                 .footer-bottom-links {
                     display: flex;
                     gap: 24px;
+                }
+
+                .footer-bottom-links a {
+                    color: var(--text-muted);
+                    text-decoration: none;
+                    transition: color 0.2s;
+                }
+
+                .footer-bottom-links a:hover {
+                    color: var(--text-main);
                 }
 
                 @media (max-width: 768px) {

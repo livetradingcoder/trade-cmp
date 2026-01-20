@@ -268,7 +268,7 @@ const WhyDifferent = () => {
           align-items: center;
           justify-content: center;
           gap: 16px;
-          max-width: 700px;
+          max-width: 800px;
           margin: 0 auto;
           padding: 24px 32px;
           background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
@@ -296,6 +296,8 @@ const WhyDifferent = () => {
           font-weight: 500;
           line-height: 1.6;
           margin: 0;
+          width: 100%;
+          text-align: center;
         }
 
         @media (max-width: 768px) {

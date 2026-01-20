@@ -25,12 +25,14 @@ import {
   ArrowLeft,
   Sparkles,
   Info,
+  Settings,
+  Gift,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
 import { useNavigate } from "react-router-dom";
 
-type ViewMode = "list" | "create" | "edit" | "password";
+type ViewMode = "list" | "create" | "edit" | "password" | "settings";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -72,6 +74,11 @@ const AdminDashboard = () => {
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  // Settings state
+  const [affiliateCode, setAffiliateCode] = useState("");
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState({ type: "", text: "" });
+
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
@@ -90,6 +97,24 @@ const AdminDashboard = () => {
       });
     }
   }, [showCapitalTooltip]);
+
+  // Fetch affiliate code on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/settings/affiliateCode`);
+        if (response.ok) {
+          const data = await response.json();
+          setAffiliateCode(data.value || "");
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
+    };
+    if (isAdmin) {
+      fetchSettings();
+    }
+  }, [isAdmin, API_URL]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,6 +278,34 @@ const AdminDashboard = () => {
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     setPasswordError("");
     setPasswordSuccess("");
+    setSettingsMessage({ type: "", text: "" });
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    setSettingsMessage({ type: "", text: "" });
+
+    try {
+      const token = localStorage.getItem("adminToken");
+      const response = await fetch(`${API_URL}/api/settings/affiliateCode`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ value: affiliateCode }),
+      });
+
+      if (response.ok) {
+        setSettingsMessage({ type: "success", text: "Affiliate code saved successfully!" });
+      } else {
+        setSettingsMessage({ type: "error", text: "Failed to save settings" });
+      }
+    } catch {
+      setSettingsMessage({ type: "error", text: "Network error. Please try again." });
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   // Login Screen
@@ -333,6 +386,10 @@ const AdminDashboard = () => {
           <button className={`nav-item ${viewMode === "list" ? "active" : ""}`} onClick={() => cancelAction()}>
             <Trophy size={20} />
             <span>Competitions</span>
+          </button>
+          <button className={`nav-item ${viewMode === "settings" ? "active" : ""}`} onClick={() => setViewMode("settings")}>
+            <Settings size={20} />
+            <span>Settings</span>
           </button>
           <button className={`nav-item ${viewMode === "password" ? "active" : ""}`} onClick={() => setViewMode("password")}>
             <Key size={20} />
@@ -769,6 +826,73 @@ const AdminDashboard = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </motion.div>
+          )}
+
+          {viewMode === "settings" && (
+            <motion.div
+              key='settings'
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className='content-section'
+            >
+              <div className='section-header'>
+                <div>
+                  <h1>Settings</h1>
+                  <p>Manage platform settings</p>
+                </div>
+              </div>
+
+              <div className='settings-container'>
+                <div className='settings-section'>
+                  <div className='settings-section-header'>
+                    <Gift size={20} />
+                    <h3>Affiliate Code</h3>
+                  </div>
+                  <p className='settings-description'>
+                    This code will be displayed on the competitions page for new users to use when signing up.
+                  </p>
+                  
+                  <div className='form-group'>
+                    <label>Affiliate Code</label>
+                    <input
+                      type='text'
+                      value={affiliateCode}
+                      onChange={(e) => setAffiliateCode(e.target.value.toUpperCase())}
+                      placeholder='e.g., AFFASAD'
+                      style={{ textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}
+                    />
+                  </div>
+
+                  <AnimatePresence>
+                    {settingsMessage.text && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={settingsMessage.type === 'success' ? 'success-message' : 'error-message'}
+                      >
+                        {settingsMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                        {settingsMessage.text}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className='form-actions'>
+                    <button type='button' className='save-btn' onClick={handleSaveSettings} disabled={isSavingSettings}>
+                      {isSavingSettings ? (
+                        <span className='loading-spinner' />
+                      ) : (
+                        <>
+                          <Save size={18} />
+                          Save Settings
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1494,6 +1618,39 @@ const dashboardStyles = `
 
   .password-input {
     position: relative;
+  }
+
+  .settings-container {
+    max-width: 600px;
+  }
+
+  .settings-section {
+    background: rgba(20, 20, 30, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 32px;
+  }
+
+  .settings-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    color: var(--primary);
+  }
+
+  .settings-section-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .settings-description {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
   }
 
   .success-message {
