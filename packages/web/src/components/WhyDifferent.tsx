@@ -10,7 +10,7 @@ const WhyDifferent = () => {
   ];
 
   return (
-    <section className='why-different-section'>
+    <section className='why-different-section' style={{marginTop:"-100px"}}>
       <div className='wd-bg-elements'>
         <div className='wd-glow-left' />
         <div className='wd-glow-right' />

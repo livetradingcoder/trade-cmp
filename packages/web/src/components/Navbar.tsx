@@ -13,7 +13,7 @@ const Navbar = () => {
     { path: "/", label: "Home" },
     { path: "/competitions", label: "Competitions" },
     { path: leaderboardUrl, label: "Leaderboard", isExternal: !leaderboardUrl.startsWith("/") },
-    { path: "/terms", label: "Terms & Privacy", isHash: true },
+    { path: "/terms", label: "Terms & Privacy" },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -31,11 +31,7 @@ const Navbar = () => {
           <div className='navbar-desktop'>
             <div className='nav-links'>
               {navLinks.map((link) =>
-                link.isHash ? (
-                  <a key={link.path} href={link.path} className='nav-link'>
-                    {link.label}
-                  </a>
-                ) : link.isExternal ? (
+                link.isExternal ? (
                   <a key={link.path} href={link.path} target='_blank' rel='noopener noreferrer' className='nav-link'>
                     {link.label}
                   </a>
@@ -68,11 +64,7 @@ const Navbar = () => {
         <div className='mobile-menu open'>
           <div className='mobile-menu-content'>
             {navLinks.map((link) =>
-              link.isHash ? (
-                <a key={link.path} href={link.path} className='mobile-nav-link' onClick={() => setMobileMenuOpen(false)}>
-                  {link.label}
-                </a>
-              ) : link.isExternal ? (
+              link.isExternal ? (
                 <a
                   key={link.path}
                   href={link.path}

@@ -8,6 +8,7 @@ const TournamentsPage = () => {
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [tooltipContent, setTooltipContent] = useState<string>("");
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,7 +32,7 @@ const TournamentsPage = () => {
     }
   };
 
-  const TooltipTrigger = ({ text, tooltipKey }: { text: string; tooltipKey: string; tooltipContent?: string }) => {
+  const TooltipTrigger = ({ text, tooltipKey, tooltipContent }: { text: string; tooltipKey: string; tooltipContent: string }) => {
     const triggerRef = useRef<HTMLDivElement>(null);
 
     const handleMouseEnter = () => {
@@ -49,6 +50,7 @@ const TournamentsPage = () => {
             top: rect.top - 8,
             left: rect.left + rect.width / 2,
           });
+          setTooltipContent(tooltipContent);
           setActiveTooltip(tooltipKey);
         }
       }, 50);
@@ -208,7 +210,7 @@ const TournamentsPage = () => {
         </motion.div>
 
         {/* Affiliate Code Banner - Only show if affiliate code is set */}
-        {affiliateCode && (
+        {!affiliateCode && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -320,27 +322,33 @@ const TournamentsPage = () => {
 
                   <div className="card-stats-grid">
                     {[
-                      { icon: Trophy, label: "Prize Pool", value: camp.prize, tooltipKey: null, tooltipContent: "" },
+                      { 
+                        icon: Trophy, 
+                        label: "Prize Pool", 
+                        value: camp.prize, 
+                        tooltipKey: `prize-${camp.id}`, 
+                        tooltipContent: "The total prize pool distributed among top performers. Winners are determined by the highest percentage gains during the competition period." 
+                      },
                       {
                         icon: Users,
                         label: "Required Participants",
                         value: camp.participants?.toString() || "N/A",
-                        tooltipKey: null,
-                        tooltipContent: "",
+                        tooltipKey: `participants-${camp.id}`,
+                        tooltipContent: "The minimum number of participants needed for the competition to start. Once this threshold is reached, the competition begins and prizes are guaranteed.",
                       },
                       {
                         icon: Calendar,
                         label: "Minimum Capital",
                         value: camp.fee,
                         tooltipKey: `capital-${camp.id}`,
-                        tooltipContent: "Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours.",
+                        tooltipContent: "The minimum trading capital required to participate. You can trade with any higher amount you're comfortable with. Your capital stays in your account at all times, and all profits are 100% yours.",
                       },
                       {
                         icon: Clock,
                         label: "Seats Left",
                         value: camp.timeLeft?.split(" ")[0] || camp.timeLeft,
-                        tooltipKey: null,
-                        tooltipContent: "",
+                        tooltipKey: `seats-${camp.id}`,
+                        tooltipContent: "Remaining spots available in this competition. Join now to secure your place before all seats are filled!",
                       },
                     ]
                       .filter((item) => item.value)
@@ -348,11 +356,7 @@ const TournamentsPage = () => {
                         <div key={idx} className="card-stat-cell">
                           <item.icon size={16} color='var(--primary)' className="stat-icon" />
                           <div className="stat-label">
-                            {item.tooltipKey ? (
-                              <TooltipTrigger text={item.label} tooltipKey={item.tooltipKey} tooltipContent={item.tooltipContent} />
-                            ) : (
-                              <span>{item.label}</span>
-                            )}
+                            <TooltipTrigger text={item.label} tooltipKey={item.tooltipKey} tooltipContent={item.tooltipContent} />
                           </div>
                           <div className="stat-value">{item.value}</div>
                         </div>
@@ -410,7 +414,7 @@ const TournamentsPage = () => {
               }}
             >
               <div className="tooltip-content">
-                Participants are free to trade with any higher amount they are comfortable with. The stated amount represents the minimum personal trading capital required. Your capital stays in your account at all times, and all the profits made will be yours.
+                {tooltipContent}
               </div>
               <div className="tooltip-arrow" />
             </motion.div>
@@ -495,9 +499,9 @@ const TournamentsPage = () => {
 
         .affiliate-text {
           color: var(--text-dim);
-          font-size: 0.95rem;
+          font-size: 1.05rem;
           font-weight: 500;
-          line-height: 1.4;
+          line-height: 1.5;
         }
 
         .affiliate-code-wrapper {
@@ -650,7 +654,7 @@ const TournamentsPage = () => {
           }
 
           .affiliate-text {
-            font-size: 0.9rem;
+            font-size: 1rem;
           }
 
           .tournaments-grid {
@@ -723,7 +727,7 @@ const TournamentsPage = () => {
           }
 
           .affiliate-text {
-            font-size: 0.85rem;
+            font-size: 1rem;
           }
 
           .affiliate-code {

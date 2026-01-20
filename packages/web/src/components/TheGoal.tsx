@@ -17,8 +17,8 @@ const TheGoal = () => {
               transition={{ duration: 0.8 }}
             >
               <h2 className='goal-title'>
-                The Goal is <br />
-                <span className='text-gradient'>Simple!</span>
+                The Goal is 
+                <span className='text-gradient'> Simple!</span>
               </h2>
               <div className='goal-text'>
                 <p>Achieve the highest percentage gain by trading the instruments listed on the competition's banner.</p>

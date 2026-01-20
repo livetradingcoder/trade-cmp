@@ -10,7 +10,7 @@ const Hero = () => {
       <div className='bg-grid'></div>
 
       <div className='section-container hero-container' >
-        <div className='hero-content'>
+        <div className='hero-content' style={{marginTop:"50px"}}>
           <div  className='hero-text'>
             <motion.div
               initial={{ opacity: 0, x: -50 }}
