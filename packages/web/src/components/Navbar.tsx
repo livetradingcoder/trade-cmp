@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ShieldCheck, Menu, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import {  Menu, X } from "lucide-react";
 import logoImage from "../images/logo.png";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const leaderboardUrl = import.meta.env.VITE_LEADERBOARD_URL || "/leaderboard";
 
@@ -51,9 +50,6 @@ const Navbar = () => {
             <div className='nav-divider' />
 
             <div className='nav-buttons'>
-              <button onClick={() => navigate("/admin")} className='btn-outline'>
-                <ShieldCheck size={18} /> Portal
-              </button>
               <Link to='/competitions'>
                 <button className='btn-primary'>Get Started</button>
               </Link>
@@ -99,16 +95,6 @@ const Navbar = () => {
               )
             )}
             <div className='mobile-nav-buttons'>
-              <button
-                onClick={() => {
-                  navigate("/admin");
-                  setMobileMenuOpen(false);
-                }}
-                className='btn-outline'
-                style={{ width: "100%" }}
-              >
-                <ShieldCheck size={18} /> Portal
-              </button>
               <Link to='/competitions' style={{ width: "100%" }} onClick={() => setMobileMenuOpen(false)}>
                 <button className='btn-primary' style={{ width: "100%" }}>
                   Get Started
