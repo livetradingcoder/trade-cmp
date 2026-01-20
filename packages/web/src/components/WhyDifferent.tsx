@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { X, Check, Sparkles } from "lucide-react";
+import { X, Check,  } from "lucide-react";
 
 const WhyDifferent = () => {
   const comparisons = [
