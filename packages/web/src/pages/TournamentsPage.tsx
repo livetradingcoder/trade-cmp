@@ -210,7 +210,7 @@ const TournamentsPage = () => {
         </motion.div>
 
         {/* Affiliate Code Banner - Only show if affiliate code is set */}
-        {!affiliateCode && (
+        {affiliateCode && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
