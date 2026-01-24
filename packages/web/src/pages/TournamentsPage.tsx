@@ -222,7 +222,7 @@ const TournamentsPage = () => {
             </div>
             <div className="affiliate-content">
               <span className="affiliate-text">
-                New to our platform? Use our affiliate code when signing up for exclusive benefits!
+                <strong>IMPORTANT: IN ORDER TO PARTICIPATE THE AFFILIATE CODE HAS TO BE GIVEN, OTHERWISE CANNOT TAKE PART.</strong>
               </span>
               <div className="affiliate-code-wrapper">
                 <span className="affiliate-code">{affiliateCode}</span>

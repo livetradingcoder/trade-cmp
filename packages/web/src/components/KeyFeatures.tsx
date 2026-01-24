@@ -90,7 +90,7 @@ Start Competing Now
         .key-features-section {
           position: relative;
           z-index: 10;
-          padding: 80px 24px;
+          padding: 40px 24px;
           overflow: hidden;
         }
 
