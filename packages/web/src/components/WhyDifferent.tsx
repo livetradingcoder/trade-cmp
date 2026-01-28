@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { X, Check,  } from "lucide-react";
+import { X, Check, } from "lucide-react";
 
 const WhyDifferent = () => {
   const comparisons = [
@@ -10,7 +10,7 @@ const WhyDifferent = () => {
   ];
 
   return (
-    <section className='why-different-section' style={{marginTop:"-100px"}}>
+    <section className='why-different-section' style={{ marginTop: "-100px" }}>
       <div className='wd-bg-elements'>
         <div className='wd-glow-left' />
         <div className='wd-glow-right' />
@@ -21,7 +21,7 @@ const WhyDifferent = () => {
           <h2 className='wd-title'>
             This Is <span className='text-gradient-alt'>Not</span> a Prop Firm
           </h2>
-          <p className='wd-subtitle'>We're building something completely different</p>
+          <p className='wd-subtitle'>Real trading competitions — not simulated evaluations.</p>
         </motion.div>
 
         {/* Comparison Table */}

@@ -439,11 +439,11 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                         </FieldWithTooltip>
                         <FieldWithTooltip
                           label='Prize'
-                          tooltip='The prize or challenge description shown to participants (e.g., "50K Challenge", "$5,000 Prize Pool")'
+                          tooltip='The prize or competition description shown to participants (e.g., "50K Competition", "$5,000 Prize Pool")'
                         >
                           <input
                             type='text'
-                            placeholder='Prize (e.g., 50K Challenge)'
+                            placeholder='Prize (e.g., 50K Competition)'
                             value={newTournament.prize}
                             onChange={(e) => setNewTournament({ ...newTournament, prize: e.target.value })}
                             style={inputStyle}
@@ -597,7 +597,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                             </FieldWithTooltip>
                             <FieldWithTooltip
                               label='Prize'
-                              tooltip='The prize or challenge description shown to participants (e.g., "50K Challenge", "$5,000 Prize Pool")'
+                              tooltip='The prize or competition description shown to participants (e.g., "50K Competition", "$5,000 Prize Pool")'
                             >
                               <input
                                 type='text'

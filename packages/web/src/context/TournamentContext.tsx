@@ -44,7 +44,7 @@ const FALLBACK_TOURNAMENTS: Tournament[] = [
     id: 1,
     title: "January Clash",
     tier: "Weekly",
-    prize: "50K Challenge",
+    prize: "50K Competition",
     fee: "$10",
     participants: 1481,
     timeLabel: "Ends in",
@@ -57,7 +57,7 @@ const FALLBACK_TOURNAMENTS: Tournament[] = [
     id: 2,
     title: "Wednesday Clash",
     tier: "Weekly",
-    prize: "50K Challenge",
+    prize: "50K Competition",
     fee: "$10",
     participants: 18,
     timeLabel: "Starts in",
@@ -70,7 +70,7 @@ const FALLBACK_TOURNAMENTS: Tournament[] = [
     id: 3,
     title: "February Clash",
     tier: "Monthly",
-    prize: "50K Challenge",
+    prize: "50K Competition",
     fee: "$25",
     participants: 7,
     timeLabel: "Starts in",
@@ -179,7 +179,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(`${API_URL}/api/tournaments/${id}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
@@ -203,7 +203,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem("adminToken");
       const response = await fetch(`${API_URL}/api/tournaments`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },

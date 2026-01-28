@@ -35,25 +35,30 @@ const TournamentsPage = () => {
   const TooltipTrigger = ({ text, tooltipKey, tooltipContent }: { text: string; tooltipKey: string; tooltipContent: string }) => {
     const triggerRef = useRef<HTMLDivElement>(null);
 
-    const handleMouseEnter = () => {
+    const handleMouseEnter = (e: React.MouseEvent) => {
       // Clear any pending hide timeout
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
         hideTimeoutRef.current = null;
       }
-      
-      // Small delay before showing to prevent flicker
-      showTimeoutRef.current = setTimeout(() => {
-        if (triggerRef.current) {
-          const rect = triggerRef.current.getBoundingClientRect();
-          setTooltipPosition({
-            top: rect.top - 8,
-            left: rect.left + rect.width / 2,
-          });
-          setTooltipContent(tooltipContent);
-          setActiveTooltip(tooltipKey);
-        }
-      }, 50);
+
+      const cell = triggerRef.current?.closest(".card-stat-cell");
+      const rect = cell?.getBoundingClientRect();
+
+      if (rect) {
+        setTooltipPosition({
+          top: rect.bottom + 20,
+          left: e.clientX,
+        });
+        setTooltipContent(tooltipContent);
+        setActiveTooltip(tooltipKey);
+      }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+      if (activeTooltip === tooltipKey) {
+        setTooltipPosition(prev => prev ? { ...prev, left: e.clientX } : null);
+      }
     };
 
     const handleMouseLeave = () => {
@@ -62,7 +67,7 @@ const TournamentsPage = () => {
         clearTimeout(showTimeoutRef.current);
         showTimeoutRef.current = null;
       }
-      
+
       // Delay hiding to allow smooth transition
       hideTimeoutRef.current = setTimeout(() => {
         setActiveTooltip(null);
@@ -75,12 +80,13 @@ const TournamentsPage = () => {
         ref={triggerRef}
         className="tooltip-trigger"
         onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         <span>{text}</span>
-        <Info 
-          size={14} 
-          color={activeTooltip === tooltipKey ? 'var(--primary)' : 'var(--text-muted)'} 
+        <Info
+          size={14}
+          color={activeTooltip === tooltipKey ? 'var(--primary)' : 'var(--text-muted)'}
           className="tooltip-icon"
         />
       </div>
@@ -112,12 +118,12 @@ const TournamentsPage = () => {
               <Trophy size={32} color='#fff' />
             </div>
             <div>
-           
+
               <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)" }}>All Competitions</h1>
             </div>
           </div>
           <p style={{ color: "var(--text-dim)", fontSize: "1.1rem", maxWidth: "600px" }}>
-            Join live trading competitions, prove your skills, and win real rewards. Choose from weekly, bi-weekly, and monthly challenges.
+            Join live trading competitions, prove your skills, and win real rewards. Choose from weekly, bi-weekly, and monthly competitions.
           </p>
         </motion.div>
 
@@ -222,11 +228,11 @@ const TournamentsPage = () => {
             </div>
             <div className="affiliate-content">
               <span className="affiliate-text">
-                <strong>IMPORTANT: IN ORDER TO PARTICIPATE THE AFFILIATE CODE HAS TO BE GIVEN, OTHERWISE CANNOT TAKE PART.</strong>
+                <strong>To join the competitions, broker account must be created using the following affiliate code:</strong>
               </span>
               <div className="affiliate-code-wrapper">
                 <span className="affiliate-code">{affiliateCode}</span>
-                <button 
+                <button
                   className="copy-btn"
                   onClick={handleCopyCode}
                   title="Copy code"
@@ -322,12 +328,12 @@ const TournamentsPage = () => {
 
                   <div className="card-stats-grid">
                     {[
-                      { 
-                        icon: Trophy, 
-                        label: "Prize Pool", 
-                        value: camp.prize, 
-                        tooltipKey: `prize-${camp.id}`, 
-                        tooltipContent: "The total prize pool distributed among top performers. Winners are determined by the highest percentage gains during the competition period." 
+                      {
+                        icon: Trophy,
+                        label: "Prize Pool",
+                        value: camp.prize,
+                        tooltipKey: `prize-${camp.id}`,
+                        tooltipContent: "The total prize pool distributed among top performers. Winners are determined by the highest percentage gains during the competition period."
                       },
                       {
                         icon: Users,
@@ -399,8 +405,8 @@ const TournamentsPage = () => {
               initial={{ opacity: 0, y: 8, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 4, scale: 0.98 }}
-              transition={{ 
-                duration: 0.2, 
+              transition={{
+                duration: 0.2,
                 ease: [0.4, 0, 0.2, 1]
               }}
               className="tooltip-popup"
@@ -408,7 +414,7 @@ const TournamentsPage = () => {
                 position: "fixed",
                 top: `${tooltipPosition.top}px`,
                 left: `${tooltipPosition.left}px`,
-                transform: "translate(-50%, -100%)",
+                transform: "translate(-50%, 0)",
                 zIndex: 10000,
                 pointerEvents: "none",
               }}
@@ -764,7 +770,8 @@ const TournamentsPage = () => {
 
         /* Tooltip Styles */
         .tooltip-trigger {
-          display: inline-flex;
+          display: flex;
+          flex-direction: column;
           align-items: center;
           gap: 4px;
           cursor: help;
@@ -798,14 +805,14 @@ const TournamentsPage = () => {
 
         .tooltip-arrow {
           position: absolute;
-          bottom: -6px;
+          top: -6px;
           left: 50%;
           transform: translateX(-50%);
           width: 0;
           height: 0;
           border-left: 8px solid transparent;
           border-right: 8px solid transparent;
-          border-top: 8px solid rgba(24, 24, 31, 0.98);
+          border-bottom: 8px solid rgba(24, 24, 31, 0.98);
         }
 
         @media (max-width: 480px) {

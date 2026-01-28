@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X } from "lucide-react";
 
@@ -75,7 +76,7 @@ export default function FAQ() {
               <span className='text-gradient'>Questions</span>
             </h2>
             <p className='faq-subtitle'>
-              Something left unanswered? Check out the full FAQs for detailed information about our platform and rules.
+              Something left unanswered? Check out the full <Link to="/terms" style={{ color: 'var(--primary)', fontWeight: '600' }}>Terms and Conditions</Link> for detailed information about our platform and rules.
             </p>
           </div>
         </div>

@@ -65,8 +65,8 @@ const RiskWarningPage = () => {
                 Knowledge is Power
               </h3>
               <p style={{ color: "var(--text-dim)", lineHeight: 1.8, margin: 0 }}>
-                Trading financial markets offers exciting opportunities for those who approach it with the right mindset and preparation. 
-                Like any skill-based activity, success comes from education, practice, and disciplined execution. Our platform is designed 
+                Trading financial markets offers exciting opportunities for those who approach it with the right mindset and preparation.
+                Like any skill-based activity, success comes from education, practice, and disciplined execution. Our platform is designed
                 to help you compete, learn, and grow as a trader.
               </p>
             </div>
@@ -277,8 +277,8 @@ const RiskWarningPage = () => {
             Important Note
           </h4>
           <p style={{ color: "var(--text-dim)", lineHeight: 1.7, margin: 0, fontSize: "0.9rem" }}>
-            Trading involves both opportunities and challenges. We encourage all participants to trade responsibly, 
-            continue learning, and only use capital they're comfortable with. Our platform provides the arena — 
+            Trading involves both opportunities and competitions. We encourage all participants to trade responsibly,
+            continue learning, and only use capital they're comfortable with. Our platform provides the arena —
             your skills, discipline, and preparation determine your success.
           </p>
         </motion.div>
