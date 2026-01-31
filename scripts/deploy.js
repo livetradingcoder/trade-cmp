@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 const platform = process.argv[2]; // 'render' or undefined for Vercel
 
 if (platform === 'render') {
-  console.log('🚀 Trade Arena Render Deployment Guide');
+  console.log('🚀 LiveTradingLeague Render Deployment Guide');
   console.log('=======================================\n');
 
   console.log('📋 Render Deployment Steps:');
@@ -32,7 +32,7 @@ if (platform === 'render') {
 
 } else {
   // Vercel deployment (default)
-  console.log('🚀 Trade Arena Vercel Deployment Script');
+  console.log('🚀 LiveTradingLeague Vercel Deployment Script');
   console.log('=======================================\n');
 
   // Check if Vercel CLI is installed

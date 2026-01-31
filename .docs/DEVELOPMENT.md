@@ -1,4 +1,4 @@
-# Trade Arena - Development Guide
+# LiveTradingLeague - Development Guide
 
 ## Prerequisites
 - Node.js (v18+)

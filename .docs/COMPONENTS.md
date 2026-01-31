@@ -1,4 +1,4 @@
-# Trade Arena - Components Documentation
+# LiveTradingLeague - Components Documentation
 
 ## Location
 `packages/web/src/components/`

@@ -45,7 +45,7 @@ const seedAdminIfNeeded = async () => {
       const hashedPassword = await bcrypt.hash("admin123", 10);
       await Admin.create({
         username: "admin",
-        email: "admin@tradearena.com",
+        email: "admin@LiveTradingLeague.com",
         password: hashedPassword,
       });
 

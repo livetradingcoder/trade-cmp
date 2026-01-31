@@ -15,7 +15,7 @@ const createTransporter = () => {
       },
     });
   }
-  
+
   // Development fallback - logs to console
   return nodemailer.createTransport({
     host: "smtp.ethereal.email",
@@ -37,9 +37,9 @@ export const sendPasswordResetEmail = async (
     const transporter = createTransporter();
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "Trade Arena <noreply@tradearena.com>",
+      from: process.env.EMAIL_FROM || "LiveTradingLeague <noreply@LiveTradingLeague.com>",
       to: email,
-      subject: "Password Reset Request - Trade Arena",
+      subject: "Password Reset Request - LiveTradingLeague",
       html: `
         <!DOCTYPE html>
         <html>
@@ -61,7 +61,7 @@ export const sendPasswordResetEmail = async (
             </div>
             <div class="content">
               <p>Hello Admin,</p>
-              <p>We received a request to reset your password for your Trade Arena admin account.</p>
+              <p>We received a request to reset your password for your LiveTradingLeague admin account.</p>
               <p>Click the button below to reset your password:</p>
               <center>
                 <a href="${resetUrl}" class="button">Reset Password</a>
@@ -79,7 +79,7 @@ export const sendPasswordResetEmail = async (
               <p>For security reasons, this link can only be used once.</p>
             </div>
             <div class="footer">
-              <p>Trade Arena Admin Portal</p>
+              <p>LiveTradingLeague Admin Portal</p>
               <p>This is an automated email. Please do not reply.</p>
             </div>
           </div>
@@ -87,11 +87,11 @@ export const sendPasswordResetEmail = async (
         </html>
       `,
       text: `
-        Password Reset Request - Trade Arena
+        Password Reset Request - LiveTradingLeague
 
         Hello Admin,
 
-        We received a request to reset your password for your Trade Arena admin account.
+        We received a request to reset your password for your LiveTradingLeague admin account.
 
         Click this link to reset your password:
         ${resetUrl}
@@ -100,12 +100,12 @@ export const sendPasswordResetEmail = async (
 
         If you didn't request this, please ignore this email. Your password won't change until you create a new one.
 
-        Trade Arena Admin Portal
+        LiveTradingLeague Admin Portal
       `,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    
+
     // Log for development
     if (process.env.NODE_ENV !== "production") {
       console.log("📧 Password reset email sent");

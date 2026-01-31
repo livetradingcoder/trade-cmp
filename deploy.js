@@ -2,7 +2,7 @@
 
 const { execSync } = require("child_process");
 
-console.log("🚀 Trade Arena Vercel Deployment Script");
+console.log("🚀 LiveTradingLeague Vercel Deployment Script");
 console.log("=======================================\n");
 
 // Check if Vercel CLI is installed

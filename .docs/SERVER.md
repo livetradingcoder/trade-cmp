@@ -1,4 +1,4 @@
-# Trade Arena - Server Documentation
+# LiveTradingLeague - Server Documentation
 
 ## Entry Point
 `packages/server/src/index.ts`

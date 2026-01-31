@@ -54,7 +54,7 @@ RUN cat > /start.sh << 'EOF'
 #!/bin/sh
 set -e
 
-echo "🚀 Starting Trade Arena Application..."
+echo "🚀 Starting LiveTradingLeague Application..."
 echo "================================================"
 
 # Configure nginx with Railway PORT

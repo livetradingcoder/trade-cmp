@@ -1,4 +1,4 @@
-# Trade Arena - Navigation & Routing
+# LiveTradingLeague - Navigation & Routing
 
 ## Route Configuration
 

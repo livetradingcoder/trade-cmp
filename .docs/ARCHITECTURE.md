@@ -1,4 +1,4 @@
-# Trade Arena - Architecture Overview
+# LiveTradingLeague - Architecture Overview
 
 ## Project Type
 Full-stack monorepo using **Turborepo** for managing multiple packages.

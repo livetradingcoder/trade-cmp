@@ -1,4 +1,4 @@
-# Trade Arena - Championship Trading Platform
+# LiveTradingLeague - Championship Trading Platform
 
 A full-stack trading championship platform built with React, TypeScript, Node.js, Express, and MongoDB.
 

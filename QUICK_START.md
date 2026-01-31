@@ -1,4 +1,4 @@
-# Quick Start Guide - Trade Arena
+# Quick Start Guide - LiveTradingLeague
 
 ## MongoDB Setup (Required!)
 
@@ -92,7 +92,7 @@ npm run db:seed
 
 This creates:
 - Admin user: `admin` / `admin123`
-- Email: `admin@tradearena.com`
+- Email: `admin@LiveTradingLeague.com`
 - 3 sample tournaments
 
 ### 4. Start Development Servers
@@ -182,7 +182,7 @@ npm run db:seed
 # Default credentials:
 # Username: admin
 # Password: admin123
-# Email: admin@tradearena.com
+# Email: admin@LiveTradingLeague.com
 ```
 
 ### Images Won't Upload

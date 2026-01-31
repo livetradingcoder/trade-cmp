@@ -1,4 +1,4 @@
-# Trade Arena - Broker Integration & User Flow Requirements
+# LiveTradingLeague - Broker Integration & User Flow Requirements
 
 ## Document Info
 - **Version:** 1.0
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-This document outlines the technical requirements for integrating FP Markets broker data to power the Trade Arena competition platform. It covers user registration flows, tournament participation, leaderboard data requirements, and admin management capabilities.
+This document outlines the technical requirements for integrating FP Markets broker data to power the LiveTradingLeague competition platform. It covers user registration flows, tournament participation, leaderboard data requirements, and admin management capabilities.
 
 ---
 
@@ -18,7 +18,7 @@ This document outlines the technical requirements for integrating FP Markets bro
 
 ```mermaid
 flowchart TB
-    subgraph "Trade Arena Platform"
+    subgraph "LiveTradingLeague Platform"
         WEB[Web Application]
         API[Backend API]
         DB[(MongoDB)]

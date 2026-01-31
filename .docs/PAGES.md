@@ -1,4 +1,4 @@
-# Trade Arena - Pages Documentation
+# LiveTradingLeague - Pages Documentation
 
 ## HomePage
 **File:** `packages/web/src/pages/HomePage.tsx`
