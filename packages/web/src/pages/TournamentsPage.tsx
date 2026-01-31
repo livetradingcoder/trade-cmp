@@ -35,29 +35,22 @@ const TournamentsPage = () => {
   const TooltipTrigger = ({ text, tooltipKey, tooltipContent }: { text: string; tooltipKey: string; tooltipContent: string }) => {
     const triggerRef = useRef<HTMLDivElement>(null);
 
-    const handleMouseEnter = (e: React.MouseEvent) => {
+    const handleMouseEnter = () => {
       // Clear any pending hide timeout
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
         hideTimeoutRef.current = null;
       }
 
-      const cell = triggerRef.current?.closest(".card-stat-cell");
-      const rect = cell?.getBoundingClientRect();
+      const rect = triggerRef.current?.getBoundingClientRect();
 
       if (rect) {
         setTooltipPosition({
-          top: rect.bottom + 20,
-          left: e.clientX,
+          top: rect.top - 10,
+          left: rect.left + rect.width / 2,
         });
         setTooltipContent(tooltipContent);
         setActiveTooltip(tooltipKey);
-      }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-      if (activeTooltip === tooltipKey) {
-        setTooltipPosition(prev => prev ? { ...prev, left: e.clientX } : null);
       }
     };
 
@@ -80,14 +73,24 @@ const TournamentsPage = () => {
         ref={triggerRef}
         className="tooltip-trigger"
         onMouseEnter={handleMouseEnter}
-        onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
       >
-        <span>{text}</span>
+        <span style={{
+          fontWeight: 'bold',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: '1.2',
+          textAlign: 'center'
+        }}>{text}</span>
         <Info
-          size={14}
+          size={12}
           color={activeTooltip === tooltipKey ? 'var(--primary)' : 'var(--text-muted)'}
           className="tooltip-icon"
+          style={{ cursor: 'help' }}
         />
       </div>
     );
@@ -397,32 +400,50 @@ const TournamentsPage = () => {
           </AnimatePresence>
         </div>
 
-        {/* Tooltip Portal */}
         <AnimatePresence>
           {activeTooltip && tooltipPosition && (
             <motion.div
               key={activeTooltip}
-              initial={{ opacity: 0, y: 8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 4, scale: 0.98 }}
-              transition={{
-                duration: 0.2,
-                ease: [0.4, 0, 0.2, 1]
-              }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="tooltip-popup"
               style={{
                 position: "fixed",
                 top: `${tooltipPosition.top}px`,
                 left: `${tooltipPosition.left}px`,
-                transform: "translate(-50%, 0)",
+                transform: "translate(-50%, -100%)",
+                marginBottom: "8px",
+                padding: "12px 16px",
+                background: "rgba(18, 18, 22, 0.98)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "8px",
+                fontSize: "0.75rem",
+                color: "#fff",
+                maxWidth: "320px",
+                minWidth: "280px",
                 zIndex: 10000,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                whiteSpace: "normal",
+                lineHeight: "1.5",
                 pointerEvents: "none",
               }}
             >
-              <div className="tooltip-content">
-                {tooltipContent}
-              </div>
-              <div className="tooltip-arrow" />
+              {tooltipContent}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 0,
+                  height: 0,
+                  borderLeft: "6px solid transparent",
+                  borderRight: "6px solid transparent",
+                  borderTop: "6px solid rgba(18, 18, 22, 0.98)",
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -582,13 +603,12 @@ const TournamentsPage = () => {
           font-weight: 700;
           text-transform: uppercase;
           margin-bottom: 4px;
+          line-height: 1.2;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 4px;
-          flex-wrap: wrap;
           text-align: center;
-          line-height: 1.3;
+          min-height: 3.5em; /* Enough space for 2 lines of text + icon gap */
         }
 
         .stat-value {
@@ -770,10 +790,9 @@ const TournamentsPage = () => {
 
         /* Tooltip Styles */
         .tooltip-trigger {
-          display: flex;
-          flex-direction: column;
+          display: inline-flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           cursor: help;
         }
 
@@ -787,43 +806,15 @@ const TournamentsPage = () => {
         }
 
         .tooltip-popup {
-          max-width: 300px;
-          min-width: 260px;
-        }
-
-        .tooltip-content {
-          padding: 14px 16px;
-          background: linear-gradient(135deg, rgba(20, 20, 26, 0.98), rgba(28, 28, 36, 0.98));
-          backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 12px;
-          font-size: 0.8rem;
-          color: var(--text-dim);
-          line-height: 1.6;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 102, 255, 0.1);
-        }
-
-        .tooltip-arrow {
-          position: absolute;
-          top: -6px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 8px solid transparent;
-          border-right: 8px solid transparent;
-          border-bottom: 8px solid rgba(24, 24, 31, 0.98);
+          max-width: 320px;
+          min-width: 280px;
+          z-index: 10000;
         }
 
         @media (max-width: 480px) {
           .tooltip-popup {
             max-width: 260px;
             min-width: 220px;
-          }
-
-          .tooltip-content {
-            padding: 12px 14px;
-            font-size: 0.75rem;
           }
         }
       `}</style>
