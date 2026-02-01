@@ -1,0 +1,218 @@
+{
+  "header": {
+    "badge": "Legal Information",
+    "title": "Terms & Conditions",
+    "subtitle": "Platform Scope, Competitions & Disclaimers",
+    "description": "Please read these terms carefully before using our platform. By participating in our competitions, you agree to these terms."
+  },
+  "sections": [
+    {
+      "id": "platform-scope",
+      "number": "1",
+      "title": "Platform Scope & Role",
+      "icon": "Building",
+      "paragraphs": [
+        "The platform operates exclusively as an online trading competition, performance-ranking, marketing, and referral platform."
+      ],
+      "introText": "The company does not provide:",
+      "items": [
+        "brokerage services",
+        "investment or financial services",
+        "proprietary trading",
+        "portfolio or asset management",
+        "capital allocation",
+        "investment or trading advisory services"
+      ],
+      "footer": "The platform does not execute trades, influence trading decisions, or manage trading activity in any form."
+    },
+    {
+      "id": "broker-partnership",
+      "number": "2",
+      "title": "Broker Partnership & No Client Funds",
+      "icon": "Handshake",
+      "paragraphs": [
+        "The platform operates in partnership with FpmTrading, a globally regulated, top-tier brokerage provider.",
+        "All trading activity and participant capital remain entirely and exclusively with FpmTrading at all times."
+      ],
+      "introText": "The company:",
+      "items": [
+        "does not receive, hold, manage, safeguard, or control participant funds",
+        "does not access trading accounts",
+        "does not process deposits or withdrawals"
+      ],
+      "footer": "The platform acts solely as a competition and performance-ranking interface and does not intervene in broker operations."
+    },
+    {
+      "id": "trading-activity",
+      "number": "3",
+      "title": "Trading Activity & Participant Responsibility",
+      "icon": "Users",
+      "paragraphs": [
+        "Participants trade independently through accounts held with FpmTrading."
+      ],
+      "subsections": [
+        {
+          "introText": "Participants are solely responsible for:",
+          "items": [
+            "opening and maintaining their trading accounts with FpmTrading",
+            "complying with FpmTrading's terms, rules, and applicable regulations",
+            "all trading decisions and risk management"
+          ]
+        },
+        {
+          "introText": "The platform has no control, ownership, or responsibility over:",
+          "items": [
+            "trade execution",
+            "pricing",
+            "spreads",
+            "leverage",
+            "margin requirements",
+            "order handling",
+            "account balances"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "competitions-purpose",
+      "number": "4",
+      "title": "Competitions & Platform Purpose",
+      "icon": "Trophy",
+      "paragraphs": [
+        "Competitions hosted on the platform are designed solely for skill-based performance comparison, engagement, and entertainment purposes."
+      ],
+      "introText": "Competitions are not:",
+      "items": [
+        "investment products",
+        "trading services",
+        "financial instruments",
+        "profit-sharing schemes"
+      ],
+      "additionalParagraphs": [
+        "All rankings and displayed statistics are used exclusively for competitive evaluation and do not represent investment performance.",
+        "Competition registration remains open until three (3) calendar days prior to the official competition end date. Once registration is closed, no additional participants may enter the competition."
+      ]
+    },
+    {
+      "id": "performance-ranking",
+      "number": "5",
+      "title": "Performance Ranking & Winner Determination",
+      "icon": "BarChart3",
+      "paragraphs": [
+        "Competition rankings are determined exclusively based on the percentage return (ROI) achieved during the competition period, as reflected on the competition ranking page.",
+        "Rankings are calculated based on the highest percentage return achieved by participants, regardless of the amount of capital deposited."
+      ],
+      "clarifications": {
+        "title": "Key clarifications:",
+        "items": [
+          "Account size, leverage, or initial deposit amount do not affect ranking position",
+          "Rankings are calculated purely on percentage performance",
+          "Percentage results are used solely for competition ranking purposes"
+        ]
+      }
+    },
+    {
+      "id": "performance-calculation",
+      "number": "6",
+      "title": "Performance Calculation, Account Rules & Disqualification",
+      "icon": "Calculator",
+      "paragraphs": [
+        "Percentage performance is calculated using the participant's initial deposit amount at the start of the competition period as the fixed baseline reference."
+      ],
+      "subsections": [
+        {
+          "title": "Account Rules:",
+          "type": "warning",
+          "items": [
+            "Additional deposits into the same trading account are not permitted during the competition",
+            "Each trading account may participate in the competition only with its initial deposit",
+            "If a participant's trading account balance reaches zero (0), that account is considered to have lost the competition and is automatically disqualified from ranking"
+          ]
+        },
+        {
+          "title": "Re-Entry Conditions:",
+          "type": "info",
+          "paragraphs": [
+            "A participant whose account has reached zero (0) may open a new trading account with FpmTrading and re-enter the same competition, provided registration remains open."
+          ],
+          "items": [
+            "Each new account is treated as a separate competition entry",
+            "The new account's performance starts from 0% ROI and is not affected by any previous account losses or results"
+          ]
+        },
+        {
+          "title": "Disqualification:",
+          "type": "default",
+          "items": [
+            "applies only to the specific trading account that reached zero (0)",
+            "is based solely on account status during the competition period",
+            "does not constitute financial advice or risk management guidance"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rewards-prizes",
+      "number": "7",
+      "title": "Rewards & Prizes",
+      "icon": "Gift",
+      "introText": "Any rewards, prizes, or incentives offered through competitions are:",
+      "items": [
+        "fixed and predefined",
+        "not derived from pooled participant trading capital",
+        "not based on profit sharing or capital allocation"
+      ]
+    },
+    {
+      "id": "conditions-participation",
+      "number": "8",
+      "title": "Conditions of Participation",
+      "icon": "ClipboardCheck",
+      "introText": "To be eligible for participation in any competition, participants must:",
+      "items": [
+        "Open a trading account with FpmTrading using the referral code displayed on the competition page or by clicking the official competition registration link",
+        "Have a minimum account balance equal to or greater than the \"Minimum Deposit Required\" specified for the selected competition"
+      ],
+      "subsections": [
+        {
+          "title": "The Minimum Deposit Required:",
+          "type": "info",
+          "items": [
+            "is displayed on the individual competition page",
+            "may vary depending on the specific competition",
+            "must be met for each new trading account used to participate"
+          ]
+        }
+      ],
+      "footer": "Failure to meet these conditions may result in ineligibility or exclusion from the competition."
+    },
+    {
+      "id": "no-investment-advice",
+      "number": "9",
+      "title": "No Investment Advice Disclaimer",
+      "icon": "AlertCircle",
+      "introText": "All content, rankings, statistics, competition results, and information provided on the platform:",
+      "items": [
+        "are for informational and entertainment purposes only",
+        "do not constitute investment advice, trading advice, or financial recommendations"
+      ],
+      "footer": "Participants trade entirely at their own risk and discretion.",
+      "footerBold": true
+    },
+    {
+      "id": "limitation-liability",
+      "number": "10",
+      "title": "Limitation of Liability",
+      "icon": "Scale",
+      "introText": "The company shall not be liable for:",
+      "items": [
+        "trading losses",
+        "broker actions or failures",
+        "execution quality",
+        "account performance",
+        "margin calls, liquidation, or financial outcomes resulting from participant trading activity"
+      ]
+    }
+  ],
+  "lastUpdated": "February 2026"
+}
