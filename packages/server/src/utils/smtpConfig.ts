@@ -101,6 +101,10 @@ export async function createEmailTransporter(): Promise<nodemailer.Transporter |
         user: smtpSettings.user,
         pass: smtpSettings.pass,
       },
+      // Add timeout configuration to prevent gateway timeouts
+      connectionTimeout: 10000, // 10 seconds to establish connection
+      greetingTimeout: 5000,    // 5 seconds to receive greeting after connection
+      socketTimeout: 10000,     // 10 seconds of inactivity before timeout
     });
 
     return transporter;
