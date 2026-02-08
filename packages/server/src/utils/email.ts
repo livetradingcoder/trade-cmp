@@ -1,32 +1,5 @@
 import nodemailer from "nodemailer";
-
-// Create transporter
-const createTransporter = () => {
-  // For development, use ethereal email (fake SMTP)
-  // For production, use real SMTP service like SendGrid, AWS SES, etc.
-  if (process.env.NODE_ENV === "production" && process.env.EMAIL_HOST) {
-    return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: parseInt(process.env.EMAIL_PORT || "587"),
-      secure: process.env.EMAIL_SECURE === "true",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-  }
-
-  // Development fallback - logs to console
-  return nodemailer.createTransport({
-    host: "smtp.ethereal.email",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER || "test@example.com",
-      pass: process.env.EMAIL_PASS || "testpass",
-    },
-  });
-};
+import { createEmailTransporter, getFromAddress } from "./smtpConfig";
 
 export const sendPasswordResetEmail = async (
   email: string,
@@ -34,10 +7,27 @@ export const sendPasswordResetEmail = async (
   resetUrl: string
 ) => {
   try {
-    const transporter = createTransporter();
+    // Try to get transporter from database settings
+    let transporter = await createEmailTransporter();
+
+    // Fallback to ethereal email for development if no SMTP configured
+    if (!transporter) {
+      console.log("No SMTP configured, using ethereal email for development");
+      transporter = nodemailer.createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER || "test@example.com",
+          pass: process.env.EMAIL_PASS || "testpass",
+        },
+      });
+    }
+
+    const fromAddress = await getFromAddress();
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "LiveTradingLeague <noreply@LiveTradingLeague.com>",
+      from: fromAddress || "LiveTradingLeague <noreply@LiveTradingLeague.com>",
       to: email,
       subject: "Password Reset Request - LiveTradingLeague",
       html: `

@@ -14,6 +14,8 @@ import { generateToken, verifyToken, AuthRequest } from "./middleware/auth";
 import { upload } from "./middleware/upload";
 import { sendPasswordResetEmail } from "./utils/email";
 import { sendEmail, emailTemplates } from "./utils/emailService";
+import { encrypt } from "./utils/encryption";
+import { createEmailTransporter, getSMTPSettings } from "./utils/smtpConfig";
 
 // Load environment variables
 dotenv.config({ path: "../../.env" });
@@ -945,7 +947,12 @@ app.get("/api/settings/:key", async (req, res) => {
   try {
     const setting = await Settings.findOne({ key: req.params.key });
     if (setting) {
-      res.json({ key: setting.key, value: setting.value });
+      // Mask SMTP password for security
+      let value = setting.value;
+      if (req.params.key === "smtp_pass" && value) {
+        value = "••••••••";
+      }
+      res.json({ key: setting.key, value });
     } else {
       res.json({ key: req.params.key, value: "" });
     }
@@ -958,16 +965,111 @@ app.get("/api/settings/:key", async (req, res) => {
 // Update setting (protected)
 app.put("/api/settings/:key", verifyToken, async (req: AuthRequest, res) => {
   try {
-    const { value } = req.body;
+    let { value } = req.body;
+
+    // Encrypt SMTP password before storing
+    if (req.params.key === "smtp_pass" && value) {
+      value = encrypt(value);
+    }
+
     const setting = await Settings.findOneAndUpdate(
       { key: req.params.key },
       { value },
       { new: true, upsert: true }
     );
-    res.json({ key: setting.key, value: setting.value });
+
+    // Mask password in response
+    let responseValue = setting.value;
+    if (req.params.key === "smtp_pass" && responseValue) {
+      responseValue = "••••••••";
+    }
+
+    res.json({ key: setting.key, value: responseValue });
   } catch (error) {
     console.error("Update setting error:", error);
     res.status(500).json({ error: "Failed to update setting" });
+  }
+});
+
+// Test SMTP configuration (protected)
+app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) => {
+  const { testEmail } = req.body;
+
+  try {
+    if (!testEmail) {
+      return res.status(400).json({ error: "Test email address is required" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(testEmail)) {
+      return res.status(400).json({ error: "Invalid email address format" });
+    }
+
+    // Get SMTP settings
+    const smtpSettings = await getSMTPSettings();
+
+    if (!smtpSettings || !smtpSettings.host || !smtpSettings.user) {
+      return res.status(400).json({
+        error: "SMTP not configured. Please configure SMTP settings first.",
+      });
+    }
+
+    // Create transporter
+    const transporter = await createEmailTransporter();
+
+    if (!transporter) {
+      return res.status(500).json({
+        error: "Failed to create email transporter. Check your SMTP settings.",
+      });
+    }
+
+    // Send test email
+    await transporter.sendMail({
+      from: smtpSettings.from || "noreply@livetradingleague.com",
+      to: testEmail,
+      subject: "SMTP Configuration Test - LiveTradingLeague",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #667eea;">SMTP Configuration Test</h2>
+          <p>Congratulations! Your SMTP email settings are working correctly.</p>
+          <p>This test email was sent from your LiveTradingLeague admin panel to verify your email configuration.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">
+            <strong>SMTP Configuration Details:</strong><br>
+            Host: ${smtpSettings.host}<br>
+            Port: ${smtpSettings.port}<br>
+            Secure: ${smtpSettings.secure ? "Yes (TLS/SSL)" : "No"}<br>
+            User: ${smtpSettings.user}<br>
+            From: ${smtpSettings.from}
+          </p>
+        </div>
+      `,
+      text: `SMTP Configuration Test\n\nCongratulations! Your SMTP email settings are working correctly.\n\nThis test email was sent from your LiveTradingLeague admin panel to verify your email configuration.\n\nSMTP Configuration Details:\nHost: ${smtpSettings.host}\nPort: ${smtpSettings.port}\nSecure: ${smtpSettings.secure ? "Yes (TLS/SSL)" : "No"}\nUser: ${smtpSettings.user}\nFrom: ${smtpSettings.from}`,
+    });
+
+    res.json({
+      success: true,
+      message: `Test email sent successfully to ${testEmail}`,
+    });
+  } catch (error) {
+    console.error("SMTP test error:", error);
+
+    // Provide detailed error message
+    let errorMessage = "Failed to send test email. ";
+    if (error instanceof Error) {
+      if (error.message.includes("Invalid login")) {
+        errorMessage += "Invalid SMTP username or password.";
+      } else if (error.message.includes("ECONNREFUSED")) {
+        errorMessage += "Could not connect to SMTP server. Check host and port.";
+      } else if (error.message.includes("ETIMEDOUT")) {
+        errorMessage += "Connection timed out. Check your network and SMTP settings.";
+      } else {
+        errorMessage += error.message;
+      }
+    }
+
+    res.status(500).json({ error: errorMessage });
   }
 });
 

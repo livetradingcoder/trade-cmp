@@ -1,15 +1,5 @@
 import nodemailer from "nodemailer";
-
-// Email configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+import { createEmailTransporter, getFromAddress } from "./smtpConfig";
 
 // Email templates
 const templates = {
@@ -91,14 +81,19 @@ const templates = {
 // Send email function
 export const sendEmail = async (to: string, template: { subject: string; html: string }) => {
   try {
+    // Create transporter dynamically from database settings
+    const transporter = await createEmailTransporter();
+
     // Skip sending if SMTP is not configured
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    if (!transporter) {
       console.log(`[Email] SMTP not configured. Would send email to ${to}: ${template.subject}`);
       return { success: true, skipped: true };
     }
 
+    const fromAddress = await getFromAddress();
+
     const info = await transporter.sendMail({
-      from: `"LiveTradingLeague" <${process.env.SMTP_USER}>`,
+      from: fromAddress || `"LiveTradingLeague" <noreply@livetradingleague.com>`,
       to,
       subject: template.subject,
       html: template.html,

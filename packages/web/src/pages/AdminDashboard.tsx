@@ -28,6 +28,8 @@ import {
   Gift,
   Bell,
   Activity,
+  Mail,
+  Loader,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
@@ -83,6 +85,21 @@ const AdminDashboard = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState({ type: "", text: "" });
 
+  // SMTP Settings state
+  const [smtpSettings, setSmtpSettings] = useState({
+    host: "",
+    port: "587",
+    secure: false,
+    user: "",
+    pass: "",
+    from: ""
+  });
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [isSavingSMTP, setIsSavingSMTP] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [smtpMessage, setSmtpMessage] = useState({ type: "", text: "" });
+
   // Pending participants state
   const [pendingCounts, setPendingCounts] = useState<Record<string | number, number>>({});
   const [totalPending, setTotalPending] = useState(0);
@@ -121,6 +138,39 @@ const AdminDashboard = () => {
     };
     if (isAdmin) {
       fetchSettings();
+    }
+  }, [isAdmin, API_URL]);
+
+  // Fetch SMTP settings on mount
+  useEffect(() => {
+    const fetchSMTPSettings = async () => {
+      try {
+        const keys = ['smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'smtp_from'];
+        const settings: Record<string, string> = {};
+
+        for (const key of keys) {
+          const response = await fetch(`${API_URL}/api/settings/${key}`);
+          if (response.ok) {
+            const data = await response.json();
+            settings[key.replace('smtp_', '')] = data.value || "";
+          }
+        }
+
+        setSmtpSettings({
+          host: settings.host || "",
+          port: settings.port || "587",
+          secure: settings.secure === "true",
+          user: settings.user || "",
+          pass: settings.pass ? "••••••••" : "", // Mask existing password
+          from: settings.from || ""
+        });
+      } catch (error) {
+        console.error("Failed to fetch SMTP settings:", error);
+      }
+    };
+
+    if (isAdmin) {
+      fetchSMTPSettings();
     }
   }, [isAdmin, API_URL]);
 
@@ -365,6 +415,79 @@ const AdminDashboard = () => {
       setSettingsMessage({ type: "error", text: "Network error. Please try again." });
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleSaveSMTPSettings = async () => {
+    setIsSavingSMTP(true);
+    setSmtpMessage({ type: "", text: "" });
+    const token = localStorage.getItem("adminToken");
+
+    try {
+      // Save each setting individually
+      const settings = {
+        smtp_host: smtpSettings.host,
+        smtp_port: smtpSettings.port,
+        smtp_secure: smtpSettings.secure.toString(),
+        smtp_user: smtpSettings.user,
+        smtp_pass: smtpSettings.pass === "••••••••" ? undefined : smtpSettings.pass, // Skip if unchanged
+        smtp_from: smtpSettings.from
+      };
+
+      for (const [key, value] of Object.entries(settings)) {
+        if (value === undefined) continue; // Skip unchanged password
+
+        const response = await fetch(`${API_URL}/api/settings/${key}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ value })
+        });
+
+        if (!response.ok) throw new Error(`Failed to save ${key}`);
+      }
+
+      setSmtpMessage({ type: "success", text: "SMTP settings saved successfully!" });
+    } catch (error) {
+      setSmtpMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to save SMTP settings" });
+    } finally {
+      setIsSavingSMTP(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmail) {
+      setSmtpMessage({ type: "error", text: "Please enter a test email address" });
+      return;
+    }
+
+    setIsTestingEmail(true);
+    setSmtpMessage({ type: "", text: "" });
+    const token = localStorage.getItem("adminToken");
+
+    try {
+      const response = await fetch(`${API_URL}/api/settings/smtp/test`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ testEmail })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSmtpMessage({ type: "success", text: "Test email sent successfully! Check your inbox." });
+      } else {
+        setSmtpMessage({ type: "error", text: data.error || "Failed to send test email" });
+      }
+    } catch (error) {
+      setSmtpMessage({ type: "error", text: "Network error: " + (error instanceof Error ? error.message : "Unknown error") });
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -995,6 +1118,165 @@ const AdminDashboard = () => {
                         <>
                           <Save size={18} />
                           Save Settings
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* SMTP Configuration Section */}
+                <div className='settings-section'>
+                  <div className='settings-section-header'>
+                    <Mail size={20} />
+                    <h3>Email (SMTP) Configuration</h3>
+                  </div>
+                  <p className='settings-description'>
+                    Configure SMTP settings for sending emails. Changes take effect immediately.
+                  </p>
+
+                  <div className='form-group'>
+                    <label>SMTP Host</label>
+                    <input
+                      type='text'
+                      value={smtpSettings.host}
+                      onChange={(e) => setSmtpSettings({...smtpSettings, host: e.target.value})}
+                      placeholder='smtp.gmail.com'
+                    />
+                  </div>
+
+                  <div className='smtp-input-row'>
+                    <div className='form-group'>
+                      <label>SMTP Port</label>
+                      <input
+                        type='number'
+                        value={smtpSettings.port}
+                        onChange={(e) => setSmtpSettings({...smtpSettings, port: e.target.value})}
+                        placeholder='587'
+                      />
+                    </div>
+
+                    <div className='form-group smtp-checkbox-group'>
+                      <label>
+                        <input
+                          type='checkbox'
+                          checked={smtpSettings.secure}
+                          onChange={(e) => setSmtpSettings({...smtpSettings, secure: e.target.checked})}
+                        />
+                        <span>Use TLS/SSL</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className='form-group'>
+                    <label>SMTP Username</label>
+                    <input
+                      type='text'
+                      value={smtpSettings.user}
+                      onChange={(e) => setSmtpSettings({...smtpSettings, user: e.target.value})}
+                      placeholder='your-email@gmail.com'
+                    />
+                  </div>
+
+                  <div className='form-group'>
+                    <label>SMTP Password</label>
+                    <div className='password-input-wrapper'>
+                      <input
+                        type={showSmtpPassword ? "text" : "password"}
+                        value={smtpSettings.pass}
+                        onChange={(e) => setSmtpSettings({...smtpSettings, pass: e.target.value})}
+                        placeholder='Enter SMTP password'
+                      />
+                      <button
+                        type='button'
+                        className='toggle-password'
+                        onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                      >
+                        {showSmtpPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className='form-group'>
+                    <label>From Email Address</label>
+                    <input
+                      type='email'
+                      value={smtpSettings.from}
+                      onChange={(e) => setSmtpSettings({...smtpSettings, from: e.target.value})}
+                      placeholder='noreply@livetradingleague.com'
+                    />
+                  </div>
+
+                  {/* Test Email Section */}
+                  <div className='test-email-section'>
+                    <h4>Test Email Configuration</h4>
+                    <div className='form-group'>
+                      <label>Send Test Email To</label>
+                      <input
+                        type='email'
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        placeholder='your-email@example.com'
+                      />
+                    </div>
+                    <button
+                      type='button'
+                      onClick={handleTestEmail}
+                      disabled={isTestingEmail || !testEmail}
+                      className='test-button'
+                    >
+                      {isTestingEmail ? (
+                        <>
+                          <Loader className='spinner' size={16} />
+                          Sending Test Email...
+                        </>
+                      ) : (
+                        <>
+                          <Mail size={16} />
+                          Send Test Email
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Success/Error Messages */}
+                  <AnimatePresence>
+                    {smtpMessage.text && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className={smtpMessage.type === 'success' ? 'success-message' : 'error-message'}
+                      >
+                        {smtpMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                        {smtpMessage.text}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Action Buttons */}
+                  <div className='form-actions'>
+                    <button
+                      type='button'
+                      onClick={() => {
+                        // Reset to original values (refetch)
+                        window.location.reload();
+                      }}
+                      className='cancel-btn'
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type='button'
+                      onClick={handleSaveSMTPSettings}
+                      disabled={isSavingSMTP}
+                      className='save-btn'
+                    >
+                      {isSavingSMTP ? (
+                        <span className='loading-spinner' />
+                      ) : (
+                        <>
+                          <Save size={18} />
+                          Save SMTP Settings
                         </>
                       )}
                     </button>
@@ -1846,6 +2128,113 @@ const dashboardStyles = `
     font-size: 0.9rem;
     margin-bottom: 24px;
     line-height: 1.5;
+  }
+
+  .password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-input-wrapper input {
+    flex: 1;
+    padding-right: 45px;
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+  }
+
+  .toggle-password:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .smtp-input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: end;
+  }
+
+  .smtp-checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  .smtp-checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+
+  .smtp-checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .smtp-checkbox-group span {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+  }
+
+  .test-email-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .test-email-section h4 {
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .test-button {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .test-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .test-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .test-button .spinner {
+    animation: spin 0.8s linear infinite;
+  }
+
+  .settings-section + .settings-section {
+    margin-top: 2rem;
   }
 
   .success-message {

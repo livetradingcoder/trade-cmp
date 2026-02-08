@@ -15,14 +15,20 @@ NODE_ENV=development
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 
+# Encryption Configuration (required for encrypting sensitive data like SMTP passwords)
+# Generate a secure random string (32+ characters recommended)
+ENCRYPTION_KEY=your-32-character-encryption-key-here-change-in-production
+
 # Cloudinary Configuration (for image uploads)
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# Email Configuration (for password reset)
+# Email Configuration (Legacy - can be overridden in admin panel)
+# SMTP settings can now be configured dynamically through the admin dashboard
+# These environment variables serve as fallback if database settings are not configured
 # For development, you can leave these empty (emails will be logged to console)
-# For production, use services like SendGrid, AWS SES, Gmail, etc.
+# For production, configure via Admin Dashboard > Settings > Email (SMTP) Configuration
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_SECURE=false
