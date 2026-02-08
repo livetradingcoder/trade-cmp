@@ -4,7 +4,6 @@ import {
   Trophy,
   Plus,
   Edit3,
-  Trash2,
   Save,
   X,
   LogOut,
@@ -27,12 +26,16 @@ import {
   Info,
   Settings,
   Gift,
+  Bell,
+  Activity,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
 import { useNavigate } from "react-router-dom";
+import ParticipantManagement from "../components/ParticipantManagement";
+import CompetitionManagement from "../components/CompetitionManagement";
 
-type ViewMode = "list" | "create" | "edit" | "password" | "settings";
+type ViewMode = "list" | "create" | "edit" | "password" | "settings" | "participants" | "manage";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -48,6 +51,7 @@ const AdminDashboard = () => {
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
+  const [managingTournament, setManagingTournament] = useState<Tournament | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<Omit<Tournament, "id">>({
@@ -78,6 +82,10 @@ const AdminDashboard = () => {
   const [affiliateCode, setAffiliateCode] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState({ type: "", text: "" });
+
+  // Pending participants state
+  const [pendingCounts, setPendingCounts] = useState<Record<string | number, number>>({});
+  const [totalPending, setTotalPending] = useState(0);
 
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
@@ -115,6 +123,52 @@ const AdminDashboard = () => {
       fetchSettings();
     }
   }, [isAdmin, API_URL]);
+
+  // Fetch pending participants count
+  useEffect(() => {
+    const fetchPendingCounts = async () => {
+      if (!isAdmin || tournaments.length === 0) return;
+
+      try {
+        const token = localStorage.getItem("adminToken");
+        const counts: Record<string | number, number> = {};
+        let total = 0;
+
+        // Fetch participants for each tournament
+        await Promise.all(
+          tournaments.map(async (tournament) => {
+            try {
+              const response = await fetch(`${API_URL}/api/participants/${tournament.id}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                const participants = data.participants || [];
+                const pendingCount = participants.filter((p: any) => p.status === "pending").length;
+                counts[tournament.id] = pendingCount;
+                total += pendingCount;
+              }
+            } catch (error) {
+              console.error(`Failed to fetch participants for tournament ${tournament.id}:`, error);
+            }
+          })
+        );
+
+        setPendingCounts(counts);
+        setTotalPending(total);
+      } catch (error) {
+        console.error("Failed to fetch pending counts:", error);
+      }
+    };
+
+    fetchPendingCounts();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingCounts, 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin, tournaments, API_URL]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,6 +227,11 @@ const AdminDashboard = () => {
     });
     setViewMode("edit");
     setSaveMessage({ type: "", text: "" });
+  };
+
+  const startManage = (tournament: Tournament) => {
+    setManagingTournament(tournament);
+    setViewMode("manage");
   };
 
   const handleSave = async () => {
@@ -273,6 +332,7 @@ const AdminDashboard = () => {
   const cancelAction = () => {
     setViewMode("list");
     setEditingTournament(null);
+    setManagingTournament(null);
     resetForm();
     setSaveMessage({ type: "", text: "" });
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -378,7 +438,7 @@ const AdminDashboard = () => {
         <div className='sidebar-header'>
           <div className='logo'>
             <Trophy size={24} />
-            <span>Competition Admin</span>
+            <span>LTL - Admin</span>
           </div>
         </div>
 
@@ -386,6 +446,11 @@ const AdminDashboard = () => {
           <button className={`nav-item ${viewMode === "list" ? "active" : ""}`} onClick={() => cancelAction()}>
             <Trophy size={20} />
             <span>Competitions</span>
+          </button>
+          <button className={`nav-item ${viewMode === "participants" ? "active" : ""}`} onClick={() => setViewMode("participants")}>
+            <Users size={20} />
+            <span>Participants</span>
+            {totalPending > 0 && <span className='notification-badge'>{totalPending}</span>}
           </button>
           <button className={`nav-item ${viewMode === "settings" ? "active" : ""}`} onClick={() => setViewMode("settings")}>
             <Settings size={20} />
@@ -442,9 +507,21 @@ const AdminDashboard = () => {
                   >
                     <div className='card-cover' style={{ backgroundImage: `url(${tournament.cover})` }}>
                       <span className={`tier-badge ${tournament.tier.toLowerCase()}`}>{tournament.tier}</span>
+                      {pendingCounts[tournament.id] > 0 && (
+                        <span className='pending-indicator' title={`${pendingCounts[tournament.id]} pending participants`}>
+                          <Bell size={14} />
+                          {pendingCounts[tournament.id]}
+                        </span>
+                      )}
                     </div>
                     <div className='card-content'>
-                      <h3>{tournament.title}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <h3 style={{ margin: 0 }}>{tournament.title}</h3>
+                        <span className={`status-indicator ${tournament.status || 'draft'}`}>
+                          <Activity size={12} />
+                          {tournament.status || 'draft'}
+                        </span>
+                      </div>
                       <div className='card-stats'>
                         <div className='stat'>
                           <Trophy size={14} />
@@ -468,9 +545,9 @@ const AdminDashboard = () => {
                           <Edit3 size={16} />
                           Edit
                         </button>
-                        <button className='delete-btn' onClick={() => handleDelete(tournament.id)}>
-                          <Trash2 size={16} />
-                          Delete
+                        <button className='manage-btn' onClick={() => startManage(tournament)}>
+                          <Settings size={16} />
+                          Manage
                         </button>
                       </div>
                     </div>
@@ -830,6 +907,36 @@ const AdminDashboard = () => {
             </motion.div>
           )}
 
+          {viewMode === "participants" && (
+            <motion.div
+              key='participants'
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className='content-section'
+            >
+              <ParticipantManagement tournaments={tournaments} />
+            </motion.div>
+          )}
+
+          {viewMode === "manage" && managingTournament && (
+            <motion.div
+              key='manage'
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className='content-section'
+            >
+              <CompetitionManagement
+                tournament={managingTournament}
+                onBack={cancelAction}
+                onEdit={() => startEdit(managingTournament)}
+                onDelete={() => handleDelete(managingTournament.id)}
+                onStatusChange={cancelAction}
+              />
+            </motion.div>
+          )}
+
           {viewMode === "settings" && (
             <motion.div
               key='settings'
@@ -854,7 +961,7 @@ const AdminDashboard = () => {
                   <p className='settings-description'>
                     This code will be displayed on the competitions page for new users to use when signing up.
                   </p>
-                  
+
                   <div className='form-group'>
                     <label>Affiliate Code</label>
                     <input
@@ -1180,6 +1287,35 @@ const dashboardStyles = `
     color: #667eea;
   }
 
+  .nav-item {
+    position: relative;
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+    50% {
+      box-shadow: 0 2px 12px rgba(239, 68, 68, 0.8);
+    }
+  }
+
   .sidebar-footer {
     padding: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1325,6 +1461,55 @@ const dashboardStyles = `
     position: relative;
   }
 
+  .pending-indicator {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(239, 68, 68, 0.95);
+    color: white;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    animation: pulse 2s ease-in-out infinite;
+    cursor: help;
+  }
+
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    white-space: nowrap;
+  }
+
+  .status-indicator.active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .status-indicator.draft {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+
+  .status-indicator.completed,
+  .status-indicator.archived {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
+
   .tier-badge {
     position: absolute;
     top: 12px;
@@ -1391,7 +1576,7 @@ const dashboardStyles = `
     z-index: 3;
   }
 
-  .edit-btn, .delete-btn {
+  .edit-btn, .delete-btn, .manage-btn {
     flex: 1;
     display: flex;
     align-items: center;
@@ -1413,6 +1598,16 @@ const dashboardStyles = `
 
   .edit-btn:hover {
     background: rgba(102, 126, 234, 0.2);
+  }
+
+  .manage-btn {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+  }
+
+  .manage-btn:hover {
+    background: rgba(34, 197, 94, 0.2);
   }
 
   .delete-btn {

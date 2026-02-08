@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight, Trophy, Calendar, Clock, Filter, Search, Info, Gift, Copy, Check, Users } from "lucide-react";
 import { useTournaments } from "../context/TournamentContext";
+import JoinCompetitionDialog from "../components/JoinCompetitionDialog";
 
 const TournamentsPage = () => {
   const { tournaments, settings } = useTournaments();
@@ -11,6 +12,8 @@ const TournamentsPage = () => {
   const [tooltipContent, setTooltipContent] = useState<string>("");
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState<{ id: string; title: string } | null>(null);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -374,7 +377,10 @@ const TournamentsPage = () => {
 
                   <button
                     className='btn-primary card-join-btn'
-                    onClick={() => window.open(camp.registrationLink, "_blank")}
+                    onClick={() => {
+                      setSelectedTournament({ id: camp.id.toString(), title: camp.title });
+                      setDialogOpen(true);
+                    }}
                   >
                     Join Competition <ArrowUpRight size={18} />
                   </button>
@@ -818,6 +824,20 @@ const TournamentsPage = () => {
           }
         }
       `}</style>
+
+      {/* Join Competition Dialog */}
+      {selectedTournament && (
+        <JoinCompetitionDialog
+          isOpen={dialogOpen}
+          onClose={() => {
+            setDialogOpen(false);
+            setSelectedTournament(null);
+          }}
+          tournamentId={selectedTournament.id}
+          tournamentTitle={selectedTournament.title}
+          referralCode={affiliateCode}
+        />
+      )}
     </section>
   );
 };

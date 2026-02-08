@@ -7,9 +7,13 @@ import cloudinary from "./config/cloudinary";
 import Tournament from "./models/Tournament";
 import Admin from "./models/Admin";
 import Settings from "./models/Settings";
+import User from "./models/User";
+import Participant from "./models/Participant";
+import LeaderboardCache from "./models/LeaderboardCache";
 import { generateToken, verifyToken, AuthRequest } from "./middleware/auth";
 import { upload } from "./middleware/upload";
 import { sendPasswordResetEmail } from "./utils/email";
+import { sendEmail, emailTemplates } from "./utils/emailService";
 
 // Load environment variables
 dotenv.config({ path: "../../.env" });
@@ -260,6 +264,9 @@ app.get("/api/tournaments", async (req, res) => {
       cover: t.cover,
       image: t.image,
       registrationLink: t.registrationLink,
+      status: t.status,
+      start_date: t.start_date,
+      end_date: t.end_date,
     }));
     res.json(transformedTournaments);
   } catch (error) {
@@ -286,6 +293,9 @@ app.get("/api/tournaments/:id", async (req, res) => {
         cover: tournament.cover,
         image: tournament.image,
         registrationLink: tournament.registrationLink,
+        status: tournament.status,
+        start_date: tournament.start_date,
+        end_date: tournament.end_date,
       };
       res.json(transformed);
     } else {
@@ -317,6 +327,9 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
       timeLabel: req.body.timeLabel || "Seats Left",
       timeLeft: req.body.timeLeft || "",
       image: req.body.image || "",
+      status: req.body.status || "draft",
+      start_date: req.body.start_date || null,
+      end_date: req.body.end_date || null,
       cover:
         req.body.cover ||
         "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
@@ -336,6 +349,9 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
       cover: tournament.cover,
       image: tournament.image,
       registrationLink: tournament.registrationLink,
+      status: tournament.status,
+      start_date: tournament.start_date,
+      end_date: tournament.end_date,
     };
     res.json(transformed);
   } catch (error) {
@@ -371,6 +387,9 @@ app.put("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) => {
         cover: tournament.cover,
         image: tournament.image,
         registrationLink: tournament.registrationLink,
+        status: tournament.status,
+        start_date: tournament.start_date,
+        end_date: tournament.end_date,
       };
       res.json(transformed);
     } else {
@@ -397,6 +416,510 @@ app.delete("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) =>
   } catch (error) {
     console.error("Delete tournament error:", error);
     res.status(500).json({ error: "Failed to delete tournament" });
+  }
+});
+
+// ==================== USER ENDPOINTS ====================
+
+// Register user
+app.post("/api/users/register", async (req, res) => {
+  const { email, fp_account_number, referral_code_used, is_new_user } = req.body;
+
+  try {
+    // Validate required fields
+    if (!email || !fp_account_number) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and FP Markets account number are required"
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [{ email: email.toLowerCase() }, { fp_account_number }]
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User with this email or account number already exists"
+      });
+    }
+
+    // Create new user
+    const user = await User.create({
+      email: email.toLowerCase(),
+      fp_account_number,
+      referral_code_used,
+      is_new_user: is_new_user !== undefined ? is_new_user : true,
+      account_verified: false,
+    });
+
+    res.json({
+      success: true,
+      message: "User registered successfully",
+      user: {
+        id: user._id,
+        email: user.email,
+        fp_account_number: user.fp_account_number,
+        account_verified: user.account_verified,
+      },
+    });
+  } catch (error) {
+    console.error("User registration error:", error);
+    res.status(500).json({ success: false, message: "Failed to register user" });
+  }
+});
+
+// Get user by ID
+app.get("/api/users/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        fp_account_number: user.fp_account_number,
+        display_name: user.display_name,
+        account_verified: user.account_verified,
+        verified_at: user.verified_at,
+        is_new_user: user.is_new_user,
+      },
+    });
+  } catch (error) {
+    console.error("Get user error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch user" });
+  }
+});
+
+// ==================== PARTICIPANT ENDPOINTS ====================
+
+// Apply to tournament
+app.post("/api/participants/apply", async (req, res) => {
+  const { tournament_id, email, fp_account_number, referral_code_used, is_new_user } = req.body;
+
+  try {
+    // Validate required fields
+    if (!tournament_id || !email || !fp_account_number) {
+      return res.status(400).json({
+        success: false,
+        message: "Tournament ID, email, and account number are required"
+      });
+    }
+
+    // Check if tournament exists
+    const tournament = await Tournament.findById(tournament_id);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: "Tournament not found" });
+    }
+
+    // Verify account with broker API (for existing users, check referral code)
+    let referralCodeVerified = false;
+    if (!is_new_user) {
+      try {
+        // Get referral code from settings
+        const referralCodeSetting = await Settings.findOne({ key: "affiliateCode" });
+        const referralCode = referralCodeSetting?.value || "AFFASAD";
+
+        // Call broker API to validate account and check referral code
+        const brokerResponse = await fetch(`http://localhost:3001/api/broker/validate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            account_number: fp_account_number,
+            email,
+            referral_code: referralCode,
+          }),
+        });
+
+        if (brokerResponse.ok) {
+          const brokerData = await brokerResponse.json() as any;
+          referralCodeVerified = brokerData.referral_code_used || false;
+        }
+      } catch (error) {
+        console.error("Broker API validation error:", error);
+        // Continue with application even if broker API fails
+      }
+    } else {
+      // New users are assumed to have used the referral code
+      referralCodeVerified = true;
+    }
+
+    // Find or create user
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      user = await User.create({
+        email: email.toLowerCase(),
+        fp_account_number,
+        referral_code_used,
+        is_new_user: is_new_user !== undefined ? is_new_user : true,
+        account_verified: false,
+      });
+    }
+
+    // Check if user already applied to this tournament
+    const existingParticipant = await Participant.findOne({
+      tournament_id,
+      user_id: user._id,
+    });
+
+    if (existingParticipant) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already applied to this tournament",
+        participant: {
+          id: existingParticipant._id,
+          status: existingParticipant.status,
+        },
+      });
+    }
+
+    // Create participant application with referral code verification status
+    const participant = await Participant.create({
+      tournament_id,
+      user_id: user._id,
+      status: "pending",
+      referral_code_verified: referralCodeVerified,
+      applied_at: new Date(),
+    });
+
+    // Send email notification
+    await sendEmail(
+      email,
+      emailTemplates.applicationSubmitted(email, tournament.title)
+    );
+
+    res.json({
+      success: true,
+      message: "Application submitted successfully. Pending admin review.",
+      participant: {
+        id: participant._id,
+        tournament_id: participant.tournament_id,
+        status: participant.status,
+        referral_code_verified: referralCodeVerified,
+        applied_at: participant.applied_at,
+      },
+    });
+  } catch (error) {
+    console.error("Apply to tournament error:", error);
+    res.status(500).json({ success: false, message: "Failed to submit application" });
+  }
+});
+
+// Get participants for a tournament (protected - admin only)
+app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const participants = await Participant.find({
+      tournament_id: req.params.tournamentId
+    })
+      .populate("user_id", "email fp_account_number display_name account_verified")
+      .populate("reviewed_by", "username")
+      .populate("disqualified_by", "username")
+      .sort({ applied_at: -1 });
+
+    res.json({
+      success: true,
+      participants: participants.map(p => ({
+        id: p._id,
+        tournament_id: p.tournament_id,
+        user: p.user_id,
+        status: p.status,
+        applied_at: p.applied_at,
+        reviewed_at: p.reviewed_at,
+        reviewed_by: p.reviewed_by,
+        decline_reason: p.decline_reason,
+        disqualified_at: p.disqualified_at,
+        disqualified_by: p.disqualified_by,
+        disqualification_reason: p.disqualification_reason,
+        notes: p.notes,
+      })),
+    });
+  } catch (error) {
+    console.error("Get participants error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch participants" });
+  }
+});
+
+// Approve participant (protected - admin only)
+app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const participant = await Participant.findById(req.params.id);
+
+    if (!participant) {
+      return res.status(404).json({ success: false, message: "Participant not found" });
+    }
+
+    if (participant.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot approve participant with status: ${participant.status}`
+      });
+    }
+
+    participant.status = "approved";
+    participant.reviewed_at = new Date();
+    participant.reviewed_by = req.adminId as any;
+    await participant.save();
+
+    // Populate user info and tournament for email
+    await participant.populate("user_id", "email fp_account_number");
+    await participant.populate("tournament_id", "title");
+
+    // Send approval email
+    const user = participant.user_id as any;
+    const tournament = participant.tournament_id as any;
+    await sendEmail(
+      user.email,
+      emailTemplates.applicationApproved(
+        user.email,
+        tournament.title,
+        "Competition start date",
+        "Competition end date"
+      )
+    );
+
+    res.json({
+      success: true,
+      message: "Participant approved successfully",
+      participant: {
+        id: participant._id,
+        status: participant.status,
+        reviewed_at: participant.reviewed_at,
+        user: participant.user_id,
+      },
+    });
+  } catch (error) {
+    console.error("Approve participant error:", error);
+    res.status(500).json({ success: false, message: "Failed to approve participant" });
+  }
+});
+
+// Decline participant (protected - admin only)
+app.put("/api/participants/:id/decline", verifyToken, async (req: AuthRequest, res) => {
+  const { reason } = req.body;
+
+  try {
+    const participant = await Participant.findById(req.params.id);
+
+    if (!participant) {
+      return res.status(404).json({ success: false, message: "Participant not found" });
+    }
+
+    if (participant.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot decline participant with status: ${participant.status}`
+      });
+    }
+
+    participant.status = "declined";
+    participant.reviewed_at = new Date();
+    participant.reviewed_by = req.adminId as any;
+    participant.decline_reason = reason || "Application declined";
+    await participant.save();
+
+    // Populate user info and tournament for email
+    await participant.populate("user_id", "email fp_account_number");
+    await participant.populate("tournament_id", "title");
+
+    // Send decline email
+    const user = participant.user_id as any;
+    const tournament = participant.tournament_id as any;
+    await sendEmail(
+      user.email,
+      emailTemplates.applicationDeclined(
+        user.email,
+        tournament.title,
+        participant.decline_reason || "Application declined"
+      )
+    );
+
+    res.json({
+      success: true,
+      message: "Participant declined",
+      participant: {
+        id: participant._id,
+        status: participant.status,
+        reviewed_at: participant.reviewed_at,
+        decline_reason: participant.decline_reason,
+        user: participant.user_id,
+      },
+    });
+  } catch (error) {
+    console.error("Decline participant error:", error);
+    res.status(500).json({ success: false, message: "Failed to decline participant" });
+  }
+});
+
+// Disqualify participant (protected - admin only)
+app.put("/api/participants/:id/disqualify", verifyToken, async (req: AuthRequest, res) => {
+  const { reason } = req.body;
+
+  try {
+    const participant = await Participant.findById(req.params.id);
+
+    if (!participant) {
+      return res.status(404).json({ success: false, message: "Participant not found" });
+    }
+
+    if (participant.status !== "approved") {
+      return res.status(400).json({
+        success: false,
+        message: `Can only disqualify approved participants. Current status: ${participant.status}`
+      });
+    }
+
+    participant.status = "disqualified";
+    participant.disqualified_at = new Date();
+    participant.disqualified_by = req.adminId as any;
+    participant.disqualification_reason = reason || "Disqualified by admin";
+    await participant.save();
+
+    // Populate user info and tournament for email
+    await participant.populate("user_id", "email fp_account_number");
+    await participant.populate("tournament_id", "title");
+
+    // Send disqualification email
+    const user = participant.user_id as any;
+    const tournament = participant.tournament_id as any;
+    await sendEmail(
+      user.email,
+      emailTemplates.participantDisqualified(
+        user.email,
+        tournament.title,
+        participant.disqualification_reason || "Disqualified by admin"
+      )
+    );
+
+    res.json({
+      success: true,
+      message: "Participant disqualified",
+      participant: {
+        id: participant._id,
+        status: participant.status,
+        disqualified_at: participant.disqualified_at,
+        disqualification_reason: participant.disqualification_reason,
+        user: participant.user_id,
+      },
+    });
+  } catch (error) {
+    console.error("Disqualify participant error:", error);
+    res.status(500).json({ success: false, message: "Failed to disqualify participant" });
+  }
+});
+
+// ==================== MOCK BROKER API ENDPOINTS ====================
+// These endpoints simulate FP Markets broker responses for local development
+// Replace with real broker integration when API is available
+
+// Mock account validation
+app.post("/api/broker/validate", async (req, res) => {
+  const { account_number, email, referral_code } = req.body;
+
+  try {
+    // Simulate validation logic
+    const isValid = account_number && email;
+    const emailMatch = email && email.includes("@");
+
+    // Randomly return referral_code_used true/false (50/50 chance)
+    // This simulates real-world scenario where some users have referral code, some don't
+    const referralCodeUsed = Math.random() > 0.5;
+
+    // Mock response matching FP Markets expected format
+    res.json({
+      valid: isValid,
+      account_number,
+      email_match: emailMatch,
+      referral_code_used: referralCodeUsed,
+      account_status: "active",
+      account_created_at: new Date().toISOString(),
+      account_type: "live",
+      account_balance: 15000.00,
+      user_info: {
+        first_name: "John",
+        last_name_masked: "D***",
+      },
+    });
+  } catch (error) {
+    console.error("Mock broker validate error:", error);
+    res.status(500).json({ error: "Validation failed" });
+  }
+});
+
+// Mock account info
+app.get("/api/broker/info", async (req, res) => {
+  const { account_number } = req.query;
+
+  try {
+    if (!account_number) {
+      return res.status(400).json({ error: "Account number is required" });
+    }
+
+    // Mock response matching FP Markets expected format
+    res.json({
+      account_number,
+      account_status: "active",
+      account_type: "live",
+      account_created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      currency: "USD",
+      account_balance: 15000.00,
+      user_info: {
+        first_name: "John",
+        last_name_masked: "D***",
+      },
+    });
+  } catch (error) {
+    console.error("Mock broker info error:", error);
+    res.status(500).json({ error: "Failed to fetch account info" });
+  }
+});
+
+// Mock performance data
+app.post("/api/broker/performance", async (req, res) => {
+  const { account_numbers, start_date, end_date, metrics } = req.body;
+
+  try {
+    if (!account_numbers || !Array.isArray(account_numbers)) {
+      return res.status(400).json({ error: "account_numbers array is required" });
+    }
+
+    // Generate mock performance data for each account
+    const accounts = account_numbers.map((account_number, index) => {
+      const roi = Math.random() * 100 - 20; // Random ROI between -20% and 80%
+      const starting_balance = 10000 + (index * 1000);
+      const current_balance = starting_balance * (1 + roi / 100);
+
+      return {
+        account_number,
+        user_info: {
+          first_name: ["John", "Jane", "Mike", "Sarah", "David"][index % 5],
+          last_name_masked: ["D***", "S***", "J***", "W***", "B***"][index % 5],
+        },
+        metrics: {
+          roi: parseFloat(roi.toFixed(2)),
+          starting_balance: parseFloat(starting_balance.toFixed(2)),
+          current_balance: parseFloat(current_balance.toFixed(2)),
+        },
+        last_trade_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: "active",
+      };
+    });
+
+    // Mock response matching FP Markets expected format
+    res.json({
+      start_date: start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      end_date: end_date || new Date().toISOString(),
+      accounts,
+    });
+  } catch (error) {
+    console.error("Mock broker performance error:", error);
+    res.status(500).json({ error: "Failed to fetch performance data" });
   }
 });
 
@@ -445,6 +968,62 @@ app.put("/api/settings/:key", verifyToken, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error("Update setting error:", error);
     res.status(500).json({ error: "Failed to update setting" });
+  }
+});
+
+// Get leaderboard for a tournament (protected - admin only)
+app.get("/api/leaderboard/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const { tournamentId } = req.params;
+
+    // TODO: Replace with real leaderboard data from LeaderboardCache model
+    // For now, return mock data
+    const mockLeaderboard = [
+      {
+        rank: 1,
+        user: {
+          email: "trader1@example.com",
+          display_name: "AlphaTrader",
+          fp_account_number: "12345678"
+        },
+        roi: 85.5,
+        pnl: 42750,
+        trades: 156,
+        win_rate: 68.5,
+        updated_at: new Date().toISOString()
+      },
+      {
+        rank: 2,
+        user: {
+          email: "trader2@example.com",
+          display_name: "BetaInvestor",
+          fp_account_number: "87654321"
+        },
+        roi: 72.3,
+        pnl: 36150,
+        trades: 142,
+        win_rate: 64.8,
+        updated_at: new Date().toISOString()
+      },
+      {
+        rank: 3,
+        user: {
+          email: "trader3@example.com",
+          display_name: "GammaHedge",
+          fp_account_number: "11223344"
+        },
+        roi: 68.9,
+        pnl: 34450,
+        trades: 128,
+        win_rate: 62.5,
+        updated_at: new Date().toISOString()
+      }
+    ];
+
+    res.json({ leaderboard: mockLeaderboard });
+  } catch (error) {
+    console.error("Fetch leaderboard error:", error);
+    res.status(500).json({ error: "Failed to fetch leaderboard" });
   }
 });
 

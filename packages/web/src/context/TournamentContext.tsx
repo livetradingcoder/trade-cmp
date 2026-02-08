@@ -17,6 +17,9 @@ export interface Tournament {
   cover: string;
   image?: string;
   registrationLink: string;
+  status?: "draft" | "active" | "completed" | "archived";
+  start_date?: string;
+  end_date?: string;
 }
 
 interface Settings {

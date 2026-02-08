@@ -11,6 +11,9 @@ export interface ITournament extends Document {
   cover: string;
   image?: string;
   registrationLink: string;
+  status: "draft" | "active" | "completed" | "archived";
+  start_date?: Date;
+  end_date?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +30,13 @@ const TournamentSchema: Schema = new Schema(
     cover: { type: String, required: true },
     image: { type: String, default: "" },
     registrationLink: { type: String, required: true },
+    status: {
+      type: String,
+      enum: ["draft", "active", "completed", "archived"],
+      default: "draft"
+    },
+    start_date: { type: Date },
+    end_date: { type: Date },
   },
   {
     timestamps: true,
