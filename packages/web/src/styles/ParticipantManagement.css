@@ -320,6 +320,36 @@
   margin-bottom: 16px;
 }
 
+.predefined-reasons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.predefined-reason-btn {
+  padding: 8px 16px;
+  background: var(--bg-color);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.predefined-reason-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.predefined-reason-btn.active {
+  background: rgba(var(--primary-rgb), 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .reason-dialog textarea {
   width: 100%;
   min-height: 100px;

@@ -45,7 +45,7 @@ const ParticipantManagement = ({ tournaments }: ParticipantManagementProps) => {
   const [reasonDialog, setReasonDialog] = useState<{ open: boolean; type: "decline" | "disqualify"; participantId: string } | null>(null);
   const [reason, setReason] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
   useEffect(() => {
     if (tournaments.length > 0 && !selectedTournament) {
@@ -359,6 +359,24 @@ const ParticipantManagement = ({ tournaments }: ParticipantManagementProps) => {
               onClick={(e) => e.stopPropagation()}
             >
               <h3>{reasonDialog.type === "decline" ? "Decline Participant" : "Disqualify Participant"}</h3>
+              {reasonDialog.type === "decline" && (
+                <div className="predefined-reasons">
+                  <button
+                    type="button"
+                    className={`predefined-reason-btn ${reason === "No referral Code" ? "active" : ""}`}
+                    onClick={() => setReason("No referral Code")}
+                  >
+                    No referral Code
+                  </button>
+                  <button
+                    type="button"
+                    className={`predefined-reason-btn ${reason === "Balance required not match" ? "active" : ""}`}
+                    onClick={() => setReason("Balance required not match")}
+                  >
+                    Balance required not match
+                  </button>
+                </div>
+              )}
               <textarea
                 placeholder="Enter reason..."
                 value={reason}

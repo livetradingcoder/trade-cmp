@@ -38,7 +38,7 @@ const CompetitionManagement = ({ tournament, onBack, onEdit, onDelete, onStatusC
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
   const updateStatus = async (newStatus: string, additionalData?: { start_date?: string; end_date?: string }) => {
     setIsUpdatingStatus(true);

@@ -61,7 +61,7 @@ const JoinCompetitionDialog = ({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/participants/apply`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001")}/api/participants/apply`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -191,6 +191,20 @@ const JoinCompetitionDialog = ({
           {/* Application Form */}
           {userType && !success && (
             <form className="dialog-body" onSubmit={handleSubmit}>
+              {/* Existing User - Referral Code Notice */}
+              {userType === "existing" && (
+                <div className="referral-section" style={{ marginBottom: "24px" }}>
+                  <div className="referral-banner">
+                    <div className="referral-icon">⚠️</div>
+                    <div>
+                      <div className="referral-title">Referral Code Required</div>
+                      <div className="referral-description">
+                        Your FP Markets account must have been created using our referral code <strong>{referralCode}</strong>. If your account was not registered with this code, please contact support to have it transferred before applying.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* New User - Referral Code Section */}
               {userType === "new" && (
                 <div className="referral-section">
@@ -219,7 +233,7 @@ const JoinCompetitionDialog = ({
                     className="broker-link-button"
                     onClick={handleOpenBrokerRegistration}
                   >
-                    Open FP Markets Registration
+                    Create FP Markets account
                     <ExternalLink size={16} />
                   </button>
                   <div className="checkbox-field">

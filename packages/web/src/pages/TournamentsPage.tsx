@@ -10,7 +10,7 @@ const TournamentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipContent, setTooltipContent] = useState<string>("");
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number; transformX: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<{ id: string; title: string } | null>(null);
@@ -48,9 +48,28 @@ const TournamentsPage = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
 
       if (rect) {
+        const tooltipWidth = 320;
+        const centerX = rect.left + rect.width / 2;
+        const spaceLeft = centerX - tooltipWidth / 2;
+        const spaceRight = window.innerWidth - (centerX + tooltipWidth / 2);
+
+        let left = centerX;
+        let transformX = "-50%";
+
+        if (spaceLeft < 8) {
+          // Not enough space on the left, align to left edge
+          left = rect.left;
+          transformX = "0%";
+        } else if (spaceRight < 8) {
+          // Not enough space on the right, align to right edge
+          left = rect.right;
+          transformX = "-100%";
+        }
+
         setTooltipPosition({
           top: rect.top - 10,
-          left: rect.left + rect.width / 2,
+          left,
+          transformX,
         });
         setTooltipContent(tooltipContent);
         setActiveTooltip(tooltipKey);
@@ -378,6 +397,8 @@ const TournamentsPage = () => {
                   <button
                     className='btn-primary card-join-btn'
                     onClick={() => {
+                      setActiveTooltip(null);
+                      setTooltipPosition(null);
                       setSelectedTournament({ id: camp.id.toString(), title: camp.title });
                       setDialogOpen(true);
                     }}
@@ -418,7 +439,7 @@ const TournamentsPage = () => {
                 position: "fixed",
                 top: `${tooltipPosition.top}px`,
                 left: `${tooltipPosition.left}px`,
-                transform: "translate(-50%, -100%)",
+                transform: `translate(${tooltipPosition.transformX}, -100%)`,
                 marginBottom: "8px",
                 padding: "12px 16px",
                 background: "rgba(18, 18, 22, 0.98)",
@@ -429,7 +450,7 @@ const TournamentsPage = () => {
                 color: "#fff",
                 maxWidth: "320px",
                 minWidth: "280px",
-                zIndex: 10000,
+                zIndex: 999,
                 boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
                 whiteSpace: "normal",
                 lineHeight: "1.5",
@@ -814,7 +835,7 @@ const TournamentsPage = () => {
         .tooltip-popup {
           max-width: 320px;
           min-width: 280px;
-          z-index: 10000;
+          z-index: 999;
         }
 
         @media (max-width: 480px) {

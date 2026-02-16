@@ -32,7 +32,7 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+  const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
   useEffect(() => {
     if (tournaments.length > 0 && !selectedTournament) {
