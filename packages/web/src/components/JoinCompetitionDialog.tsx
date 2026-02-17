@@ -166,9 +166,9 @@ const JoinCompetitionDialog = ({
                 >
                   <div className="user-type-icon">✓</div>
                   <div>
-                    <div className="user-type-title">Yes, I have an account</div>
+                    <div className="user-type-title">Yes, I have an account, with your referral code</div>
                     <div className="user-type-description">
-                      I already have an FP Markets trading account
+                      I already have an FP Markets trading account, with your referral code
                     </div>
                   </div>
                 </button>
@@ -180,7 +180,7 @@ const JoinCompetitionDialog = ({
                   <div>
                     <div className="user-type-title">No, I'm new</div>
                     <div className="user-type-description">
-                      I need to create an FP Markets account
+                      I need to create an FP Markets account with your referral code
                     </div>
                   </div>
                 </button>
