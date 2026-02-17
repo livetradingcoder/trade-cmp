@@ -10,7 +10,7 @@ const TournamentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipContent, setTooltipContent] = useState<string>("");
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number; transformX: string } | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<{ id: string; title: string } | null>(null);
@@ -25,6 +25,16 @@ const TournamentsPage = () => {
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
       if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
     };
+  }, []);
+
+  // Dismiss tooltip on scroll
+  useEffect(() => {
+    const dismiss = () => {
+      setActiveTooltip(null);
+      setTooltipPosition(null);
+    };
+    window.addEventListener("scroll", dismiss, true);
+    return () => window.removeEventListener("scroll", dismiss, true);
   }, []);
 
   const handleCopyCode = () => {
@@ -49,27 +59,13 @@ const TournamentsPage = () => {
 
       if (rect) {
         const tooltipWidth = 320;
+        const padding = 8;
         const centerX = rect.left + rect.width / 2;
-        const spaceLeft = centerX - tooltipWidth / 2;
-        const spaceRight = window.innerWidth - (centerX + tooltipWidth / 2);
-
-        let left = centerX;
-        let transformX = "-50%";
-
-        if (spaceLeft < 8) {
-          // Not enough space on the left, align to left edge
-          left = rect.left;
-          transformX = "0%";
-        } else if (spaceRight < 8) {
-          // Not enough space on the right, align to right edge
-          left = rect.right;
-          transformX = "-100%";
-        }
+        let left = Math.max(padding, Math.min(centerX - tooltipWidth / 2, window.innerWidth - tooltipWidth - padding));
 
         setTooltipPosition({
           top: rect.top - 10,
           left,
-          transformX,
         });
         setTooltipContent(tooltipContent);
         setActiveTooltip(tooltipKey);
@@ -439,7 +435,7 @@ const TournamentsPage = () => {
                 position: "fixed",
                 top: `${tooltipPosition.top}px`,
                 left: `${tooltipPosition.left}px`,
-                transform: `translate(${tooltipPosition.transformX}, -100%)`,
+                transform: `translateY(-100%)`,
                 marginBottom: "8px",
                 padding: "12px 16px",
                 background: "rgba(18, 18, 22, 0.98)",
