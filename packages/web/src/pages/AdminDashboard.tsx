@@ -67,7 +67,9 @@ const AdminDashboard = () => {
     if (pathParts[2] === "password") return "password";
     return "list";
   })();
-  const urlTournamentId = pathParts[2] === "competitions" ? pathParts[3] : undefined;
+  const urlTournamentId = pathParts[2] === "competitions" ? pathParts[3]
+    : pathParts[2] === "participants" ? pathParts[3]
+    : undefined;
   const editingTournament = viewMode === "edit" && urlTournamentId
     ? tournaments.find(t => String(t.id) === urlTournamentId) || null
     : null;
@@ -1071,7 +1073,11 @@ const AdminDashboard = () => {
               exit={{ opacity: 0, x: -20 }}
               className='content-section'
             >
-              <ParticipantManagement tournaments={tournaments} />
+              <ParticipantManagement
+                tournaments={tournaments}
+                selectedTournamentId={urlTournamentId}
+                onTournamentChange={(id) => navigate(`/admin/participants/${id}`)}
+              />
             </motion.div>
           )}
 

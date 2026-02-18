@@ -34,10 +34,12 @@ interface Participant {
 
 interface ParticipantManagementProps {
   tournaments: Tournament[];
+  selectedTournamentId?: string | number;
+  onTournamentChange?: (id: string | number) => void;
 }
 
-const ParticipantManagement = ({ tournaments }: ParticipantManagementProps) => {
-  const [selectedTournament, setSelectedTournament] = useState<string | number>("");
+const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournamentChange }: ParticipantManagementProps) => {
+  const [selectedTournament, setSelectedTournament] = useState<string | number>(selectedTournamentId || "");
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "declined" | "disqualified">("pending");
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,10 +50,14 @@ const ParticipantManagement = ({ tournaments }: ParticipantManagementProps) => {
   const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
   useEffect(() => {
-    if (tournaments.length > 0 && !selectedTournament) {
-      setSelectedTournament(tournaments[0].id);
+    if (selectedTournamentId) {
+      setSelectedTournament(selectedTournamentId);
+    } else if (tournaments.length > 0 && !selectedTournament) {
+      const firstId = tournaments[0].id;
+      setSelectedTournament(firstId);
+      if (onTournamentChange) onTournamentChange(firstId);
     }
-  }, [tournaments]);
+  }, [tournaments, selectedTournamentId]);
 
   useEffect(() => {
     if (selectedTournament) {
@@ -187,7 +193,10 @@ const ParticipantManagement = ({ tournaments }: ParticipantManagementProps) => {
         <h2>Participant Management</h2>
         <div className="tournament-selector">
           <label>Tournament:</label>
-          <select value={selectedTournament} onChange={(e) => setSelectedTournament(e.target.value)}>
+          <select value={selectedTournament} onChange={(e) => {
+            setSelectedTournament(e.target.value);
+            if (onTournamentChange) onTournamentChange(e.target.value);
+          }}>
             {tournaments.map((tournament) => (
               <option key={tournament.id} value={tournament.id}>
                 {tournament.title}
