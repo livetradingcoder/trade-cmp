@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight, Trophy, Calendar, Clock, Filter, Search, Info, Gift, Copy, Check, Users } from "lucide-react";
+import { Tooltip } from "react-tooltip";
+import "react-tooltip/dist/react-tooltip.css";
 import { useTournaments } from "../context/TournamentContext";
 import JoinCompetitionDialog from "../components/JoinCompetitionDialog";
 
@@ -8,34 +10,11 @@ const TournamentsPage = () => {
   const { tournaments, settings } = useTournaments();
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  const [tooltipContent, setTooltipContent] = useState<string>("");
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<{ id: string; title: string } | null>(null);
-  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const affiliateCode = settings.affiliateCode;
-
-  // Clean up timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-      if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
-    };
-  }, []);
-
-  // Dismiss tooltip on scroll
-  useEffect(() => {
-    const dismiss = () => {
-      setActiveTooltip(null);
-      setTooltipPosition(null);
-    };
-    window.addEventListener("scroll", dismiss, true);
-    return () => window.removeEventListener("scroll", dismiss, true);
-  }, []);
 
   const handleCopyCode = () => {
     if (affiliateCode) {
@@ -43,75 +22,6 @@ const TournamentsPage = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  const TooltipTrigger = ({ text, tooltipKey, tooltipContent }: { text: string; tooltipKey: string; tooltipContent: string }) => {
-    const triggerRef = useRef<HTMLDivElement>(null);
-
-    const handleMouseEnter = () => {
-      // Clear any pending hide timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-
-      const rect = triggerRef.current?.getBoundingClientRect();
-
-      if (rect) {
-        const tooltipWidth = 320;
-        const padding = 8;
-        const centerX = rect.left + rect.width / 2;
-        let left = Math.max(padding, Math.min(centerX - tooltipWidth / 2, window.innerWidth - tooltipWidth - padding));
-
-        setTooltipPosition({
-          top: rect.top - 10,
-          left,
-        });
-        setTooltipContent(tooltipContent);
-        setActiveTooltip(tooltipKey);
-      }
-    };
-
-    const handleMouseLeave = () => {
-      // Clear any pending show timeout
-      if (showTimeoutRef.current) {
-        clearTimeout(showTimeoutRef.current);
-        showTimeoutRef.current = null;
-      }
-
-      // Delay hiding to allow smooth transition
-      hideTimeoutRef.current = setTimeout(() => {
-        setActiveTooltip(null);
-        setTooltipPosition(null);
-      }, 150);
-    };
-
-    return (
-      <div
-        ref={triggerRef}
-        className="tooltip-trigger"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}
-      >
-        <span style={{
-          fontWeight: 'bold',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          lineHeight: '1.2',
-          textAlign: 'center'
-        }}>{text}</span>
-        <Info
-          size={12}
-          color={activeTooltip === tooltipKey ? 'var(--primary)' : 'var(--text-muted)'}
-          className="tooltip-icon"
-          style={{ cursor: 'help' }}
-        />
-      </div>
-    );
   };
 
   const tabs = ["All", "Weekly", "Bi-Weekly", "Monthly"];
@@ -383,7 +293,23 @@ const TournamentsPage = () => {
                         <div key={idx} className="card-stat-cell">
                           <item.icon size={16} color='var(--primary)' className="stat-icon" />
                           <div className="stat-label">
-                            <TooltipTrigger text={item.label} tooltipKey={item.tooltipKey} tooltipContent={item.tooltipContent} />
+                            <div
+                              data-tooltip-id="stat-tooltip"
+                              data-tooltip-content={item.tooltipContent}
+                              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'help' }}
+                            >
+                              <span style={{
+                                fontWeight: 'bold',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                lineHeight: '1.2',
+                                textAlign: 'center'
+                              }}>{item.label}</span>
+                              <Info size={12} color="var(--text-muted)" />
+                            </div>
                           </div>
                           <div className="stat-value">{item.value}</div>
                         </div>
@@ -393,8 +319,6 @@ const TournamentsPage = () => {
                   <button
                     className='btn-primary card-join-btn'
                     onClick={() => {
-                      setActiveTooltip(null);
-                      setTooltipPosition(null);
                       setSelectedTournament({ id: camp.id.toString(), title: camp.title });
                       setDialogOpen(true);
                     }}
@@ -423,53 +347,22 @@ const TournamentsPage = () => {
           </AnimatePresence>
         </div>
 
-        <AnimatePresence>
-          {activeTooltip && tooltipPosition && (
-            <motion.div
-              key={activeTooltip}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="tooltip-popup"
-              style={{
-                position: "fixed",
-                top: `${tooltipPosition.top}px`,
-                left: `${tooltipPosition.left}px`,
-                transform: `translateY(-100%)`,
-                marginBottom: "8px",
-                padding: "12px 16px",
-                background: "rgba(18, 18, 22, 0.98)",
-                backdropFilter: "blur(10px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "8px",
-                fontSize: "0.75rem",
-                color: "#fff",
-                maxWidth: "320px",
-                minWidth: "280px",
-                zIndex: 999,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                whiteSpace: "normal",
-                lineHeight: "1.5",
-                pointerEvents: "none",
-              }}
-            >
-              {tooltipContent}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: 0,
-                  height: 0,
-                  borderLeft: "6px solid transparent",
-                  borderRight: "6px solid transparent",
-                  borderTop: "6px solid rgba(18, 18, 22, 0.98)",
-                }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <Tooltip
+          id="stat-tooltip"
+          place="top"
+          style={{
+            backgroundColor: "rgba(18, 18, 22, 0.98)",
+            color: "#fff",
+            fontSize: "0.75rem",
+            maxWidth: "300px",
+            borderRadius: "8px",
+            lineHeight: "1.5",
+            zIndex: 9999,
+            padding: "12px 16px",
+          }}
+          closeOnScroll
+          closeOnResize
+        />
 
         {filteredChampionships.length === 0 && (
           <motion.div
@@ -811,35 +704,6 @@ const TournamentsPage = () => {
           }
         }
 
-        /* Tooltip Styles */
-        .tooltip-trigger {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          cursor: help;
-        }
-
-        .tooltip-icon {
-          flex-shrink: 0;
-          transition: color 0.2s ease;
-        }
-
-        .tooltip-trigger:hover .tooltip-icon {
-          color: var(--primary) !important;
-        }
-
-        .tooltip-popup {
-          max-width: 320px;
-          min-width: 280px;
-          z-index: 999;
-        }
-
-        @media (max-width: 480px) {
-          .tooltip-popup {
-            max-width: 260px;
-            min-width: 220px;
-          }
-        }
       `}</style>
 
       {/* Join Competition Dialog */}

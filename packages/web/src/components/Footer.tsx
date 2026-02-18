@@ -11,7 +11,9 @@ const Footer = () => {
               <img src={logoImage} alt='Live Trading League' className='footer-logo-image' />
             </Link>
             <p className='footer-description'>
-              Revolutionising trading competitions. Prove your skills. Climb the ranks. Win real money.
+              Revolutionising trading competitions.
+              <br />
+              Prove your skills. Climb the ranks. Win real money.
             </p>
           </div>
 
