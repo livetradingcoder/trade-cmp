@@ -30,7 +30,7 @@ export default function App() {
   const location = useLocation();
 
   // Check if we're on the admin page
-  const isAdminPage = location.pathname === "/admin";
+  const isAdminPage = location.pathname.startsWith("/admin");
 
   // Render admin dashboard without layout
   if (isAdminPage) {

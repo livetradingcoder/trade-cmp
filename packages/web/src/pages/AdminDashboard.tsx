@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ParticipantManagement from "../components/ParticipantManagement";
 import CompetitionManagement from "../components/CompetitionManagement";
 
@@ -41,6 +41,7 @@ type ViewMode = "list" | "create" | "edit" | "password" | "settings" | "particip
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { tournaments, isAdmin, login, logout, updateTournament, createTournament, deleteTournament } = useTournaments();
 
   // Auth state
@@ -50,10 +51,29 @@ const AdminDashboard = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // View state
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
-  const [managingTournament, setManagingTournament] = useState<Tournament | null>(null);
+  // Derive viewMode and tournament ID from URL
+  const pathParts = location.pathname.replace(/\/$/, "").split("/");
+  // /admin → list, /admin/competitions/new → create, /admin/competitions/:id/edit → edit,
+  // /admin/competitions/:id/manage → manage, /admin/participants → participants,
+  // /admin/settings → settings, /admin/password → password
+  const viewMode: ViewMode = (() => {
+    if (pathParts[2] === "competitions") {
+      if (pathParts[3] === "new") return "create";
+      if (pathParts[4] === "edit") return "edit";
+      if (pathParts[4] === "manage") return "manage";
+    }
+    if (pathParts[2] === "participants") return "participants";
+    if (pathParts[2] === "settings") return "settings";
+    if (pathParts[2] === "password") return "password";
+    return "list";
+  })();
+  const urlTournamentId = pathParts[2] === "competitions" ? pathParts[3] : undefined;
+  const editingTournament = viewMode === "edit" && urlTournamentId
+    ? tournaments.find(t => String(t.id) === urlTournamentId) || null
+    : null;
+  const managingTournament = viewMode === "manage" && urlTournamentId
+    ? tournaments.find(t => String(t.id) === urlTournamentId) || null
+    : null;
 
   // Form state
   const [formData, setFormData] = useState<Omit<Tournament, "id">>({
@@ -112,6 +132,24 @@ const AdminDashboard = () => {
   const infoIconRef = useRef<HTMLDivElement>(null);
 
   const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
+
+  // Populate form when navigating directly to edit URL
+  useEffect(() => {
+    if (viewMode === "edit" && editingTournament) {
+      setFormData({
+        title: editingTournament.title,
+        tier: editingTournament.tier,
+        prize: editingTournament.prize,
+        fee: editingTournament.fee,
+        participants: editingTournament.participants,
+        timeLabel: editingTournament.timeLabel,
+        timeLeft: editingTournament.timeLeft,
+        cover: editingTournament.cover,
+        image: editingTournament.image || "",
+        registrationLink: editingTournament.registrationLink,
+      });
+    }
+  }, [viewMode, editingTournament]);
 
   useEffect(() => {
     if (showCapitalTooltip && infoIconRef.current) {
@@ -236,7 +274,7 @@ const AdminDashboard = () => {
     logout();
     setUsername("");
     setPassword("");
-    setViewMode("list");
+    navigate("/admin");
   };
 
   const resetForm = () => {
@@ -257,12 +295,11 @@ const AdminDashboard = () => {
 
   const startCreate = () => {
     resetForm();
-    setViewMode("create");
     setSaveMessage({ type: "", text: "" });
+    navigate("/admin/competitions/new");
   };
 
   const startEdit = (tournament: Tournament) => {
-    setEditingTournament(tournament);
     setFormData({
       title: tournament.title,
       tier: tournament.tier,
@@ -275,13 +312,12 @@ const AdminDashboard = () => {
       image: tournament.image || "",
       registrationLink: tournament.registrationLink,
     });
-    setViewMode("edit");
     setSaveMessage({ type: "", text: "" });
+    navigate(`/admin/competitions/${tournament.id}/edit`);
   };
 
   const startManage = (tournament: Tournament) => {
-    setManagingTournament(tournament);
-    setViewMode("manage");
+    navigate(`/admin/competitions/${tournament.id}/manage`);
   };
 
   const handleSave = async () => {
@@ -299,8 +335,8 @@ const AdminDashboard = () => {
         if (success) {
           setSaveMessage({ type: "success", text: "Competition created successfully!" });
           setTimeout(() => {
-            setViewMode("list");
             resetForm();
+            navigate("/admin");
           }, 1500);
         } else {
           setSaveMessage({ type: "error", text: "Failed to create competition" });
@@ -310,8 +346,7 @@ const AdminDashboard = () => {
         if (success) {
           setSaveMessage({ type: "success", text: "Competition updated successfully!" });
           setTimeout(() => {
-            setViewMode("list");
-            setEditingTournament(null);
+            navigate("/admin");
           }, 1500);
         } else {
           setSaveMessage({ type: "error", text: "Failed to update competition" });
@@ -367,7 +402,7 @@ const AdminDashboard = () => {
       if (response.ok) {
         setPasswordSuccess("Password changed successfully!");
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-        setTimeout(() => setViewMode("list"), 2000);
+        setTimeout(() => navigate("/admin"), 2000);
       } else {
         const data = await response.json();
         setPasswordError(data.error || "Failed to change password");
@@ -380,15 +415,13 @@ const AdminDashboard = () => {
   };
 
   const cancelAction = () => {
-    setViewMode("list");
-    setEditingTournament(null);
-    setManagingTournament(null);
     resetForm();
     setSaveMessage({ type: "", text: "" });
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     setPasswordError("");
     setPasswordSuccess("");
     setSettingsMessage({ type: "", text: "" });
+    navigate("/admin");
   };
 
   const handleSaveSettings = async () => {
@@ -570,16 +603,16 @@ const AdminDashboard = () => {
             <Trophy size={20} />
             <span>Competitions</span>
           </button>
-          <button className={`nav-item ${viewMode === "participants" ? "active" : ""}`} onClick={() => setViewMode("participants")}>
+          <button className={`nav-item ${viewMode === "participants" ? "active" : ""}`} onClick={() => navigate("/admin/participants")}>
             <Users size={20} />
             <span>Participants</span>
             {totalPending > 0 && <span className='notification-badge'>{totalPending}</span>}
           </button>
-          <button className={`nav-item ${viewMode === "settings" ? "active" : ""}`} onClick={() => setViewMode("settings")}>
+          <button className={`nav-item ${viewMode === "settings" ? "active" : ""}`} onClick={() => navigate("/admin/settings")}>
             <Settings size={20} />
             <span>Settings</span>
           </button>
-          <button className={`nav-item ${viewMode === "password" ? "active" : ""}`} onClick={() => setViewMode("password")}>
+          <button className={`nav-item ${viewMode === "password" ? "active" : ""}`} onClick={() => navigate("/admin/password")}>
             <Key size={20} />
             <span>Change Password</span>
           </button>
