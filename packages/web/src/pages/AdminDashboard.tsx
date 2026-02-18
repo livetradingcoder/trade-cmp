@@ -76,6 +76,7 @@ const AdminDashboard = () => {
   const managingTournament = viewMode === "manage" && urlTournamentId
     ? tournaments.find(t => String(t.id) === urlTournamentId) || null
     : null;
+  const manageTab = new URLSearchParams(location.search).get("tab") as "participants" | "leaderboard" | null;
 
   // Form state
   const [formData, setFormData] = useState<Omit<Tournament, "id">>({
@@ -1095,6 +1096,8 @@ const AdminDashboard = () => {
                 onEdit={() => startEdit(managingTournament)}
                 onDelete={() => handleDelete(managingTournament.id)}
                 onStatusChange={cancelAction}
+                activeTab={manageTab || "participants"}
+                onTabChange={(tab) => navigate(`/admin/competitions/${managingTournament.id}/manage?tab=${tab}`)}
               />
             </motion.div>
           )}

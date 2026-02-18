@@ -28,12 +28,17 @@ interface CompetitionManagementProps {
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange?: () => void;
+  activeTab?: TabType;
+  onTabChange?: (tab: TabType) => void;
 }
 
-type TabType = "participants" | "leaderboard";
-
-const CompetitionManagement = ({ tournament, onBack, onEdit, onDelete, onStatusChange }: CompetitionManagementProps) => {
-  const [activeTab, setActiveTab] = useState<TabType>("participants");
+const CompetitionManagement = ({ tournament, onBack, onEdit, onDelete, onStatusChange, activeTab: controlledTab, onTabChange }: CompetitionManagementProps) => {
+  const [internalTab, setInternalTab] = useState<TabType>("participants");
+  const activeTab = controlledTab || internalTab;
+  const handleTabChange = (tab: TabType) => {
+    setInternalTab(tab);
+    if (onTabChange) onTabChange(tab);
+  };
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -250,14 +255,14 @@ const CompetitionManagement = ({ tournament, onBack, onEdit, onDelete, onStatusC
       <div className="management-tabs">
         <button
           className={`tab-button ${activeTab === "participants" ? "active" : ""}`}
-          onClick={() => setActiveTab("participants")}
+          onClick={() => handleTabChange("participants")}
         >
           <Users size={18} />
           Participants
         </button>
         <button
           className={`tab-button ${activeTab === "leaderboard" ? "active" : ""}`}
-          onClick={() => setActiveTab("leaderboard")}
+          onClick={() => handleTabChange("leaderboard")}
         >
           <Trophy size={18} />
           Leaderboard
