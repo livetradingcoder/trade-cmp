@@ -22,6 +22,8 @@ interface CompetitionTournament {
   end_date?: string;
 }
 
+type TabType = "participants" | "leaderboard";
+
 interface CompetitionManagementProps {
   tournament: CompetitionTournament;
   onBack: () => void;
