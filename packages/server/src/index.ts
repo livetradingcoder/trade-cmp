@@ -1129,6 +1129,12 @@ app.get("/api/leaderboard/:tournamentId", verifyToken, async (req: AuthRequest, 
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
-});
+// Don't call app.listen() in serverless environment
+if (process.env.VERCEL !== "1") {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+  });
+}
+
+// Export for Vercel serverless
+export default app;
