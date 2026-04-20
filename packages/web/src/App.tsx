@@ -32,29 +32,35 @@ export default function App() {
   // Check if we're on the admin page
   const isAdminPage = location.pathname.startsWith("/admin");
 
-  // Render admin dashboard without layout
-  if (isAdminPage) {
-    return <AdminDashboard />;
-  }
-
   return (
-    <div className='app-container'>
+    <>
       <ScrollToTop />
-      <Ticker />
-      <Navbar />
+      <Routes>
+        {/* Admin routes without layout */}
+        <Route path='/admin/*' element={<AdminDashboard />} />
 
-      <main>
-        <Routes>
-          <Route path='/' element={<HomePage />} />
-          <Route path='/competitions' element={<TournamentsPage />} />
-          <Route path='/leaderboard' element={<LeaderboardPage />} />
-          <Route path='/terms' element={<TermsPage />} />
-          <Route path='/risk-warning' element={<RiskWarningPage />} />
-          <Route path='/security' element={<SecurityPage />} />
-        </Routes>
-      </main>
-
-      <Footer />
-    </div>
+        {/* Public routes with layout */}
+        <Route
+          path='*'
+          element={
+            <div className='app-container'>
+              <Ticker />
+              <Navbar />
+              <main>
+                <Routes>
+                  <Route path='/' element={<HomePage />} />
+                  <Route path='/competitions' element={<TournamentsPage />} />
+                  <Route path='/leaderboard' element={<LeaderboardPage />} />
+                  <Route path='/terms' element={<TermsPage />} />
+                  <Route path='/risk-warning' element={<RiskWarningPage />} />
+                  <Route path='/security' element={<SecurityPage />} />
+                </Routes>
+              </main>
+              <Footer />
+            </div>
+          }
+        />
+      </Routes>
+    </>
   );
 }
