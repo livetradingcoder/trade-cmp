@@ -29,9 +29,6 @@ const Footer = () => {
                     Leaderboards
                   </a>
                 </li>
-                <li>
-                  <a href='/#goal'>Protocol</a>
-                </li>
               </ul>
             </div>
             <div className='footer-col'>
