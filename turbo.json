@@ -1,6 +1,17 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL"],
+  "globalEnv": [
+  "DATABASE_URL",
+  "MONGODB_URI",
+  "ENCRYPTION_KEY",
+  "ADMIN_USERNAME",
+  "ADMIN_PASSWORD",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+  "NODE_ENV",
+  "VERCEL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
