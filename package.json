@@ -15,6 +15,7 @@
     "db:seed": "dotenv -e .env -- turbo run db:seed",
     "db:setup": "dotenv -e .env -- npm run db:push && dotenv -e .env -- npm run db:seed",
     "dev": "dotenv -e .env -- turbo run dev",
+    "build:web": "npm run build -w @trade-arena/web",
     "build": "dotenv -e .env -- turbo run build && rm -rf dist && cp -r packages/web/dist dist",
     "lint": "turbo run lint",
     "start": "dotenv -e .env -- concurrently -n web,server -c cyan,magenta \"npm run start:web\" \"npm run start:server\"",
