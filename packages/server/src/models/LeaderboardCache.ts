@@ -1,16 +1,23 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IRanking {
+export interface ILeaderboardRanking {
   rank: number;
+  participant_id: mongoose.Types.ObjectId;
+  trading_account_id: mongoose.Types.ObjectId;
   display_name: string;
   account_masked: string;
   roi: number;
-  user_id: mongoose.Types.ObjectId;
+  pnl: number;
+  win_rate: number;
+  trade_count: number;
+  calculation_source: "computed_raw" | "broker_metrics";
+  calculation_status: "ranked" | "insufficient_data";
+  updated_at: Date;
 }
 
 export interface ILeaderboardCache extends Document {
   tournament_id: mongoose.Types.ObjectId;
-  rankings: IRanking[];
+  rankings: ILeaderboardRanking[];
   fetched_at: Date;
   expires_at: Date;
   createdAt: Date;
@@ -20,10 +27,33 @@ export interface ILeaderboardCache extends Document {
 const RankingSchema: Schema = new Schema(
   {
     rank: { type: Number, required: true },
+    participant_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Participant",
+      required: true,
+    },
+    trading_account_id: {
+      type: Schema.Types.ObjectId,
+      ref: "TradingAccount",
+      required: true,
+    },
     display_name: { type: String, required: true },
     account_masked: { type: String, required: true },
     roi: { type: Number, required: true },
-    user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    pnl: { type: Number, required: true },
+    win_rate: { type: Number, required: true },
+    trade_count: { type: Number, required: true },
+    calculation_source: {
+      type: String,
+      enum: ["computed_raw", "broker_metrics"],
+      required: true,
+    },
+    calculation_status: {
+      type: String,
+      enum: ["ranked", "insufficient_data"],
+      required: true,
+    },
+    updated_at: { type: Date, required: true },
   },
   { _id: false }
 );
