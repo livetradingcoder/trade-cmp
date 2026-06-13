@@ -6,6 +6,11 @@ export interface ConnectorAccountInput {
 export interface FetchCompetitionDataInput {
   tournamentId: string;
   accounts: ConnectorAccountInput[];
+  // Optional reporting window (ISO date or datetime). Connectors that query a
+  // broker for a date range (e.g. fpmarkets) use these; fixture/simulation
+  // ignore them. When omitted the connector falls back to its own default.
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface NormalizedSnapshotInput {

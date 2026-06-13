@@ -16,6 +16,8 @@ import { sendPasswordResetEmail } from "./utils/email";
 import { sendEmail, emailTemplates } from "./utils/emailService";
 import { encrypt } from "./utils/encryption";
 import { createEmailTransporter, getSMTPSettings } from "./utils/smtpConfig";
+import { syncTournament } from "./services/sync/syncTournament";
+import { startSyncScheduler } from "./services/sync/scheduler";
 
 // Load environment variables
 dotenv.config({ path: "../../.env" });
@@ -1073,56 +1075,55 @@ app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) =
   }
 });
 
+// Trigger a broker sync for a tournament (protected - admin only)
+app.post("/api/admin/sync/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const result = await syncTournament(req.params.tournamentId);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error("Sync error:", error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || "Failed to sync tournament",
+    });
+  }
+});
+
 // Get leaderboard for a tournament (protected - admin only)
 app.get("/api/leaderboard/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
   try {
     const { tournamentId } = req.params;
 
-    // TODO: Replace with real leaderboard data from LeaderboardCache model
-    // For now, return mock data
-    const mockLeaderboard = [
-      {
-        rank: 1,
-        user: {
-          email: "trader1@example.com",
-          display_name: "AlphaTrader",
-          fp_account_number: "12345678"
-        },
-        roi: 85.5,
-        pnl: 42750,
-        trades: 156,
-        win_rate: 68.5,
-        updated_at: new Date().toISOString()
-      },
-      {
-        rank: 2,
-        user: {
-          email: "trader2@example.com",
-          display_name: "BetaInvestor",
-          fp_account_number: "87654321"
-        },
-        roi: 72.3,
-        pnl: 36150,
-        trades: 142,
-        win_rate: 64.8,
-        updated_at: new Date().toISOString()
-      },
-      {
-        rank: 3,
-        user: {
-          email: "trader3@example.com",
-          display_name: "GammaHedge",
-          fp_account_number: "11223344"
-        },
-        roi: 68.9,
-        pnl: 34450,
-        trades: 128,
-        win_rate: 62.5,
-        updated_at: new Date().toISOString()
-      }
-    ];
+    const cache = await LeaderboardCache.findOne({ tournament_id: tournamentId });
 
-    res.json({ leaderboard: mockLeaderboard });
+    if (!cache) {
+      return res.json({
+        leaderboard: [],
+        fetched_at: null,
+        expires_at: null,
+        stale: true,
+      });
+    }
+
+    res.json({
+      leaderboard: cache.rankings.map((r) => ({
+        rank: r.rank,
+        participant_id: r.participant_id,
+        trading_account_id: r.trading_account_id,
+        display_name: r.display_name,
+        account_masked: r.account_masked,
+        roi: r.roi,
+        pnl: r.pnl,
+        win_rate: r.win_rate,
+        trade_count: r.trade_count,
+        calculation_source: r.calculation_source,
+        calculation_status: r.calculation_status,
+        updated_at: r.updated_at,
+      })),
+      fetched_at: cache.fetched_at,
+      expires_at: cache.expires_at,
+      stale: cache.expires_at.getTime() < Date.now(),
+    });
   } catch (error) {
     console.error("Fetch leaderboard error:", error);
     res.status(500).json({ error: "Failed to fetch leaderboard" });
@@ -1134,6 +1135,7 @@ if (process.env.VERCEL !== "1") {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   });
+  startSyncScheduler();
 }
 
 // Export for Vercel serverless

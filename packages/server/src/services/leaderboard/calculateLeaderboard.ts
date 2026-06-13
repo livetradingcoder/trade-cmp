@@ -1,4 +1,4 @@
-type InputRow = {
+export type InputRow = {
   participantId: string;
   accountNumber: string;
   startingEquity?: number | null;

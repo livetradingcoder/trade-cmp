@@ -36,6 +36,15 @@ EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
 EMAIL_FROM=LiveTradingLeague <noreply@LiveTradingLeague.com>
 
+# FP Markets ("fpmarkets") Broker Integration
+# Account Performance API credentials (beta). Get token/secret from the broker.
+# Your server's outbound IP must be whitelisted by the broker first.
+FP_MARKETS_BASE_URL=https://ibbeta.fptrading.com
+FP_MARKETS_TOKEN=your_fp_access_token
+FP_MARKETS_SECRET=your_fp_secret
+# Comma-separated rebate/IB account number(s) you own
+FP_MARKETS_REBATE_ACCOUNTS=00123,00456
+
 # Frontend Configuration (only needed for local development)
 VITE_API_URL=http://localhost:3001
 FRONTEND_URL=http://localhost:5173
