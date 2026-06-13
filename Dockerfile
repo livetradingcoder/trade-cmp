@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN npm ci --ignore-scripts
 RUN npm run build --workspaces --if-present
 
 # Production stage - Single container with both backend and frontend
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install nginx and gettext (for envsubst)
 RUN apk add --no-cache nginx gettext
