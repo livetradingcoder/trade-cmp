@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+const RETRY_MS = 10000;
+
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || process.env.DATABASE_URL || "mongodb://localhost:27017/trade_arena";
@@ -18,17 +20,18 @@ const connectDB = async () => {
     // Auto-seed admin if not exists
     await seedAdminIfNeeded();
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
-    console.log("\n⚠️  MongoDB is not available. Please:");
-    console.log("   1. Install MongoDB: brew install mongodb-community");
-    console.log("   2. Start MongoDB: brew services start mongodb-community");
-    console.log("   3. Or use MongoDB Atlas (cloud): https://www.mongodb.com/cloud/atlas");
-    console.log("   4. Update MONGODB_URI in your .env file\n");
-
-    // Don't exit in development, just warn
-    if (process.env.NODE_ENV === "production") {
-      process.exit(1);
-    }
+    // Never exit the process — that causes a deploy crash-loop on hosts like
+    // Railway when the DB IP is not yet whitelisted. Keep the server (and its
+    // health check) up and retry; mongoose connects as soon as the network/IP
+    // allowlist is fixed.
+    console.error("❌ MongoDB connection error:", error instanceof Error ? error.message : error);
+    console.log(
+      `↻ Server stays up; retrying MongoDB in ${RETRY_MS / 1000}s. ` +
+        `If on a cloud host, check the DB IP allowlist (e.g. MongoDB Atlas Network Access).`
+    );
+    setTimeout(() => {
+      void connectDB();
+    }, RETRY_MS);
   }
 };
 
