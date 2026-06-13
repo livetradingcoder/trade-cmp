@@ -39,6 +39,17 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", database: "mongodb" });
 });
 
+// Bootstrap helper: report this server's outbound IP so it can be whitelisted
+// in MongoDB Atlas and by the broker. Remove once the IP is recorded.
+app.get("/api/egress-ip", async (_req, res) => {
+  try {
+    const ip = (await (await fetch("https://api.ipify.org")).text()).trim();
+    res.json({ egress_ip: ip });
+  } catch (error: any) {
+    res.status(502).json({ error: error?.message || "IP lookup failed" });
+  }
+});
+
 // ==================== AUTH ENDPOINTS ====================
 
 // Admin login with JWT
