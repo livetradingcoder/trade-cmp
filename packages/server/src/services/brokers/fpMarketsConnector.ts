@@ -62,7 +62,7 @@ export function signTimestamp(timestamp: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(timestamp).digest("hex");
 }
 
-function loadConfig(): FpMarketsConfig {
+export function loadFpMarketsConfig(): FpMarketsConfig {
   const token = process.env.FP_MARKETS_TOKEN;
   const secret = process.env.FP_MARKETS_SECRET;
 
@@ -99,6 +99,15 @@ function toDateOnly(value: string): string {
   return value.slice(0, 10);
 }
 
+function defaultRange(): { startDate: string; endDate: string } {
+  const end = new Date();
+  const start = new Date(end.getTime() - DEFAULT_LOOKBACK_DAYS * 86400000);
+  return {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  };
+}
+
 function resolveRange(input: FetchCompetitionDataInput): {
   startDate: string;
   endDate: string;
@@ -109,13 +118,7 @@ function resolveRange(input: FetchCompetitionDataInput): {
       endDate: toDateOnly(input.endDate),
     };
   }
-
-  const end = new Date();
-  const start = new Date(end.getTime() - DEFAULT_LOOKBACK_DAYS * 86400000);
-  return {
-    startDate: start.toISOString().slice(0, 10),
-    endDate: end.toISOString().slice(0, 10),
-  };
+  return defaultRange();
 }
 
 /** Pull the first human-readable message out of the API error envelope. */
@@ -159,6 +162,46 @@ async function callPerformanceApi(
   return Array.isArray(accounts) ? accounts : [];
 }
 
+export interface FpMarketsProbeResult {
+  baseUrl: string;
+  requestedAccounts: string[];
+  startDate: string;
+  endDate: string;
+  accountsReturned: FpAccountResource[];
+}
+
+/**
+ * Make one live, signed call to the Account Performance API using the
+ * configured rebate account number(s). Returns whatever accounts the broker
+ * sends back (no participant matching) — a direct proof that auth, request
+ * signing, and IP whitelisting are all working. Throws with the broker's error
+ * message otherwise (e.g. "Access denied: IP not whitelisted.").
+ */
+export async function probeFpMarkets(range?: {
+  startDate?: string;
+  endDate?: string;
+}): Promise<FpMarketsProbeResult> {
+  const config = loadFpMarketsConfig();
+  const { startDate, endDate } =
+    range?.startDate && range?.endDate
+      ? { startDate: toDateOnly(range.startDate), endDate: toDateOnly(range.endDate) }
+      : defaultRange();
+
+  const accountsReturned = await callPerformanceApi(config, {
+    account_numbers: config.rebateAccountNumbers,
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  return {
+    baseUrl: config.baseUrl,
+    requestedAccounts: config.rebateAccountNumbers,
+    startDate,
+    endDate,
+    accountsReturned,
+  };
+}
+
 export const fpMarketsConnector: BrokerConnector = {
   type: "fpmarkets",
   supportsRawTrades: false,
@@ -169,7 +212,7 @@ export const fpMarketsConnector: BrokerConnector = {
   async fetchCompetitionData(
     input: FetchCompetitionDataInput
   ): Promise<FetchCompetitionDataResult> {
-    const config = loadConfig();
+    const config = loadFpMarketsConfig();
     const { startDate, endDate } = resolveRange(input);
 
     const resources = await callPerformanceApi(config, {

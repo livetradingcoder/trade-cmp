@@ -18,6 +18,7 @@ import { encrypt } from "./utils/encryption";
 import { createEmailTransporter, getSMTPSettings } from "./utils/smtpConfig";
 import { syncTournament } from "./services/sync/syncTournament";
 import { startSyncScheduler } from "./services/sync/scheduler";
+import { probeFpMarkets } from "./services/brokers/fpMarketsConnector";
 
 // Load environment variables
 dotenv.config({ path: "../../.env" });
@@ -1072,6 +1073,36 @@ app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) =
     }
 
     res.status(500).json({ error: errorMessage });
+  }
+});
+
+// Diagnostic: one live signed call to FP Markets (protected - admin only).
+// Proves request signing + IP whitelisting end to end from this server's IP.
+// Optional ?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD override the date window.
+app.get("/api/admin/fp-test", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const startDate =
+      typeof req.query.start_date === "string" ? req.query.start_date : undefined;
+    const endDate =
+      typeof req.query.end_date === "string" ? req.query.end_date : undefined;
+
+    const result = await probeFpMarkets({ startDate, endDate });
+    res.json({
+      success: true,
+      base_url: result.baseUrl,
+      requested_accounts: result.requestedAccounts,
+      start_date: result.startDate,
+      end_date: result.endDate,
+      accounts_count: result.accountsReturned.length,
+      accounts: result.accountsReturned,
+    });
+  } catch (error: any) {
+    // 502: we reached out but the broker rejected us (bad IP / signature / token)
+    // or config is missing. The message carries the broker's exact reason.
+    res.status(502).json({
+      success: false,
+      message: error?.message || "FP Markets probe failed",
+    });
   }
 });
 
