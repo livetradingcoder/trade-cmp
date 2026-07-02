@@ -1,64 +1,59 @@
 # LiveTradingLeague - Championship Trading Platform
 
-A full-stack trading championship platform built with React, TypeScript, Node.js, Express, and MongoDB.
+A full-stack trading championship platform built with React, TypeScript, Node.js, Express, and MongoDB. Participants register FP Markets trading accounts; the platform pulls performance data from the broker and ranks participants on tournament leaderboards.
+
+**Docs site:** https://livetradingcoder.github.io/trade-cmp-docs/
+**Live app:** https://trade-cmp-production.up.railway.app (custom domain provisioning: app.livetradingleague.com)
 
 ## Features
 
 - Tournament management system
-- Admin dashboard for tournament creation
-- Real-time leaderboard
+- Admin dashboard for tournament creation & participant management
+- **FP Markets broker integration** — HMAC-signed live account performance sync
+- Real-time leaderboard computed from broker balance snapshots
 - Responsive React frontend
 - RESTful API backend with Mongoose ODM
-- Docker containerization for easy deployment
+- Docker containerization, deployed on Railway with a static outbound IP
 
 ## Tech Stack
 
-- **Frontend**: React, TypeScript, Vite
-- **Backend**: Node.js, Express, TypeScript
-- **Database**: MongoDB with Mongoose ODM
-- **Deployment**: Docker & Cloud Platforms (Railway, Vercel, Render)
+- **Frontend**: React 19, TypeScript, Vite
+- **Backend**: Node.js 22, Express, TypeScript
+- **Database**: MongoDB (Atlas) with Mongoose ODM
+- **Deployment**: Docker single container (nginx + Express) on Railway, static egress IP, Cloudflare DNS
 
 ## Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ (22 recommended, matches production)
 - MongoDB (local or MongoDB Atlas)
 - Docker (optional, for containerized deployment)
 
 ### 1. Environment Setup
 
-Copy the environment template and configure your database:
+Copy the environment template and configure:
 
 ```bash
 cp env-example.txt .env
-# Edit .env with your MongoDB connection string
 ```
 
-Example `.env`:
-
-```
-MONGODB_URI=mongodb://localhost:27017/trade_arena
-# or for MongoDB Atlas:
-# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/trade_arena
-```
+Required for local dev: `DATABASE_URL`/`MONGODB_URI`, `JWT_SECRET`, `ENCRYPTION_KEY`.
+Required for the FP Markets integration: `FP_MARKETS_BASE_URL`, `FP_MARKETS_TOKEN`,
+`FP_MARKETS_SECRET`, `FP_MARKETS_REBATE_ACCOUNTS`. See
+[Environment Variables](https://livetradingcoder.github.io/trade-cmp-docs/deployment/environment)
+for the full reference.
 
 ### 2. Local Development
 
 ```bash
-# Install dependencies
+# Install dependencies (also generates db client)
 npm install
 
 # Seed initial data (creates admin user and sample tournaments)
-cd packages/server
 npm run db:seed
 
-# Start backend (terminal 1)
-cd packages/server
-npm run dev
-
-# Start frontend (terminal 2)
-cd packages/web
+# Start both frontend + backend
 npm run dev
 ```
 
@@ -66,102 +61,111 @@ Access:
 
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3001
-- Admin login: username `admin`, password `admin`
+- Admin login: `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env` (defaults: `ltl-admin-1` / `Adm!n2026`)
 
-### 3. Docker Deployment
-
-Build and run in Docker:
+### 3. Tests
 
 ```bash
-# Build the container
-docker build -t trade-arena .
-
-# Run with environment variables
-docker run -p 80:80 -e MONGODB_URI="your_mongodb_uri" trade-arena
+cd packages/server
+npm test
 ```
 
-Access at http://localhost
+Covers: broker connectors (`fixture`, `fpmarkets`), leaderboard calculation, sync
+row-building, and trading data models.
 
-## Deployment Options
+### 4. Docker Deployment
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions including:
+```bash
+docker build -t livetradingleague .
+docker run -p 8080:80 --env-file .env livetradingleague
+```
 
-- **Railway** (recommended) - Easy deployment with automatic builds
-- **Vercel** - Separate frontend/backend deployment
-- **Render** - Docker-based deployment
+Access at http://localhost:8080
 
-All platforms require a MongoDB database (MongoDB Atlas recommended for free tier).
+## Deployment
+
+Production runs on **Railway** (single container, static egress IP required for
+the broker whitelist — serverless hosts like Vercel don't support this). See
+[DEPLOY-RAILWAY.md](./DEPLOY-RAILWAY.md) for the full setup, or the docs site's
+[Railway Deployment](https://livetradingcoder.github.io/trade-cmp-docs/deployment/railway)
+guide.
+
+## FP Markets Integration — Current Status
+
+**Live testing in progress.** Full design + endpoints:
+[FP Markets Sync](https://livetradingcoder.github.io/trade-cmp-docs/guide/fp-markets-sync).
+
+| Check | Status |
+|-------|--------|
+| Outbound IP whitelisted by broker | ✅ (static IPs: 162.220.232.250, .251, 152.55.176.240) |
+| Auth (token + HMAC signature) | ✅ verified live |
+| Rebate/IB `477779` accepted by API | ✅ |
+| Accounts returned | ⚠️ **1 of 2 expected** — broker's own IB portal shows 2 approved clients under `477779`, API returns only 1. Reported to FP. |
+| Account with real balance/trade activity | ⚠️ Not yet — the 1 returned account has $0 balance and no trades |
+
+**To re-run the live check:**
+
+```bash
+TOK=$(curl -s -X POST https://trade-cmp-production.up.railway.app/api/admin/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"<ADMIN_USERNAME>","password":"<ADMIN_PASSWORD>"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+
+curl -s https://trade-cmp-production.up.railway.app/api/admin/fp-test \
+  -H "Authorization: Bearer $TOK" | python3 -m json.tool
+```
+
+Once the broker confirms the 2nd account and adds real trade/balance data, the
+next step is a **full sync** run (`POST /api/admin/sync/:tournamentId`) against a
+real tournament + participant to validate the end-to-end pipeline: snapshots →
+leaderboard cache → ranked ROI. That's tracked in `.planning/ROADMAP.md` (Phase 2
+— Live Verification, milestone v1.1) and `.planning/STATE.md` has the running log
+of every probe result.
 
 ## API Endpoints
 
-- `GET /api/health` - Health check (returns `{"status":"ok","database":"mongodb"}`)
-- `GET /api/tournaments` - Get all tournaments
-- `GET /api/tournaments/:id` - Get tournament by ID
-- `POST /api/tournaments` - Create tournament (admin only)
-- `PUT /api/tournaments/:id` - Update tournament (admin only)
-- `DELETE /api/tournaments/:id` - Delete tournament (admin only)
-- `POST /api/admin/login` - Admin authentication
+Full reference: [API Overview](https://livetradingcoder.github.io/trade-cmp-docs/api/overview).
 
-## Database Schema
+Key ones for broker testing:
 
-The application uses MongoDB with Mongoose. Key models:
+- `GET /api/health` — health check
+- `POST /api/admin/login` — admin auth
+- `GET /api/admin/fp-test` — live signed probe to FP Markets (proves auth + IP whitelist)
+- `POST /api/admin/sync/:tournamentId` — trigger a full broker sync
+- `GET /api/leaderboard/:tournamentId` — read computed leaderboard
 
-### Tournament
+## Project Structure
 
-- `title`: String
-- `tier`: String (Weekly/Monthly)
-- `prize`: String
-- `fee`: String
-- `participants`: Number
-- `timeLabel`: String (Ends in/Starts in)
-- `timeLeft`: String
-- `cover`: String (image URL)
-- `image`: String (optional)
-- `registrationLink`: String
-
-### Admin
-
-- `username`: String (unique)
-- `password`: String
-
-## Admin Panel
-
-1. Click "Verify Manager" button on the homepage
-2. Login with default credentials:
-   - Username: `admin`
-   - Password: `admin`
-3. Manage tournaments:
-   - Create new tournaments
-   - Edit existing tournaments
-   - Delete tournaments
-   - Update tournament details and images
-
-## Migration from PostgreSQL
-
-This project was migrated from PostgreSQL/Prisma to MongoDB/Mongoose. See [MONGODB_MIGRATION.md](./MONGODB_MIGRATION.md) for details.
+```
+trade-cmp/
+├── .planning/                # GSD milestone tracking (current: v1.1 live testing)
+├── packages/
+│   ├── server/
+│   │   └── src/
+│   │       ├── services/brokers/   # fixture, simulation, fpmarkets connectors
+│   │       ├── services/sync/      # syncTournament, scheduler, leaderboard build
+│   │       ├── models/             # Mongoose models
+│   │       └── test/               # vitest suite
+│   └── web/                  # Frontend React app
+├── Dockerfile                 # Production container (single, Railway target)
+├── DEPLOY-RAILWAY.md          # Deploy runbook (static egress IP, Cloudflare domain)
+└── docs -> ../trade-cmp-docs  # symlink to the docs site source
+```
 
 ## Troubleshooting
 
 ### Database Connection Issues
 
-1. Verify your `MONGODB_URI` in `.env`
-2. For MongoDB Atlas:
-   - Check IP whitelist includes your IP or `0.0.0.0/0`
-   - Verify database user has read/write permissions
-3. For local MongoDB:
-   - Ensure MongoDB is running: `mongod`
+The server **retries** the MongoDB connection instead of exiting, so it won't
+crash-loop on deploy while the DB IP allow list is being set up. Check:
 
-### Admin Can't Login
+1. `DATABASE_URL`/`MONGODB_URI` is correct
+2. MongoDB Atlas Network Access allows your IP (or the deploy's static egress IP)
 
-1. Run the seed script: `cd packages/server && npm run db:seed`
-2. Default credentials: `admin` / `admin`
-3. Check backend logs for errors
+### FP Markets Probe Fails
 
-### Frontend Shows Fallback Data
-
-- Backend is not accessible
-- Check backend is running on port 3001
-- Verify `VITE_API_URL` is set correctly
+See the status table above for known-good/bad responses, or the docs site's
+[Verifying the Integration](https://livetradingcoder.github.io/trade-cmp-docs/guide/fp-markets-sync#verifying-the-integration)
+table (403 = IP not whitelisted, 404 = wrong rebate number, 401 = bad signature).
 
 ### Docker Issues
 
@@ -169,48 +173,19 @@ This project was migrated from PostgreSQL/Prisma to MongoDB/Mongoose. See [MONGO
 2. Check environment variables are passed correctly
 3. View logs: `docker logs <container-id>`
 
-## Project Structure
-
-```
-trade-cmp/
-├── packages/
-│   ├── server/              # Backend API
-│   │   ├── src/
-│   │   │   ├── config/      # Database configuration
-│   │   │   ├── models/      # Mongoose models
-│   │   │   ├── index.ts     # Express server
-│   │   │   └── seed.ts      # Database seeding
-│   │   └── dist/            # Built backend
-│   └── web/                 # Frontend React app
-│       ├── src/
-│       │   ├── components/
-│       │   ├── context/
-│       │   ├── pages/
-│       │   └── types/
-│       └── dist/            # Built frontend
-├── Dockerfile               # Production container
-├── docker-compose.yml       # Multi-service setup
-├── nginx.conf              # Web server configuration
-├── DEPLOYMENT.md           # Deployment guide
-└── MONGODB_MIGRATION.md    # Migration documentation
-```
-
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+3. Make your changes, run `npm test` in `packages/server`
+4. Submit a pull request
 
 ## License
 
-MIT License - feel free to use this project for your own purposes.
+MIT License.
 
 ## Support
 
-For issues and questions:
-
-- Check [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment help
-- Check [MONGODB_MIGRATION.md](./MONGODB_MIGRATION.md) for database info
+- Docs site: https://livetradingcoder.github.io/trade-cmp-docs/
+- Deploy runbook: [DEPLOY-RAILWAY.md](./DEPLOY-RAILWAY.md)
 - Open an issue on GitHub
