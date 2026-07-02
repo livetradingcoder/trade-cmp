@@ -30,14 +30,16 @@ import {
   Activity,
   Mail,
   Loader,
+  FlaskConical,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
 import { useNavigate, useLocation } from "react-router-dom";
 import ParticipantManagement from "../components/ParticipantManagement";
 import CompetitionManagement from "../components/CompetitionManagement";
+import E2ETestPanel from "../components/E2ETestPanel";
 
-type ViewMode = "list" | "create" | "edit" | "password" | "settings" | "participants" | "manage";
+type ViewMode = "list" | "create" | "edit" | "password" | "settings" | "participants" | "manage" | "e2e";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -65,6 +67,7 @@ const AdminDashboard = () => {
     if (pathParts[2] === "participants") return "participants";
     if (pathParts[2] === "settings") return "settings";
     if (pathParts[2] === "password") return "password";
+    if (pathParts[2] === "e2e-test") return "e2e";
     return "list";
   })();
   const urlTournamentId = pathParts[2] === "competitions" ? pathParts[3]
@@ -615,6 +618,15 @@ const AdminDashboard = () => {
             <Settings size={20} />
             <span>Settings</span>
           </button>
+          <button
+            className={`nav-item e2e-nav ${viewMode === "e2e" ? "active" : ""}`}
+            onClick={() => navigate("/admin/e2e-test")}
+            title='E2E test only — broker sync pipeline testing'
+          >
+            <FlaskConical size={20} />
+            <span>Sync E2E</span>
+            <span className='e2e-nav-badge'>TEST</span>
+          </button>
           <button className={`nav-item ${viewMode === "password" ? "active" : ""}`} onClick={() => navigate("/admin/password")}>
             <Key size={20} />
             <span>Change Password</span>
@@ -1079,6 +1091,24 @@ const AdminDashboard = () => {
                 selectedTournamentId={urlTournamentId}
                 onTournamentChange={(id) => navigate(`/admin/participants/${id}`)}
               />
+            </motion.div>
+          )}
+
+          {viewMode === "e2e" && (
+            <motion.div
+              key='e2e'
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className='content-section'
+            >
+              <div className='section-header'>
+                <div>
+                  <h1>Sync E2E Testing</h1>
+                  <p>Broker → snapshots → leaderboard pipeline verification (test only)</p>
+                </div>
+              </div>
+              <E2ETestPanel tournaments={tournaments} />
             </motion.div>
           )}
 
@@ -1629,6 +1659,20 @@ const dashboardStyles = `
     text-align: center;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
     animation: pulse 2s ease-in-out infinite;
+  }
+
+  .e2e-nav-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px dashed rgba(245, 158, 11, 0.7);
+    color: #fbbf24;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    border-radius: 6px;
   }
 
   @keyframes pulse {

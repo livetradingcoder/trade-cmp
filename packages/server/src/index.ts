@@ -688,18 +688,26 @@ app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, r
 
     // Populate user info and tournament for email
     await participant.populate("user_id", "email fp_account_number");
-    await participant.populate("tournament_id", "title");
+    await participant.populate("tournament_id", "title start_date end_date");
 
-    // Send approval email
+    // Send approval email with the tournament's real dates
     const user = participant.user_id as any;
     const tournament = participant.tournament_id as any;
+    const formatDate = (value?: Date) =>
+      value
+        ? new Date(value).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })
+        : "To be announced";
     await sendEmail(
       user.email,
       emailTemplates.applicationApproved(
         user.email,
         tournament.title,
-        "Competition start date",
-        "Competition end date"
+        formatDate(tournament.start_date),
+        formatDate(tournament.end_date)
       )
     );
 
