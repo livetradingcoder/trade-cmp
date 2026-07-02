@@ -45,6 +45,21 @@ Progress: [███░░░░░░░] 30%
 
 - Send FP team the 2-vs-1 account discrepancy report (evidence: their own IB portal screenshot) and request they investigate why Raul Tuhut's account isn't returned by the Account Performance API
 - Ask FP for an account with real balance/trade activity — Paul's (2058014) is all zeros, unusable for leaderboard testing
+- When FP data flows: run `npm run test:live:full` (full pipeline on production with the real account) — everything else is automated now
+
+### Test Automation (added 2026-07-02)
+
+- Integration suite: `packages/server/src/test/integration/pipeline.test.ts` — 10 tests,
+  in-memory Mongo + supertest against the real Express app. Full flow: register →
+  apply → approve → assign trading account → sync → ranked leaderboard. Covers
+  fixture connector, fpmarkets with live-shaped mocked responses (signed request
+  asserted, ROI from balances), broker-rejection handling, idempotent re-sync, auth guards.
+- New admin endpoints (the previously missing glue): POST/GET `/api/admin/broker-integrations`,
+  POST `/api/admin/trading-accounts`, GET `/api/admin/trading-accounts/:tournamentId`.
+- Live E2E: `scripts/live-e2e.mjs` — `npm run test:live` (read-only probe) and
+  `npm run test:live:full` (real pipeline on prod; `--connector=fixture` to test
+  app flow before FP data exists; `--cleanup` deletes the test tournament).
+- Total: 24 tests green (14 unit + 10 integration).
 
 ### Blockers/Concerns
 

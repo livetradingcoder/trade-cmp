@@ -66,12 +66,24 @@ Access:
 ### 3. Tests
 
 ```bash
-cd packages/server
-npm test
+npm test               # unit + integration suite (24 tests)
+npm run test:live      # read-only probe against the DEPLOYED app (health, login, FP data)
+npm run test:live:full # full pipeline on production: tournament -> user -> approve
+                       #   -> trading account -> sync -> leaderboard
 ```
 
-Covers: broker connectors (`fixture`, `fpmarkets`), leaderboard calculation, sync
-row-building, and trading data models.
+**Unit + integration** (`packages/server/src/test/`): broker connectors,
+leaderboard calculation, sync row-building, trading models, plus a
+**full-pipeline integration suite** (in-memory MongoDB + supertest against the
+real Express app) that exercises register → apply → approve → assign trading
+account → sync → ranked leaderboard, for both the `fixture` connector and the
+`fpmarkets` connector with live-shaped mocked broker responses.
+
+**Live E2E** (`scripts/live-e2e.mjs`): needs `ADMIN_PASSWORD` in `.env`. Useful
+flags for the full mode: `--connector=fixture` (validate the whole app flow
+before real broker data exists), `--account=NUMBER` (pick the FP account),
+`--cleanup` (delete the test tournament afterwards). The moment FP Markets data
+flows, `npm run test:live:full` is the one-command whole-app verification.
 
 ### 4. Docker Deployment
 
