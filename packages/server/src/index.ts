@@ -19,6 +19,9 @@ import { createEmailTransporter, getSMTPSettings } from "./utils/smtpConfig";
 import { syncTournament } from "./services/sync/syncTournament";
 import { startSyncScheduler } from "./services/sync/scheduler";
 import { probeFpMarkets } from "./services/brokers/fpMarketsConnector";
+import { getBrokerConnector } from "./services/brokers";
+import BrokerIntegration from "./models/BrokerIntegration";
+import TradingAccount from "./models/TradingAccount";
 
 // Load environment variables
 dotenv.config({ path: "../../.env" });
@@ -1084,6 +1087,133 @@ app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) =
     }
 
     res.status(500).json({ error: errorMessage });
+  }
+});
+
+// ==================== BROKER SYNC SETUP (admin) ====================
+
+// Ensure a broker integration exists for a connector type (idempotent upsert).
+// Capability flags come from the connector implementation itself.
+app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest, res) => {
+  const { type, name } = req.body;
+
+  try {
+    if (!type) {
+      return res.status(400).json({ success: false, message: "type is required" });
+    }
+
+    let connector;
+    try {
+      connector = getBrokerConnector(type);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: `Unsupported broker connector: ${type}`,
+      });
+    }
+
+    const integration = await BrokerIntegration.findOneAndUpdate(
+      { type },
+      {
+        $set: {
+          name: name || type,
+          enabled: true,
+          supports_raw_trades: connector.supportsRawTrades,
+          supports_snapshots: connector.supportsSnapshots,
+          supports_broker_metrics: connector.supportsBrokerMetrics,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ success: true, integration });
+  } catch (error) {
+    console.error("Broker integration ensure error:", error);
+    res.status(500).json({ success: false, message: "Failed to ensure broker integration" });
+  }
+});
+
+// List broker integrations
+app.get("/api/admin/broker-integrations", verifyToken, async (_req: AuthRequest, res) => {
+  try {
+    const integrations = await BrokerIntegration.find().sort({ type: 1 });
+    res.json({ success: true, integrations });
+  } catch (error) {
+    console.error("Broker integration list error:", error);
+    res.status(500).json({ success: false, message: "Failed to list broker integrations" });
+  }
+});
+
+// Assign an approved participant's trading account to a broker integration so
+// syncTournament picks it up. broker_account_number defaults to the user's
+// registered FP account number.
+app.post("/api/admin/trading-accounts", verifyToken, async (req: AuthRequest, res) => {
+  const { participant_id, broker_integration_id, broker_account_number } = req.body;
+
+  try {
+    if (!participant_id || !broker_integration_id) {
+      return res.status(400).json({
+        success: false,
+        message: "participant_id and broker_integration_id are required",
+      });
+    }
+
+    const participant = await Participant.findById(participant_id).populate(
+      "user_id",
+      "fp_account_number email"
+    );
+    if (!participant) {
+      return res.status(404).json({ success: false, message: "Participant not found" });
+    }
+    if (participant.status !== "approved") {
+      return res.status(400).json({
+        success: false,
+        message: `Participant must be approved (current status: ${participant.status})`,
+      });
+    }
+
+    const integration = await BrokerIntegration.findById(broker_integration_id);
+    if (!integration) {
+      return res.status(404).json({ success: false, message: "Broker integration not found" });
+    }
+
+    const user = participant.user_id as any;
+    const accountNumber = broker_account_number || user.fp_account_number;
+
+    const account = await TradingAccount.create({
+      user_id: user._id,
+      participant_id: participant._id,
+      tournament_id: participant.tournament_id,
+      broker_integration_id: integration._id,
+      broker_account_number: accountNumber,
+      status: "active",
+      validated_at: new Date(),
+    });
+
+    res.json({ success: true, account });
+  } catch (error: any) {
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A trading account with this number already exists for the tournament",
+      });
+    }
+    console.error("Trading account create error:", error);
+    res.status(500).json({ success: false, message: "Failed to create trading account" });
+  }
+});
+
+// List trading accounts for a tournament
+app.get("/api/admin/trading-accounts/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const accounts = await TradingAccount.find({ tournament_id: req.params.tournamentId })
+      .populate("user_id", "email fp_account_number display_name")
+      .populate("participant_id", "status")
+      .populate("broker_integration_id", "type name enabled");
+    res.json({ success: true, accounts });
+  } catch (error) {
+    console.error("Trading account list error:", error);
+    res.status(500).json({ success: false, message: "Failed to list trading accounts" });
   }
 });
 
