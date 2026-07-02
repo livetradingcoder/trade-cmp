@@ -212,3 +212,23 @@
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;
 }
+
+.e2e-board-meta {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.e2e-rank {
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.e2e-pos {
+  color: #4ade80;
+}
+
+.e2e-neg {
+  color: #f87171;
+}

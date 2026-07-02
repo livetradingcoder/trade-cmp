@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FlaskConical, Link2, RefreshCw, Play, AlertTriangle } from "lucide-react";
+import { FlaskConical, Link2, RefreshCw, Play, AlertTriangle, Trophy } from "lucide-react";
 import "../styles/E2ETestPanel.css";
 
 /**
@@ -48,6 +48,17 @@ interface SyncSummary {
   errors: string[];
 }
 
+interface LeaderboardRow {
+  rank: number;
+  display_name: string;
+  account_masked: string;
+  roi: number;
+  pnl: number;
+  win_rate: number;
+  trade_count: number;
+  calculation_status: string;
+}
+
 const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
   const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
@@ -61,6 +72,8 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [syncResult, setSyncResult] = useState<SyncSummary | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+  const [boardFetchedAt, setBoardFetchedAt] = useState<string | null>(null);
 
   const authHeaders = useCallback(
     () => ({
@@ -89,18 +102,22 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
 
   const loadTournamentData = useCallback(async () => {
     if (!tournamentId) return;
-    const [pRes, aRes] = await Promise.all([
+    const [pRes, aRes, bRes] = await Promise.all([
       fetch(`${API_URL}/api/participants/${tournamentId}`, { headers: authHeaders() }),
       fetch(`${API_URL}/api/admin/trading-accounts/${tournamentId}`, { headers: authHeaders() }),
+      fetch(`${API_URL}/api/leaderboard/${tournamentId}`, { headers: authHeaders() }),
     ]);
     const pData = await pRes.json();
     const aData = await aRes.json();
+    const bData = await bRes.json();
     if (pData.success) {
       const approved = (pData.participants as ParticipantRow[]).filter((p) => p.status === "approved");
       setParticipants(approved);
       if (approved.length > 0) setSelectedParticipant((prev) => prev || approved[0].id);
     }
     if (aData.success) setAccounts(aData.accounts);
+    setLeaderboard(bData.leaderboard || []);
+    setBoardFetchedAt(bData.fetched_at || null);
   }, [API_URL, authHeaders, tournamentId]);
 
   useEffect(() => {
@@ -112,6 +129,8 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
     setAccounts([]);
     setSelectedParticipant("");
     setSyncResult(null);
+    setLeaderboard([]);
+    setBoardFetchedAt(null);
     loadTournamentData();
   }, [tournamentId, loadTournamentData]);
 
@@ -304,6 +323,53 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
                   <td>{account.broker_integration_id?.type || "—"}</td>
                   <td>
                     <span className={`e2e-state ${account.sync_state}`}>{account.sync_state}</span>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className='e2e-card e2e-accounts'>
+        <h3>
+          <Trophy size={16} /> 4 · Resulting leaderboard ({leaderboard.length})
+          {boardFetchedAt && (
+            <span className='e2e-board-meta'>
+              computed {new Date(boardFetchedAt).toLocaleTimeString()}
+            </span>
+          )}
+        </h3>
+        {leaderboard.length === 0 ? (
+          <p className='e2e-hint'>Empty — run a sync above and rankings appear here.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Trader</th>
+                <th>Account</th>
+                <th>ROI</th>
+                <th>PnL</th>
+                <th>Win rate</th>
+                <th>Trades</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboard.map((row) => (
+                <motion.tr key={`${row.rank}-${row.account_masked}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <td className='e2e-rank'>{row.rank || "—"}</td>
+                  <td>{row.display_name}</td>
+                  <td>{row.account_masked}</td>
+                  <td className={row.roi >= 0 ? "e2e-pos" : "e2e-neg"}>{row.roi?.toFixed(2)}%</td>
+                  <td className={row.pnl >= 0 ? "e2e-pos" : "e2e-neg"}>{row.pnl?.toFixed(2)}</td>
+                  <td>{row.win_rate?.toFixed(1)}%</td>
+                  <td>{row.trade_count}</td>
+                  <td>
+                    <span className={`e2e-state ${row.calculation_status === "ranked" ? "ready" : ""}`}>
+                      {row.calculation_status}
+                    </span>
                   </td>
                 </motion.tr>
               ))}
