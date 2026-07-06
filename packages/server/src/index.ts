@@ -686,6 +686,39 @@ app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, r
       )
     );
 
+    // Auto-provision the trading account so this participant is picked up by
+    // the next sync immediately — no manual E2E-panel step required.
+    try {
+      const connector = getBrokerConnector("fpmarkets");
+      const integration = await BrokerIntegration.findOneAndUpdate(
+        { type: "fpmarkets" },
+        {
+          $set: {
+            name: "fpmarkets",
+            enabled: true,
+            supports_raw_trades: connector.supportsRawTrades,
+            supports_snapshots: connector.supportsSnapshots,
+            supports_broker_metrics: connector.supportsBrokerMetrics,
+          },
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+
+      await TradingAccount.create({
+        user_id: user._id,
+        participant_id: participant._id,
+        tournament_id: participant.tournament_id,
+        broker_integration_id: integration._id,
+        broker_account_number: user.fp_account_number,
+        status: "active",
+        validated_at: new Date(),
+      });
+    } catch (error: any) {
+      if (error?.code !== 11000) {
+        console.error("Auto trading-account provision error:", error);
+      }
+    }
+
     res.json({
       success: true,
       message: "Participant approved successfully",
