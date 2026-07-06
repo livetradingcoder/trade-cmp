@@ -35,7 +35,10 @@ const JoinCompetitionDialog = ({
   };
 
   const handleOpenBrokerRegistration = () => {
-    window.open("https://www.fpmarkets.com/", "_blank");
+    window.open(
+      "https://portal.fptrading.com/register?fpm-affiliate-utm-source=IB&fpm-affiliate-agt=477779",
+      "_blank"
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
