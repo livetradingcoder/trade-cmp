@@ -309,7 +309,7 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                             fontWeight: "700",
                             textTransform: "uppercase",
                           }}
-                          title="This user's FP Markets account was not registered with the platform's referral code"
+                          title="This user's FPTrading account was not registered with the platform's referral code"
                         >
                           ⚠️ No Referral Code
                         </span>
@@ -330,7 +330,7 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                     </div>
                     {!participant.referral_code_verified && (
                       <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#fbbf24", fontStyle: "italic" }}>
-                        ⚠️ This user may need to be manually transferred under the referral code. Coordinate with FP Markets team before approving.
+                        ⚠️ This user may need to be manually transferred under the referral code. Coordinate with FPTrading team before approving.
                       </div>
                     )}
                     {participant.decline_reason && (

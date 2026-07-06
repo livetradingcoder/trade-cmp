@@ -8,7 +8,7 @@ import "../styles/E2ETestPanel.css";
  *
  * Assigns approved participants' trading accounts to a broker integration and
  * triggers a sync — the manual version of scripts/live-e2e.mjs, used to verify
- * the broker → snapshots → leaderboard pipeline while the FP Markets
+ * the broker → snapshots → leaderboard pipeline while the FPTrading
  * integration is being live-tested. Not intended as a production ops surface.
  */
 
@@ -226,7 +226,7 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
         <AlertTriangle size={18} />
         <div>
           <strong>E2E TEST ONLY</strong> — this panel exists to verify the broker → sync →
-          leaderboard pipeline during FP Markets live testing. Assignments made here feed the
+          leaderboard pipeline during FPTrading live testing. Assignments made here feed the
           real sync. Automated equivalent: <code>npm run test:live:full</code>
         </div>
       </div>
