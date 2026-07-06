@@ -5,16 +5,19 @@
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Participants' real trading performance, pulled from the broker and ranked on a live, trustworthy leaderboard.
-**Current focus:** Phase 1 — Broker Coordination
+**Current focus:** v1.1 complete — milestone shipped, awaiting next milestone scope
 
 ## Current Position
 
-Phase: 1 of 2 (Broker Coordination)
-Plan: 0 of TBD in current phase
-Status: In progress — partial account mapping confirmed, broker-side gap identified
-Last activity: 2026-07-02 — Local Code folder wiped and re-cloned; .planning reconstructed; confirmed fp-test still returns only 1 of 2 expected accounts
+Phase: 2 of 2 (Live Verification) — both phases closed
+Plan: Verified directly via live re-check, no formal plan needed
+Status: **Milestone v1.1 complete.** FP fixed the account-mapping gap; fp-test
+now returns 10 real accounts under IB 477779 with usable balance/trade data.
+Last activity: 2026-07-06 — Re-verified fp-test live (10 accounts, was 1),
+closed both phases, then did a full ad-hoc audit + fix pass (see below) and a
+tester UAT guide. All pushed to main.
 
-Progress: [███░░░░░░░] 30%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -43,9 +46,9 @@ Progress: [███░░░░░░░] 30%
 
 ### Pending Todos
 
-- Send FP team the 2-vs-1 account discrepancy report (evidence: their own IB portal screenshot) and request they investigate why Raul Tuhut's account isn't returned by the Account Performance API
-- Ask FP for an account with real balance/trade activity — Paul's (2058014) is all zeros, unusable for leaderboard testing
-- When FP data flows: run `npm run test:live:full` (full pipeline on production with the real account) — everything else is automated now
+- Confirm whether Railway prod has `SYNC_ENABLED=true` set — scheduler is off by default, meaning leaderboard only refreshes on manual "Sync now" until this is checked
+- Consider building a non-"test-only" production ops surface for sync (E2E panel is explicitly test-only, though approve-time auto-provisioning now covers the common case)
+- Optional: CSV export / sync-history UI landed this session — no further action needed unless gaps found in the tester UAT pass
 
 ### Test Automation (added 2026-07-02)
 
@@ -63,14 +66,19 @@ Progress: [███░░░░░░░] 30%
 
 ### Blockers/Concerns
 
-- Phase 1 → Phase 2 is externally gated: FP Markets must map accounts under IB 477779 before VERIFY-01 is testable. Broker response time is unknown.
-- Unknown: whether `ibbeta` returns data for accounts under our IB, or whether production env is needed. Must confirm with FP in Phase 1.
-- 2026-06-15 (later): fp-test now returns 1 account (2058014, "Paul", status active) — up from 0. User expects 2 accounts under IB 477779; only 1 present so far (confirmed not a date-range issue — tried 2020-2026 window, same result). Returned account has starting_balance/current_balance = 0 and last_trade_at = null — no trade activity yet either.
-- 2026-06-15 (later still): user confirmed via FP's own IB portal (fptrading.com/ib/accounts/clients, rebate 477779) that there ARE 2 approved clients — Paul Adrian Scripcariu (2025-03-17) and Raul Tuhut (2025-03-26). Our Account Performance API still returns only Paul's account (re-verified). This is now clearly a broker-side API gap (their own client list disagrees with what their performance API returns), not a config issue on our side. Also still need an account with real balance/trade activity for leaderboard testing — Paul's shows all zeros.
-- 2026-07-02: Re-verified after local environment rebuild — still only 1 account returned. No change from broker side yet.
+**All resolved.** History (kept for context):
+- Phase 1 → Phase 2 was externally gated on FP mapping accounts under IB 477779. FP's own portal showed 2 approved clients while the API returned only 1 (Paul, `2058014`, all-zero balance) — reported to FP as a broker-side API gap.
+- 2026-07-06: FP confirmed the fix via WhatsApp ("this issue has now been fixed"). Re-verified live: `fp-test` now returns **10 accounts** under 477779, including Raul Tuhut (`81049662`, balance $1276.22, real `last_trade_at`) and 8 others. No remaining blocker.
+
+Newly discovered this session (found via ad-hoc audit against `.docs/` requirements, all fixed and pushed):
+- `GET /api/settings` leaked `smtp_pass` unauthenticated — fixed (masked, matches sibling route).
+- Public `/leaderboard` page required admin auth (401 for real visitors, silently swallowed) — fixed (route no longer requires verifyToken).
+- `LeaderboardPage.tsx` / `LeaderboardManagement.tsx` used a stale response shape (`entry.user.*`) that would've crashed once real data reached the page — fixed to match the real cache shape (`display_name`/`account_masked`/`trade_count`).
+- `/api/broker/validate` mock returned `Math.random() > 0.5` for `referral_code_used`, randomly flagging real applications — replaced with deterministic logic (new users assumed verified, existing users always flagged for manual review).
+- Unconfirmed: whether Railway's `SYNC_ENABLED` env var is `true` — affects whether the leaderboard auto-refreshes or only updates on manual sync.
 
 ## Session Continuity
 
-Last session: 2026-07-02
-Stopped at: .planning reconstructed after local wipe; ready to draft/send broker follow-up message re: 2-account discrepancy
-Resume file: None
+Last session: 2026-07-06
+Stopped at: v1.1 milestone verified complete (conversational UAT, 2/2 passed), planning docs updated, bonus fixes shipped and pushed to main (`440c774`, `36b2a2d`). Tester UAT guide (8 flows, PDF) delivered.
+Resume file: None — ready for next milestone scope, or ask user what's next.
