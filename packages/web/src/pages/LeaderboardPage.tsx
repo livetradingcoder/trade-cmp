@@ -5,14 +5,12 @@ import { useTournaments } from "../context/TournamentContext";
 
 interface LeaderboardEntry {
   rank: number;
-  user: {
-    email: string;
-    display_name?: string;
-    fp_account_number: string;
-  };
+  participant_id: string;
+  display_name: string;
+  account_masked: string;
   roi: number;
   pnl: number;
-  trades: number;
+  trade_count: number;
   win_rate: number;
   updated_at: string;
 }
@@ -67,7 +65,7 @@ const LeaderboardPage = () => {
   };
 
   const filteredLeaderboard = leaderboard.filter((entry) =>
-    (entry.user.display_name || entry.user.email).toLowerCase().includes(searchQuery.toLowerCase())
+    entry.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatPnL = (pnl: number) => {
@@ -357,7 +355,7 @@ const LeaderboardPage = () => {
                     <tbody>
                       {filteredLeaderboard.map((entry, i) => (
                         <motion.tr
-                          key={entry.user.email}
+                          key={entry.participant_id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.05 }}
@@ -395,10 +393,10 @@ const LeaderboardPage = () => {
                               </div>
                               <div>
                                 <div style={{ fontWeight: 800, fontSize: "1rem" }}>
-                                  {entry.user.display_name || entry.user.email}
+                                  {entry.display_name}
                                 </div>
                                 <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", fontFamily: "monospace" }}>
-                                  ****{entry.user.fp_account_number.slice(-4)}
+                                  {entry.account_masked}
                                 </div>
                               </div>
                             </div>
@@ -409,7 +407,7 @@ const LeaderboardPage = () => {
                           <td style={{ padding: "20px 16px", fontWeight: 800, color: entry.pnl >= 0 ? "var(--success)" : "#ef4444" }}>
                             {formatPnL(entry.pnl)}
                           </td>
-                          <td style={{ padding: "20px 16px" }}>{entry.trades}</td>
+                          <td style={{ padding: "20px 16px" }}>{entry.trade_count}</td>
                           <td style={{ padding: "20px 16px" }}>{entry.win_rate.toFixed(1)}%</td>
                           <td style={{ padding: "20px 16px" }}>
                             <div
@@ -449,7 +447,7 @@ const LeaderboardPage = () => {
                 <div className='mobile-cards' style={{ display: "none" }}>
                   {filteredLeaderboard.map((entry, i) => (
                     <motion.div
-                      key={entry.user.email}
+                      key={entry.participant_id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.05 }}
@@ -473,9 +471,9 @@ const LeaderboardPage = () => {
                             )}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 800 }}>{entry.user.display_name || entry.user.email}</div>
+                            <div style={{ fontWeight: 800 }}>{entry.display_name}</div>
                             <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontFamily: "monospace" }}>
-                              ****{entry.user.fp_account_number.slice(-4)}
+                              {entry.account_masked}
                             </span>
                           </div>
                         </div>
@@ -488,7 +486,7 @@ const LeaderboardPage = () => {
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
-                          {entry.trades} trades • {entry.win_rate.toFixed(1)}% win rate
+                          {entry.trade_count} trades • {entry.win_rate.toFixed(1)}% win rate
                         </div>
                         <div
                           style={{

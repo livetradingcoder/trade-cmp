@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Clock, UserCheck, UserX, Ban } from "lucide-react";
+import { Check, X, Clock, UserCheck, UserX, Ban, Download } from "lucide-react";
+import { downloadCsv } from "../utils/csv";
 import "../styles/ParticipantManagement.css";
 
 interface Tournament {
@@ -186,23 +187,49 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
 
   const counts = getStatusCounts();
 
+  const handleExportCsv = () => {
+    downloadCsv(
+      `participants-${selectedTournament}-${activeTab}.csv`,
+      [
+        { header: "Email", value: (p: Participant) => p.user.email },
+        { header: "FP Account Number", value: (p: Participant) => p.user.fp_account_number },
+        { header: "Status", value: (p: Participant) => p.status },
+        { header: "Applied At", value: (p: Participant) => p.applied_at },
+        { header: "Reviewed At", value: (p: Participant) => p.reviewed_at || "" },
+        { header: "Decline Reason", value: (p: Participant) => p.decline_reason || "" },
+        { header: "Disqualification Reason", value: (p: Participant) => p.disqualification_reason || "" },
+      ],
+      filteredParticipants
+    );
+  };
+
   return (
     <div className="participant-management">
       {/* Header */}
       <div className="participant-header">
         <h2>Participant Management</h2>
-        <div className="tournament-selector">
-          <label>Tournament:</label>
-          <select value={selectedTournament} onChange={(e) => {
-            setSelectedTournament(e.target.value);
-            if (onTournamentChange) onTournamentChange(e.target.value);
-          }}>
-            {tournaments.map((tournament) => (
-              <option key={tournament.id} value={tournament.id}>
-                {tournament.title}
-              </option>
-            ))}
-          </select>
+        <div className="participant-header-actions">
+          <div className="tournament-selector">
+            <label>Tournament:</label>
+            <select value={selectedTournament} onChange={(e) => {
+              setSelectedTournament(e.target.value);
+              if (onTournamentChange) onTournamentChange(e.target.value);
+            }}>
+              {tournaments.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="action-button view"
+            onClick={handleExportCsv}
+            disabled={filteredParticipants.length === 0}
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
         </div>
       </div>
 

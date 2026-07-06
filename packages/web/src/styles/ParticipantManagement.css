@@ -17,6 +17,13 @@
   color: var(--text-main);
 }
 
+.participant-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .tournament-selector {
   display: flex;
   align-items: center;

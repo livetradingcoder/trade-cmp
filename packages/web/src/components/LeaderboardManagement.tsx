@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Award, User } from "lucide-react";
+import { Award, User, Download } from "lucide-react";
+import { downloadCsv } from "../utils/csv";
 import "../styles/LeaderboardManagement.css";
 
 interface Tournament {
@@ -11,14 +12,12 @@ interface Tournament {
 
 interface LeaderboardEntry {
   rank: number;
-  user: {
-    email: string;
-    display_name?: string;
-    fp_account_number: string;
-  };
+  participant_id: string;
+  display_name: string;
+  account_masked: string;
   roi: number;
   pnl: number;
-  trades: number;
+  trade_count: number;
   win_rate: number;
   updated_at: string;
 }
@@ -79,20 +78,47 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
     return `${sign}${roi.toFixed(2)}%`;
   };
 
+  const handleExportCsv = () => {
+    downloadCsv(
+      `leaderboard-${selectedTournament}.csv`,
+      [
+        { header: "Rank", value: (r: LeaderboardEntry) => r.rank },
+        { header: "Trader", value: (r: LeaderboardEntry) => r.display_name },
+        { header: "Account", value: (r: LeaderboardEntry) => r.account_masked },
+        { header: "ROI %", value: (r: LeaderboardEntry) => r.roi },
+        { header: "P&L", value: (r: LeaderboardEntry) => r.pnl },
+        { header: "Trades", value: (r: LeaderboardEntry) => r.trade_count },
+        { header: "Win Rate %", value: (r: LeaderboardEntry) => r.win_rate },
+        { header: "Updated At", value: (r: LeaderboardEntry) => r.updated_at },
+      ],
+      leaderboard
+    );
+  };
+
   return (
     <div className="leaderboard-management">
       {/* Header */}
       <div className="leaderboard-header">
         <h2>Leaderboard</h2>
-        <div className="tournament-selector">
-          <label>Tournament:</label>
-          <select value={selectedTournament} onChange={(e) => setSelectedTournament(e.target.value)}>
-            {tournaments.map((tournament) => (
-              <option key={tournament.id} value={tournament.id}>
-                {tournament.title} {tournament.status !== "active" && `(${tournament.status})`}
-              </option>
-            ))}
-          </select>
+        <div className="leaderboard-header-actions">
+          <div className="tournament-selector">
+            <label>Tournament:</label>
+            <select value={selectedTournament} onChange={(e) => setSelectedTournament(e.target.value)}>
+              {tournaments.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.title} {tournament.status !== "active" && `(${tournament.status})`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            className="export-csv-button"
+            onClick={handleExportCsv}
+            disabled={leaderboard.length === 0}
+          >
+            <Download size={16} />
+            Export CSV
+          </button>
         </div>
       </div>
 
@@ -125,7 +151,7 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
             <tbody>
               {leaderboard.map((entry, index) => (
                 <motion.tr
-                  key={entry.user.email}
+                  key={entry.participant_id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
@@ -149,10 +175,10 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
                       </div>
                       <div>
                         <div className="trader-name">
-                          {entry.user.display_name || entry.user.email}
+                          {entry.display_name}
                         </div>
                         <div className="trader-account">
-                          ****{entry.user.fp_account_number.slice(-4)}
+                          {entry.account_masked}
                         </div>
                       </div>
                     </div>
@@ -167,7 +193,7 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
                       {formatPnL(entry.pnl)}
                     </span>
                   </td>
-                  <td>{entry.trades}</td>
+                  <td>{entry.trade_count}</td>
                   <td>
                     <span className="win-rate">{entry.win_rate.toFixed(1)}%</span>
                   </td>

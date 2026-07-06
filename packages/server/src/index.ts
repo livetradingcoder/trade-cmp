@@ -22,6 +22,7 @@ import { probeFpMarkets } from "./services/brokers/fpMarketsConnector";
 import { getBrokerConnector } from "./services/brokers";
 import BrokerIntegration from "./models/BrokerIntegration";
 import TradingAccount from "./models/TradingAccount";
+import SyncRun from "./models/SyncRun";
 
 // Load environment variables
 dotenv.config({ path: "../../.env" });
@@ -537,37 +538,11 @@ app.post("/api/participants/apply", async (req, res) => {
       return res.status(404).json({ success: false, message: "Tournament not found" });
     }
 
-    // Verify account with broker API (for existing users, check referral code)
-    let referralCodeVerified = false;
-    if (!is_new_user) {
-      try {
-        // Get referral code from settings
-        const referralCodeSetting = await Settings.findOne({ key: "affiliateCode" });
-        const referralCode = referralCodeSetting?.value || "AFFASAD";
-
-        // Call broker API to validate account and check referral code
-        const brokerResponse = await fetch(`http://localhost:3001/api/broker/validate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            account_number: fp_account_number,
-            email,
-            referral_code: referralCode,
-          }),
-        });
-
-        if (brokerResponse.ok) {
-          const brokerData = await brokerResponse.json() as any;
-          referralCodeVerified = brokerData.referral_code_used || false;
-        }
-      } catch (error) {
-        console.error("Broker API validation error:", error);
-        // Continue with application even if broker API fails
-      }
-    } else {
-      // New users are assumed to have used the referral code
-      referralCodeVerified = true;
-    }
+    // FP Markets has no real account/referral-verification endpoint (only the
+    // performance API exists). New users are assumed to have used the referral
+    // code since they registered through our link; existing users are always
+    // flagged for manual admin verification against FP's IB portal.
+    const referralCodeVerified = !!is_new_user;
 
     // Find or create user
     let user = await User.findOne({ email: email.toLowerCase() });
@@ -958,7 +933,7 @@ app.get("/api/settings", async (req, res) => {
     const settings = await Settings.find();
     const settingsObj: Record<string, string> = {};
     settings.forEach((s) => {
-      settingsObj[s.key] = s.value;
+      settingsObj[s.key] = s.key === "smtp_pass" && s.value ? "••••••••" : s.value;
     });
     res.json(settingsObj);
   } catch (error) {
@@ -1269,8 +1244,23 @@ app.post("/api/admin/sync/:tournamentId", verifyToken, async (req: AuthRequest, 
   }
 });
 
+// List recent sync runs for a tournament, most recent first (protected - admin only)
+app.get("/api/admin/sync-runs/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const runs = await SyncRun.find({ tournament_id: req.params.tournamentId })
+      .sort({ started_at: -1 })
+      .limit(20);
+    res.json({ success: true, runs });
+  } catch (error) {
+    console.error("Sync run list error:", error);
+    res.status(500).json({ success: false, message: "Failed to list sync runs" });
+  }
+});
+
 // Get leaderboard for a tournament (protected - admin only)
-app.get("/api/leaderboard/:tournamentId", verifyToken, async (req: AuthRequest, res) => {
+// Public: leaderboard response is already sanitized (masked account numbers,
+// no balances) — no admin auth needed, matches spec's public leaderboard requirement.
+app.get("/api/leaderboard/:tournamentId", async (req, res) => {
   try {
     const { tournamentId } = req.params;
 

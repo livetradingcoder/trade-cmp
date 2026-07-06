@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FlaskConical, Link2, RefreshCw, Play, AlertTriangle, Trophy } from "lucide-react";
+import { FlaskConical, Link2, RefreshCw, Play, AlertTriangle, Trophy, History } from "lucide-react";
 import "../styles/E2ETestPanel.css";
 
 /**
@@ -59,6 +59,18 @@ interface LeaderboardRow {
   calculation_status: string;
 }
 
+interface SyncRunRow {
+  _id: string;
+  started_at: string;
+  finished_at?: string;
+  status: string;
+  accounts_processed: number;
+  snapshots_written: number;
+  trades_written: number;
+  leaderboard_entries_written: number;
+  error_summary?: string;
+}
+
 const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
   const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "" : "http://localhost:3001");
 
@@ -74,6 +86,7 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
   const [syncResult, setSyncResult] = useState<SyncSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [boardFetchedAt, setBoardFetchedAt] = useState<string | null>(null);
+  const [syncRuns, setSyncRuns] = useState<SyncRunRow[]>([]);
 
   const authHeaders = useCallback(
     () => ({
@@ -102,14 +115,16 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
 
   const loadTournamentData = useCallback(async () => {
     if (!tournamentId) return;
-    const [pRes, aRes, bRes] = await Promise.all([
+    const [pRes, aRes, bRes, sRes] = await Promise.all([
       fetch(`${API_URL}/api/participants/${tournamentId}`, { headers: authHeaders() }),
       fetch(`${API_URL}/api/admin/trading-accounts/${tournamentId}`, { headers: authHeaders() }),
       fetch(`${API_URL}/api/leaderboard/${tournamentId}`, { headers: authHeaders() }),
+      fetch(`${API_URL}/api/admin/sync-runs/${tournamentId}`, { headers: authHeaders() }),
     ]);
     const pData = await pRes.json();
     const aData = await aRes.json();
     const bData = await bRes.json();
+    const sData = await sRes.json();
     if (pData.success) {
       const approved = (pData.participants as ParticipantRow[]).filter((p) => p.status === "approved");
       setParticipants(approved);
@@ -118,6 +133,7 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
     if (aData.success) setAccounts(aData.accounts);
     setLeaderboard(bData.leaderboard || []);
     setBoardFetchedAt(bData.fetched_at || null);
+    if (sData.success) setSyncRuns(sData.runs);
   }, [API_URL, authHeaders, tournamentId]);
 
   useEffect(() => {
@@ -131,6 +147,7 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
     setSyncResult(null);
     setLeaderboard([]);
     setBoardFetchedAt(null);
+    setSyncRuns([]);
     loadTournamentData();
   }, [tournamentId, loadTournamentData]);
 
@@ -371,6 +388,46 @@ const E2ETestPanel = ({ tournaments }: { tournaments: Tournament[] }) => {
                       {row.calculation_status}
                     </span>
                   </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className='e2e-card e2e-accounts'>
+        <h3>
+          <History size={16} /> 5 · Sync history ({syncRuns.length})
+        </h3>
+        {syncRuns.length === 0 ? (
+          <p className='e2e-hint'>No syncs recorded yet for this tournament.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Started</th>
+                <th>Status</th>
+                <th>Accounts</th>
+                <th>Snapshots</th>
+                <th>Trades</th>
+                <th>Leaderboard rows</th>
+                <th>Errors</th>
+              </tr>
+            </thead>
+            <tbody>
+              {syncRuns.map((run) => (
+                <motion.tr key={run._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <td>{new Date(run.started_at).toLocaleString()}</td>
+                  <td>
+                    <span className={`e2e-state ${run.status === "success" ? "ready" : run.status === "error" ? "error" : ""}`}>
+                      {run.status}
+                    </span>
+                  </td>
+                  <td>{run.accounts_processed}</td>
+                  <td>{run.snapshots_written}</td>
+                  <td>{run.trades_written}</td>
+                  <td>{run.leaderboard_entries_written}</td>
+                  <td className='e2e-sync-errors'>{run.error_summary || "—"}</td>
                 </motion.tr>
               ))}
             </tbody>
