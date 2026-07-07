@@ -189,7 +189,7 @@ const Hero = () => {
           gap: 12px;
           width: 100%;
           max-width: 440px;
-          margin-top: -50px;
+          margin-top: -140px;
           position: relative;
           z-index: 5;
         }
