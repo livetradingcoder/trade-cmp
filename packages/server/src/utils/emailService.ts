@@ -1,79 +1,126 @@
 import { sendMailgunEmail } from "./mailgunConfig";
 
+const LOGO_URL = "https://app.livetradingleague.com/ltl.png";
+const WEBSITE_URL = "https://app.livetradingleague.com";
+// TODO: replace with real social links
+const DISCORD_URL = "#";
+const X_URL = "#";
+const YOUTUBE_URL = "#";
+
+/** Wraps a body block in the branded LiveTradingLeague email shell. */
+function renderEmailShell(bodyHtml: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiveTradingLeague</title>
+</head>
+<body style="margin:0;padding:0;background:#0d0d0d;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" bgcolor="#0d0d0d">
+<tr>
+<td align="center">
+<table width="650" cellpadding="0" cellspacing="0" style="max-width:650px;margin:40px auto;">
+<tr>
+<td align="center" style="padding-bottom:35px;">
+<img src="${LOGO_URL}" alt="LiveTradingLeague" style="max-width:360px;width:100%;height:auto;display:block;">
+</td>
+</tr>
+<tr>
+<td style="background:#161616;border:1px solid #2c2c2c;border-radius:12px;padding:50px;">
+${bodyHtml}
+<hr style="margin:40px 0;border:none;border-top:1px solid #333;">
+<p style="font-size:18px;line-height:30px;color:#888;margin:0;">
+This is an automated message from <strong>LiveTradingLeague</strong>.<br>
+Please do not reply to this email.
+</p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:40px 20px;">
+<div style="font-size:38px;font-weight:bold;color:white;">Live<span style="color:#2c8cff;">Trading</span>League</div>
+<div style="margin-top:12px;font-size:22px;color:#888;">Empowering Traders. Building Champions.</div>
+<div style="margin-top:30px;">
+<a href="${WEBSITE_URL}" style="color:#2c8cff;text-decoration:none;margin:0 12px;">Website</a>
+<a href="${DISCORD_URL}" style="color:#2c8cff;text-decoration:none;margin:0 12px;">Discord</a>
+<a href="${X_URL}" style="color:#2c8cff;text-decoration:none;margin:0 12px;">X</a>
+<a href="${YOUTUBE_URL}" style="color:#2c8cff;text-decoration:none;margin:0 12px;">YouTube</a>
+</div>
+<div style="margin-top:30px;font-size:16px;color:#666;">©️ 2026 LiveTradingLeague. All rights reserved.</div>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
+}
+
+const titleBlock = (title: string) =>
+  `<h1 style="margin:0;font-size:42px;color:#d8821d;font-weight:bold;">${title}</h1><div style="height:35px;"></div>`;
+
+const messageBlock = (message: string) =>
+  `<p style="font-size:30px;line-height:45px;color:white;margin:0;">${message}</p><div style="height:35px;"></div>`;
+
+const highlightBox = (label: string, value: string) => `
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#222;border-left:6px solid #d8821d;border-radius:6px;">
+<tr>
+<td style="padding:28px;">
+<div style="font-size:22px;font-weight:bold;color:white;margin-bottom:12px;">${label}</div>
+<div style="font-size:22px;color:white;">${value}</div>
+</td>
+</tr>
+</table>
+<div style="height:35px;"></div>`;
+
+const bodyText = (text: string) =>
+  `<p style="margin:0;font-size:24px;line-height:38px;color:white;">${text}</p><div style="height:35px;"></div>`;
+
 // Email templates
 const templates = {
   applicationSubmitted: (email: string, tournamentTitle: string) => ({
     subject: `Application Submitted - ${tournamentTitle}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #0066ff;">Application Submitted Successfully</h2>
-        <p>Thank you for applying to <strong>${tournamentTitle}</strong>.</p>
-        <p>Your application is currently <strong>pending admin review</strong>.</p>
-        <p>You will receive an email notification once your application has been reviewed.</p>
-        <hr style="border: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 14px;">
-          This is an automated message from LiveTradingLeague. Please do not reply to this email.
-        </p>
-      </div>
-    `,
+    html: renderEmailShell(
+      titleBlock("Application Submitted") +
+        messageBlock(`Thank you for applying to <strong>${tournamentTitle}</strong>.`) +
+        bodyText(
+          "Your application is currently <strong>pending admin review</strong>. You will receive an email notification once your application has been reviewed."
+        )
+    ),
   }),
 
   applicationApproved: (email: string, tournamentTitle: string, startDate: string, endDate: string) => ({
     subject: `Application Approved - ${tournamentTitle}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #22c55e;">Congratulations! Application Approved</h2>
-        <p>Your application to participate in <strong>${tournamentTitle}</strong> has been approved!</p>
-        <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>Competition Details:</strong></p>
-          <p style="margin: 5px 0;">Start Date: ${startDate}</p>
-          <p style="margin: 5px 0;">End Date: ${endDate}</p>
-        </div>
-        <p>Good luck in the competition!</p>
-        <hr style="border: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 14px;">
-          This is an automated message from LiveTradingLeague. Please do not reply to this email.
-        </p>
-      </div>
-    `,
+    html: renderEmailShell(
+      titleBlock("Application Approved!") +
+        messageBlock(`Your application to participate in <strong>${tournamentTitle}</strong> has been approved!`) +
+        highlightBox("Competition Details", `Start Date: ${startDate}<br>End Date: ${endDate}`) +
+        bodyText("Good luck in the competition!")
+    ),
   }),
 
   applicationDeclined: (email: string, tournamentTitle: string, reason: string) => ({
     subject: `Application Declined - ${tournamentTitle}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #ef4444;">Application Declined</h2>
-        <p>Unfortunately, your application to join <strong>${tournamentTitle}</strong> was not approved.</p>
-        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>Reason:</strong></p>
-          <p style="margin: 5px 0;">${reason}</p>
-        </div>
-        <p>If you believe this is an error, please contact support.</p>
-        <hr style="border: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 14px;">
-          This is an automated message from LiveTradingLeague. Please do not reply to this email.
-        </p>
-      </div>
-    `,
+    html: renderEmailShell(
+      titleBlock("Application Declined") +
+        messageBlock(`Unfortunately, your application to join <strong>${tournamentTitle}</strong> was not approved.`) +
+        highlightBox("Reason", reason) +
+        bodyText("If you believe this is an error, please contact support.")
+    ),
   }),
 
   participantDisqualified: (email: string, tournamentTitle: string, reason: string) => ({
     subject: `Disqualified from Competition - ${tournamentTitle}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #fb923c;">Competition Disqualification</h2>
-        <p>We regret to inform you that you have been disqualified from <strong>${tournamentTitle}</strong>.</p>
-        <div style="background: #fff7ed; border-left: 4px solid #fb923c; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0;"><strong>Reason:</strong></p>
-          <p style="margin: 5px 0;">${reason}</p>
-        </div>
-        <p><strong>Important:</strong> This decision only affects your participation in this competition and does not impact your FP Markets trading account.</p>
-        <hr style="border: 1px solid #eee; margin: 20px 0;">
-        <p style="color: #666; font-size: 14px;">
-          This is an automated message from LiveTradingLeague. Please do not reply to this email.
-        </p>
-      </div>
-    `,
+    html: renderEmailShell(
+      titleBlock("Disqualified from Competition") +
+        messageBlock(`We regret to inform you that you have been disqualified from <strong>${tournamentTitle}</strong>.`) +
+        highlightBox("Reason", reason) +
+        bodyText(
+          "<strong>Important:</strong> This decision only affects your participation in this competition and does not impact your trading account."
+        )
+    ),
   }),
 };
 
