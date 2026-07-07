@@ -1,9 +1,40 @@
 import { motion } from "framer-motion";
 import { Gamepad2, Check } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { ASSETS } from "../constants";
 
+const HERO_VIDEO_BASE_OPACITY = 0.65;
+const HERO_VIDEO_CROSSFADE_SECONDS = 0.4;
+
 const Hero = () => {
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+
+  // The source video's last frame doesn't match its first, so a plain loop
+  // flashes at the seam. Crossfade opacity across the loop boundary to mask it.
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+
+    let rafId: number;
+    const tick = () => {
+      if (video.duration) {
+        const remaining = video.duration - video.currentTime;
+        const factor =
+          remaining < HERO_VIDEO_CROSSFADE_SECONDS
+            ? remaining / HERO_VIDEO_CROSSFADE_SECONDS
+            : video.currentTime < HERO_VIDEO_CROSSFADE_SECONDS
+              ? video.currentTime / HERO_VIDEO_CROSSFADE_SECONDS
+              : 1;
+        video.style.opacity = String(HERO_VIDEO_BASE_OPACITY * Math.max(0, Math.min(1, factor)));
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   return (
     <section className='hero-section'>
       <div className='bg-glow-top'></div>
@@ -79,6 +110,7 @@ const Hero = () => {
                   }}
                 >
                   <video
+                    ref={heroVideoRef}
                     src={ASSETS.HERO_VIDEO}
                     className='hero-image'
                     autoPlay
