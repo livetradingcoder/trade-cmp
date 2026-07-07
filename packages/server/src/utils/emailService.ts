@@ -118,7 +118,7 @@ const templates = {
         messageBlock(`We regret to inform you that you have been disqualified from <strong>${tournamentTitle}</strong>.`) +
         highlightBox("Reason", reason) +
         bodyText(
-          "<strong>Important:</strong> This decision only affects your participation in this competition and does not impact your trading account."
+          "<strong>Important:</strong> This decision only affects your participation in this competition and does not impact your FPTrading trading account."
         )
     ),
   }),
