@@ -1,5 +1,4 @@
-import nodemailer from "nodemailer";
-import { createEmailTransporter, getFromAddress } from "./smtpConfig";
+import { sendMailgunEmail } from "./mailgunConfig";
 
 // Email templates
 const templates = {
@@ -80,31 +79,11 @@ const templates = {
 
 // Send email function
 export const sendEmail = async (to: string, template: { subject: string; html: string }) => {
-  try {
-    // Create transporter dynamically from database settings
-    const transporter = await createEmailTransporter();
-
-    // Skip sending if SMTP is not configured
-    if (!transporter) {
-      console.log(`[Email] SMTP not configured. Would send email to ${to}: ${template.subject}`);
-      return { success: true, skipped: true };
-    }
-
-    const fromAddress = await getFromAddress();
-
-    const info = await transporter.sendMail({
-      from: fromAddress || `"LiveTradingLeague" <noreply@livetradingleague.com>`,
-      to,
-      subject: template.subject,
-      html: template.html,
-    });
-
-    console.log(`[Email] Sent to ${to}: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error(`[Email] Failed to send to ${to}:`, error);
-    return { success: false, error };
+  const result = await sendMailgunEmail({ to, subject: template.subject, html: template.html });
+  if (result.success) {
+    console.log(`[Email] Sent to ${to}${result.messageId ? `: ${result.messageId}` : " (skipped, not configured)"}`);
   }
+  return result;
 };
 
 // Export templates

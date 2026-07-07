@@ -1,5 +1,4 @@
-import nodemailer from "nodemailer";
-import { createEmailTransporter, getFromAddress } from "./smtpConfig";
+import { sendMailgunEmail } from "./mailgunConfig";
 
 export const sendPasswordResetEmail = async (
   email: string,
@@ -7,30 +6,8 @@ export const sendPasswordResetEmail = async (
   resetUrl: string
 ) => {
   try {
-    // Try to get transporter from database settings
-    let transporter = await createEmailTransporter();
-
-    // Fallback to ethereal email for development if no SMTP configured
-    if (!transporter) {
-      console.log("No SMTP configured, using ethereal email for development");
-      transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false,
-        auth: {
-          user: process.env.EMAIL_USER || "test@example.com",
-          pass: process.env.EMAIL_PASS || "testpass",
-        },
-      });
-    }
-
-    const fromAddress = await getFromAddress();
-
-    const mailOptions = {
-      from: fromAddress || "LiveTradingLeague <noreply@LiveTradingLeague.com>",
-      to: email,
-      subject: "Password Reset Request - LiveTradingLeague",
-      html: `
+    const subject = "Password Reset Request - LiveTradingLeague";
+    const html = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -75,8 +52,8 @@ export const sendPasswordResetEmail = async (
           </div>
         </body>
         </html>
-      `,
-      text: `
+      `;
+    const text = `
         Password Reset Request - LiveTradingLeague
 
         Hello Admin,
@@ -91,18 +68,14 @@ export const sendPasswordResetEmail = async (
         If you didn't request this, please ignore this email. Your password won't change until you create a new one.
 
         LiveTradingLeague Admin Portal
-      `,
-    };
+      `;
 
-    const info = await transporter.sendMail(mailOptions);
-
-    // Log for development
-    if (process.env.NODE_ENV !== "production") {
-      console.log("📧 Password reset email sent");
-      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    const result = await sendMailgunEmail({ to: email, subject, html, text });
+    if (!result.success) {
+      throw new Error(result.error || "Failed to send password reset email");
     }
 
-    return { success: true, messageId: info.messageId };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error("Email send error:", error);
     return { success: false, error };

@@ -15,7 +15,7 @@ import { upload } from "./middleware/upload";
 import { sendPasswordResetEmail } from "./utils/email";
 import { sendEmail, emailTemplates } from "./utils/emailService";
 import { encrypt } from "./utils/encryption";
-import { createEmailTransporter, getSMTPSettings } from "./utils/smtpConfig";
+import { getMailgunSettings, sendMailgunEmail } from "./utils/mailgunConfig";
 import { syncTournament } from "./services/sync/syncTournament";
 import { startSyncScheduler } from "./services/sync/scheduler";
 import { probeFpMarkets } from "./services/brokers/fpMarketsConnector";
@@ -965,8 +965,9 @@ app.get("/api/settings", async (req, res) => {
   try {
     const settings = await Settings.find();
     const settingsObj: Record<string, string> = {};
+    const secretKeys = ["smtp_pass", "mailgun_api_key"];
     settings.forEach((s) => {
-      settingsObj[s.key] = s.key === "smtp_pass" && s.value ? "••••••••" : s.value;
+      settingsObj[s.key] = secretKeys.includes(s.key) && s.value ? "••••••••" : s.value;
     });
     res.json(settingsObj);
   } catch (error) {
@@ -980,9 +981,9 @@ app.get("/api/settings/:key", async (req, res) => {
   try {
     const setting = await Settings.findOne({ key: req.params.key });
     if (setting) {
-      // Mask SMTP password for security
+      // Mask secrets for security
       let value = setting.value;
-      if (req.params.key === "smtp_pass" && value) {
+      if ((req.params.key === "smtp_pass" || req.params.key === "mailgun_api_key") && value) {
         value = "••••••••";
       }
       res.json({ key: setting.key, value });
@@ -1000,8 +1001,8 @@ app.put("/api/settings/:key", verifyToken, async (req: AuthRequest, res) => {
   try {
     let { value } = req.body;
 
-    // Encrypt SMTP password before storing
-    if (req.params.key === "smtp_pass" && value) {
+    // Encrypt secrets before storing
+    if ((req.params.key === "smtp_pass" || req.params.key === "mailgun_api_key") && value) {
       value = encrypt(value);
     }
 
@@ -1011,9 +1012,9 @@ app.put("/api/settings/:key", verifyToken, async (req: AuthRequest, res) => {
       { new: true, upsert: true }
     );
 
-    // Mask password in response
+    // Mask secret in response
     let responseValue = setting.value;
-    if (req.params.key === "smtp_pass" && responseValue) {
+    if ((req.params.key === "smtp_pass" || req.params.key === "mailgun_api_key") && responseValue) {
       responseValue = "••••••••";
     }
 
@@ -1024,7 +1025,7 @@ app.put("/api/settings/:key", verifyToken, async (req: AuthRequest, res) => {
   }
 });
 
-// Test SMTP configuration (protected)
+// Test Mailgun configuration (protected)
 app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) => {
   const { testEmail } = req.body;
 
@@ -1039,70 +1040,46 @@ app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) =
       return res.status(400).json({ error: "Invalid email address format" });
     }
 
-    // Get SMTP settings
-    const smtpSettings = await getSMTPSettings();
+    const mailgunSettings = await getMailgunSettings();
 
-    if (!smtpSettings || !smtpSettings.host || !smtpSettings.user) {
+    if (!mailgunSettings) {
       return res.status(400).json({
-        error: "SMTP not configured. Please configure SMTP settings first.",
+        error: "Mailgun not configured. Please set the API key and domain first.",
       });
     }
 
-    // Create transporter
-    const transporter = await createEmailTransporter();
-
-    if (!transporter) {
-      return res.status(500).json({
-        error: "Failed to create email transporter. Check your SMTP settings.",
-      });
-    }
-
-    // Send test email
-    await transporter.sendMail({
-      from: smtpSettings.from || "noreply@livetradingleague.com",
+    const result = await sendMailgunEmail({
       to: testEmail,
-      subject: "SMTP Configuration Test - LiveTradingLeague",
+      subject: "Mailgun Configuration Test - LiveTradingLeague",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #667eea;">SMTP Configuration Test</h2>
-          <p>Congratulations! Your SMTP email settings are working correctly.</p>
+          <h2 style="color: #667eea;">Mailgun Configuration Test</h2>
+          <p>Congratulations! Your Mailgun email settings are working correctly.</p>
           <p>This test email was sent from your LiveTradingLeague admin panel to verify your email configuration.</p>
           <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="color: #666; font-size: 12px;">
-            <strong>SMTP Configuration Details:</strong><br>
-            Host: ${smtpSettings.host}<br>
-            Port: ${smtpSettings.port}<br>
-            Secure: ${smtpSettings.secure ? "Yes (TLS/SSL)" : "No"}<br>
-            User: ${smtpSettings.user}<br>
-            From: ${smtpSettings.from}
+            <strong>Mailgun Configuration Details:</strong><br>
+            Domain: ${mailgunSettings.domain}<br>
+            From: ${mailgunSettings.from}
           </p>
         </div>
       `,
-      text: `SMTP Configuration Test\n\nCongratulations! Your SMTP email settings are working correctly.\n\nThis test email was sent from your LiveTradingLeague admin panel to verify your email configuration.\n\nSMTP Configuration Details:\nHost: ${smtpSettings.host}\nPort: ${smtpSettings.port}\nSecure: ${smtpSettings.secure ? "Yes (TLS/SSL)" : "No"}\nUser: ${smtpSettings.user}\nFrom: ${smtpSettings.from}`,
+      text: `Mailgun Configuration Test\n\nCongratulations! Your Mailgun email settings are working correctly.\n\nDomain: ${mailgunSettings.domain}\nFrom: ${mailgunSettings.from}`,
     });
+
+    if (!result.success) {
+      return res.status(500).json({
+        error: `Failed to send test email. ${result.error || ""}`.trim(),
+      });
+    }
 
     res.json({
       success: true,
       message: `Test email sent successfully to ${testEmail}`,
     });
-  } catch (error) {
-    console.error("SMTP test error:", error);
-
-    // Provide detailed error message
-    let errorMessage = "Failed to send test email. ";
-    if (error instanceof Error) {
-      if (error.message.includes("Invalid login")) {
-        errorMessage += "Invalid SMTP username or password.";
-      } else if (error.message.includes("ECONNREFUSED")) {
-        errorMessage += "Could not connect to SMTP server. Check host and port.";
-      } else if (error.message.includes("ETIMEDOUT")) {
-        errorMessage += "Connection timed out. Check your network and SMTP settings.";
-      } else {
-        errorMessage += error.message;
-      }
-    }
-
-    res.status(500).json({ error: errorMessage });
+  } catch (error: any) {
+    console.error("Mailgun test error:", error);
+    res.status(500).json({ error: `Failed to send test email. ${error?.message || ""}`.trim() });
   }
 });
 

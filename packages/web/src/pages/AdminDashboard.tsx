@@ -111,16 +111,13 @@ const AdminDashboard = () => {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState({ type: "", text: "" });
 
-  // SMTP Settings state
-  const [smtpSettings, setSmtpSettings] = useState({
-    host: "",
-    port: "587",
-    secure: false,
-    user: "",
-    pass: "",
+  // Mailgun settings state (HTTP API — SMTP is blocked on Railway's network)
+  const [mailgunSettings, setMailgunSettings] = useState({
+    apiKey: "",
+    domain: "",
     from: ""
   });
-  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [showMailgunKey, setShowMailgunKey] = useState(false);
   const [isSavingSMTP, setIsSavingSMTP] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [testEmail, setTestEmail] = useState("");
@@ -185,36 +182,33 @@ const AdminDashboard = () => {
     }
   }, [isAdmin, API_URL]);
 
-  // Fetch SMTP settings on mount
+  // Fetch Mailgun settings on mount
   useEffect(() => {
-    const fetchSMTPSettings = async () => {
+    const fetchMailgunSettings = async () => {
       try {
-        const keys = ['smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'smtp_from'];
+        const keys = ['mailgun_api_key', 'mailgun_domain', 'smtp_from'];
         const settings: Record<string, string> = {};
 
         for (const key of keys) {
           const response = await fetch(`${API_URL}/api/settings/${key}`);
           if (response.ok) {
             const data = await response.json();
-            settings[key.replace('smtp_', '')] = data.value || "";
+            settings[key] = data.value || "";
           }
         }
 
-        setSmtpSettings({
-          host: settings.host || "",
-          port: settings.port || "587",
-          secure: settings.secure === "true",
-          user: settings.user || "",
-          pass: settings.pass ? "••••••••" : "", // Mask existing password
-          from: settings.from || ""
+        setMailgunSettings({
+          apiKey: settings.mailgun_api_key ? "••••••••" : "", // Mask existing key
+          domain: settings.mailgun_domain || "",
+          from: settings.smtp_from || ""
         });
       } catch (error) {
-        console.error("Failed to fetch SMTP settings:", error);
+        console.error("Failed to fetch Mailgun settings:", error);
       }
     };
 
     if (isAdmin) {
-      fetchSMTPSettings();
+      fetchMailgunSettings();
     }
   }, [isAdmin, API_URL]);
 
@@ -465,16 +459,13 @@ const AdminDashboard = () => {
     try {
       // Save each setting individually
       const settings = {
-        smtp_host: smtpSettings.host,
-        smtp_port: smtpSettings.port,
-        smtp_secure: smtpSettings.secure.toString(),
-        smtp_user: smtpSettings.user,
-        smtp_pass: smtpSettings.pass === "••••••••" ? undefined : smtpSettings.pass, // Skip if unchanged
-        smtp_from: smtpSettings.from
+        mailgun_api_key: mailgunSettings.apiKey === "••••••••" ? undefined : mailgunSettings.apiKey, // Skip if unchanged
+        mailgun_domain: mailgunSettings.domain,
+        smtp_from: mailgunSettings.from
       };
 
       for (const [key, value] of Object.entries(settings)) {
-        if (value === undefined) continue; // Skip unchanged password
+        if (value === undefined) continue; // Skip unchanged key
 
         const response = await fetch(`${API_URL}/api/settings/${key}`, {
           method: "PUT",
@@ -488,9 +479,9 @@ const AdminDashboard = () => {
         if (!response.ok) throw new Error(`Failed to save ${key}`);
       }
 
-      setSmtpMessage({ type: "success", text: "SMTP settings saved successfully!" });
+      setSmtpMessage({ type: "success", text: "Mailgun settings saved successfully!" });
     } catch (error) {
-      setSmtpMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to save SMTP settings" });
+      setSmtpMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to save Mailgun settings" });
     } finally {
       setIsSavingSMTP(false);
     }
@@ -1196,74 +1187,42 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-                {/* SMTP Configuration Section */}
+                {/* Mailgun Configuration Section */}
                 <div className='settings-section'>
                   <div className='settings-section-header'>
                     <Mail size={20} />
-                    <h3>Email (SMTP) Configuration</h3>
+                    <h3>Email (Mailgun) Configuration</h3>
                   </div>
                   <p className='settings-description'>
-                    Configure SMTP settings for sending emails. Changes take effect immediately.
+                    Configure Mailgun's HTTP API for sending emails. Changes take effect immediately.
+                    SMTP is not used — Railway's network blocks outbound SMTP ports.
                   </p>
 
                   <div className='form-group'>
-                    <label>SMTP Host</label>
+                    <label>Mailgun Domain</label>
                     <input
                       type='text'
-                      value={smtpSettings.host}
-                      onChange={(e) => setSmtpSettings({...smtpSettings, host: e.target.value})}
-                      placeholder='smtp.gmail.com'
-                    />
-                  </div>
-
-                  <div className='smtp-input-row'>
-                    <div className='form-group'>
-                      <label>SMTP Port</label>
-                      <input
-                        type='number'
-                        value={smtpSettings.port}
-                        onChange={(e) => setSmtpSettings({...smtpSettings, port: e.target.value})}
-                        placeholder='587'
-                      />
-                    </div>
-
-                    <div className='form-group smtp-checkbox-group'>
-                      <label>
-                        <input
-                          type='checkbox'
-                          checked={smtpSettings.secure}
-                          onChange={(e) => setSmtpSettings({...smtpSettings, secure: e.target.checked})}
-                        />
-                        <span>Use TLS/SSL</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className='form-group'>
-                    <label>SMTP Username</label>
-                    <input
-                      type='text'
-                      value={smtpSettings.user}
-                      onChange={(e) => setSmtpSettings({...smtpSettings, user: e.target.value})}
-                      placeholder='your-email@gmail.com'
+                      value={mailgunSettings.domain}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, domain: e.target.value})}
+                      placeholder='livetradingleague.com'
                     />
                   </div>
 
                   <div className='form-group'>
-                    <label>SMTP Password</label>
+                    <label>Mailgun Private API Key</label>
                     <div className='password-input-wrapper'>
                       <input
-                        type={showSmtpPassword ? "text" : "password"}
-                        value={smtpSettings.pass}
-                        onChange={(e) => setSmtpSettings({...smtpSettings, pass: e.target.value})}
-                        placeholder='Enter SMTP password'
+                        type={showMailgunKey ? "text" : "password"}
+                        value={mailgunSettings.apiKey}
+                        onChange={(e) => setMailgunSettings({...mailgunSettings, apiKey: e.target.value})}
+                        placeholder='Enter Mailgun Sending API key'
                       />
                       <button
                         type='button'
                         className='toggle-password'
-                        onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                        onClick={() => setShowMailgunKey(!showMailgunKey)}
                       >
-                        {showSmtpPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        {showMailgunKey ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                   </div>
@@ -1272,8 +1231,8 @@ const AdminDashboard = () => {
                     <label>From Email Address</label>
                     <input
                       type='email'
-                      value={smtpSettings.from}
-                      onChange={(e) => setSmtpSettings({...smtpSettings, from: e.target.value})}
+                      value={mailgunSettings.from}
+                      onChange={(e) => setMailgunSettings({...mailgunSettings, from: e.target.value})}
                       placeholder='noreply@livetradingleague.com'
                     />
                   </div>
@@ -1348,7 +1307,7 @@ const AdminDashboard = () => {
                       ) : (
                         <>
                           <Save size={18} />
-                          Save SMTP Settings
+                          Save Mailgun Settings
                         </>
                       )}
                     </button>
