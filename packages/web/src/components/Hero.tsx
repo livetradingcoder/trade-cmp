@@ -8,25 +8,55 @@ const HERO_VIDEO_BASE_OPACITY = 0.65;
 const HERO_VIDEO_CROSSFADE_SECONDS = 0.4;
 
 const Hero = () => {
-  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroVideoARef = useRef<HTMLVideoElement>(null);
+  const heroVideoBRef = useRef<HTMLVideoElement>(null);
 
   // The source video's last frame doesn't match its first, so a plain loop
-  // flashes at the seam. Crossfade opacity across the loop boundary to mask it.
+  // flashes at the seam. Two copies of the same video play in parallel, offset
+  // so one is always at full opacity while the other crossfades in behind it —
+  // there's never a dip to the background, so it loops forever with no flash.
   useEffect(() => {
-    const video = heroVideoRef.current;
-    if (!video) return;
+    const a = heroVideoARef.current;
+    const b = heroVideoBRef.current;
+    if (!a || !b) return;
+
+    let active = a;
+    let standby = b;
+    let standbyStarted = false;
+
+    active.style.opacity = String(HERO_VIDEO_BASE_OPACITY);
+    standby.style.opacity = "0";
+    standby.pause();
+    standby.currentTime = 0;
+    active.play().catch(() => {});
 
     let rafId: number;
     const tick = () => {
-      if (video.duration) {
-        const remaining = video.duration - video.currentTime;
-        const factor =
-          remaining < HERO_VIDEO_CROSSFADE_SECONDS
-            ? remaining / HERO_VIDEO_CROSSFADE_SECONDS
-            : video.currentTime < HERO_VIDEO_CROSSFADE_SECONDS
-              ? video.currentTime / HERO_VIDEO_CROSSFADE_SECONDS
-              : 1;
-        video.style.opacity = String(HERO_VIDEO_BASE_OPACITY * Math.max(0, Math.min(1, factor)));
+      if (active.duration) {
+        const remaining = active.duration - active.currentTime;
+
+        if (remaining <= HERO_VIDEO_CROSSFADE_SECONDS) {
+          if (!standbyStarted) {
+            standby.currentTime = 0;
+            standby.play().catch(() => {});
+            standbyStarted = true;
+          }
+          const fadeProgress = 1 - remaining / HERO_VIDEO_CROSSFADE_SECONDS;
+          active.style.opacity = String(HERO_VIDEO_BASE_OPACITY * (1 - fadeProgress));
+          standby.style.opacity = String(HERO_VIDEO_BASE_OPACITY * fadeProgress);
+        } else {
+          active.style.opacity = String(HERO_VIDEO_BASE_OPACITY);
+          standby.style.opacity = "0";
+        }
+
+        if (active.currentTime >= active.duration - 0.02) {
+          active.pause();
+          active.currentTime = 0;
+          const swap = active;
+          active = standby;
+          standby = swap;
+          standbyStarted = false;
+        }
       }
       rafId = requestAnimationFrame(tick);
     };
@@ -108,13 +138,19 @@ const Hero = () => {
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
+                  className='hero-video-stage'
                 >
                   <video
-                    ref={heroVideoRef}
+                    ref={heroVideoARef}
                     src={ASSETS.HERO_VIDEO}
-                    className='hero-image'
-                    autoPlay
-                    loop
+                    className='hero-image hero-video-layer'
+                    muted
+                    playsInline
+                  />
+                  <video
+                    ref={heroVideoBRef}
+                    src={ASSETS.HERO_VIDEO}
+                    className='hero-image hero-video-layer'
                     muted
                     playsInline
                   />
@@ -341,9 +377,17 @@ const Hero = () => {
         .hero-image-container {
           position: relative;
           z-index: 1;
+          width: 100%;
           display: flex;
           justify-content: center;
           align-items: center;
+        }
+
+        .hero-video-stage {
+          position: relative;
+          width: 100%;
+          max-width: 600px;
+          aspect-ratio: 1 / 1;
         }
 
         .hero-image {
@@ -359,6 +403,14 @@ const Hero = () => {
           mask-image: radial-gradient(circle at center, black 15%, transparent 90%);
           opacity: 0.65;
           display: block;
+        }
+
+        .hero-video-layer {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          max-width: none;
         }
 
         .floating-element {
