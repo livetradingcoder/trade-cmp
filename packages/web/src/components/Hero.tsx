@@ -295,7 +295,7 @@ const Hero = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-top: -230px;
+          margin-top: -80px;
         }
 
         .hero-visual-inner {
