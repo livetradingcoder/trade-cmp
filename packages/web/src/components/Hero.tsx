@@ -189,7 +189,11 @@ const Hero = () => {
           gap: 12px;
           width: 100%;
           max-width: 440px;
-          margin-top: -140px;
+          /* top (not margin-top) so the visual pull-up over the video doesn't
+             shrink the column's reserved flow height — that reserved space is
+             what stopped this badge from ever bleeding into the next section,
+             regardless of how text wrapping shifts things at different widths. */
+          top: -140px;
           position: relative;
           z-index: 5;
         }
