@@ -543,6 +543,9 @@ const Hero = () => {
           }
 
           .hero-stats {
+            /* Desktop pulls the badge up over the video (top: -140px);
+               on mobile it should sit at the bottom of the video instead. */
+            top: 0;
             margin-top: -25px;
             max-width: 400px;
             padding: 0 16px;
