@@ -248,14 +248,19 @@ export const fpMarketsConnector: BrokerConnector = {
         ? new Date(resource.last_trade_at).toISOString()
         : `${endDate}T23:59:59.000Z`;
 
-      snapshots.push({
-        accountNumber: account.accountNumber,
-        capturedAt: startCapturedAt,
-        balance: starting,
-        equity: starting,
-        currency: DEFAULT_CURRENCY,
-        source: "broker",
-      });
+      // FP's starting_balance is reserved and comes back 0 in practice — a
+      // zero starting snapshot would poison the ROI baseline downstream, so
+      // only emit it when the broker actually populates it.
+      if (starting > 0) {
+        snapshots.push({
+          accountNumber: account.accountNumber,
+          capturedAt: startCapturedAt,
+          balance: starting,
+          equity: starting,
+          currency: DEFAULT_CURRENCY,
+          source: "broker",
+        });
+      }
       snapshots.push({
         accountNumber: account.accountNumber,
         capturedAt: endCapturedAt,

@@ -191,9 +191,34 @@ export async function syncTournament(
         metaByAccount.set(account.broker_account_number, meta);
       }
 
+      // Build rows from the accumulated snapshot history rather than only
+      // this sync's result: FP's starting_balance is reserved (always 0), so
+      // each account's ROI baseline is the first non-zero equity we have ever
+      // observed for it — persisted across syncs — not what the broker claims.
+      const numberByAccountId = new Map(
+        group.map((account) => [
+          String(account._id),
+          account.broker_account_number,
+        ])
+      );
+      const history = await AccountSnapshot.find({
+        trading_account_id: { $in: group.map((account) => account._id) },
+        equity: { $gt: 0 },
+      }).sort({ captured_at: 1 });
+
+      const historySnapshots = history.map((snapshot) => ({
+        accountNumber:
+          numberByAccountId.get(String(snapshot.trading_account_id)) ?? "",
+        capturedAt: snapshot.captured_at.toISOString(),
+        balance: snapshot.balance,
+        equity: snapshot.equity,
+        currency: snapshot.currency,
+        source: snapshot.source,
+      }));
+
       leaderboardRows.push(
         ...buildLeaderboardRows(
-          result,
+          { ...result, snapshots: historySnapshots },
           connector.supportsBrokerMetrics,
           groupMeta
         )

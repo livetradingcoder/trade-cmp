@@ -148,8 +148,10 @@ describe("fpMarkets connector", () => {
       endDate: "2026-06-30",
     });
 
-    expect(result.snapshots).toHaveLength(2);
-    expect(result.snapshots[1].capturedAt).toBe("2026-06-30T23:59:59.000Z");
+    // starting_balance of 0 is FP's reserved/unpopulated value — no starting
+    // snapshot is emitted for it, only the current-balance one.
+    expect(result.snapshots).toHaveLength(1);
+    expect(result.snapshots[0].capturedAt).toBe("2026-06-30T23:59:59.000Z");
   });
 
   it("throws the broker error message on a non-200 response", async () => {
