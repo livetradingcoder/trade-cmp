@@ -58,8 +58,12 @@ export async function sendMailgunEmail(options: {
     return { success: true };
   }
 
+  // Add a display name if the configured "from" is a bare address (no "Name <email>" already)
+  const fromAddress = settings.from || `noreply@${settings.domain}`;
+  const from = /<.+>/.test(fromAddress) ? fromAddress : `LiveTradingLeague <${fromAddress}>`;
+
   const body = new URLSearchParams({
-    from: settings.from || `LiveTradingLeague <noreply@${settings.domain}>`,
+    from,
     to: options.to,
     subject: options.subject,
     html: options.html,
