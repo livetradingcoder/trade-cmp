@@ -78,7 +78,14 @@ const Hero = () => {
                     ease: "easeInOut",
                   }}
                 >
-                  <img src={ASSETS.HERO_IMAGE} alt='Platform' className='hero-image' />
+                  <video
+                    src={ASSETS.HERO_VIDEO}
+                    className='hero-image'
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
                 </motion.div>
               </div>
 
