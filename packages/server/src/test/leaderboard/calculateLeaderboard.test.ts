@@ -26,4 +26,23 @@ describe("calculateLeaderboard", () => {
     expect(rows[0].rank).toBe(1);
     expect(rows[1].rank).toBe(2);
   });
+
+  it("derives P&L from the equity change when the connector returns no raw trades (FP Markets)", () => {
+    const rows = calculateLeaderboard([
+      {
+        participantId: "p1",
+        accountNumber: "81049662",
+        startingEquity: 1276.22,
+        endingEquity: 1217.22,
+        closedTradePnls: [],
+        fallbackMetrics: null,
+      },
+    ]);
+
+    expect(rows[0].calculationStatus).toBe("ranked");
+    expect(rows[0].pnl).toBeCloseTo(-59, 2); // 1217.22 - 1276.22
+    expect(rows[0].tradeCount).toBe(0); // FP sends no trades — count stays 0
+    expect(rows[0].winRate).toBe(0);
+    expect(rows[0].roi).toBeCloseTo(-4.623, 2);
+  });
 });

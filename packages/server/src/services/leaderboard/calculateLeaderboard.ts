@@ -31,7 +31,13 @@ export function calculateLeaderboard(rows: InputRow[]): OutputRow[] {
       row.endingEquity != null &&
       row.startingEquity > 0
     ) {
-      const pnl = row.closedTradePnls.reduce((sum, value) => sum + value, 0);
+      // Connectors that expose raw trades (fixture/simulation) give an exact
+      // P&L from the sum of closed trades. FP Markets returns no trades, so
+      // fall back to the equity change over the period — the same basis as ROI
+      // — instead of reporting $0 for accounts that clearly moved.
+      const pnl = row.closedTradePnls.length
+        ? row.closedTradePnls.reduce((sum, value) => sum + value, 0)
+        : row.endingEquity - row.startingEquity;
       const wins = row.closedTradePnls.filter((value) => value > 0).length;
       const tradeCount = row.closedTradePnls.length;
       const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0;
