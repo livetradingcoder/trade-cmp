@@ -407,8 +407,8 @@ const LeaderboardPage = () => {
                           <td style={{ padding: "20px 16px", fontWeight: 800, color: entry.pnl >= 0 ? "var(--success)" : "#ef4444" }}>
                             {formatPnL(entry.pnl)}
                           </td>
-                          <td style={{ padding: "20px 16px" }}>{entry.trade_count}</td>
-                          <td style={{ padding: "20px 16px" }}>{entry.win_rate.toFixed(1)}%</td>
+                          <td style={{ padding: "20px 16px" }}>{entry.trade_count > 0 ? entry.trade_count : "—"}</td>
+                          <td style={{ padding: "20px 16px" }}>{entry.trade_count > 0 ? `${entry.win_rate.toFixed(1)}%` : "—"}</td>
                           <td style={{ padding: "20px 16px" }}>
                             <div
                               style={{
@@ -486,7 +486,7 @@ const LeaderboardPage = () => {
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
-                          {entry.trade_count} trades • {entry.win_rate.toFixed(1)}% win rate
+                          {entry.trade_count > 0 ? `${entry.trade_count} trades • ${entry.win_rate.toFixed(1)}% win rate` : "trades & win rate not reported by broker"}
                         </div>
                         <div
                           style={{

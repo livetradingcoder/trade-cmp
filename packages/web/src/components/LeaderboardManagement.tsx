@@ -193,9 +193,11 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
                       {formatPnL(entry.pnl)}
                     </span>
                   </td>
-                  <td>{entry.trade_count}</td>
+                  <td>{entry.trade_count > 0 ? entry.trade_count : "—"}</td>
                   <td>
-                    <span className="win-rate">{entry.win_rate.toFixed(1)}%</span>
+                    <span className="win-rate">
+                      {entry.trade_count > 0 ? `${entry.win_rate.toFixed(1)}%` : "—"}
+                    </span>
                   </td>
                   <td className="updated-at">
                     {new Date(entry.updated_at).toLocaleDateString()}
