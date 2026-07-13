@@ -7,7 +7,6 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "npm run db:generate",
     "setup": "npm install && npm run db:generate",
     "clean-install": "rm -rf node_modules package-lock.json packages/*/node_modules && npm install && npm run db:generate",
     "db:generate": "dotenv -e .env -- turbo run db:generate",
