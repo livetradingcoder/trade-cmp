@@ -18,7 +18,7 @@ import { encrypt } from "./utils/encryption";
 import { getMailgunSettings, sendMailgunEmail } from "./utils/mailgunConfig";
 import { syncTournament } from "./services/sync/syncTournament";
 import { startSyncScheduler } from "./services/sync/scheduler";
-import { probeFpMarkets } from "./services/brokers/fpMarketsConnector";
+import { probeFpMarkets, probeFpActivity } from "./services/brokers/fpMarketsConnector";
 import { getBrokerConnector } from "./services/brokers";
 import BrokerIntegration from "./models/BrokerIntegration";
 import TradingAccount from "./models/TradingAccount";
@@ -1236,6 +1236,44 @@ app.get("/api/admin/fp-test", verifyToken, async (req: AuthRequest, res) => {
     res.status(502).json({
       success: false,
       message: error?.message || "FP Markets probe failed",
+    });
+  }
+});
+
+// One live signed call to the new trade-activity + cash-activity APIs for a
+// single trading account. Proves they're live and shows the real shape.
+// (protected - admin only)
+app.get("/api/admin/fp-activity-test", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const accountNumber =
+      typeof req.query.account === "string" ? req.query.account : "";
+    if (!accountNumber) {
+      return res
+        .status(400)
+        .json({ success: false, message: "account query param is required" });
+    }
+    const startDate =
+      typeof req.query.start_date === "string" ? req.query.start_date : undefined;
+    const endDate =
+      typeof req.query.end_date === "string" ? req.query.end_date : undefined;
+
+    const result = await probeFpActivity({ accountNumber, startDate, endDate });
+    res.json({
+      success: true,
+      base_url: result.baseUrl,
+      rebate_account_number: result.rebateAccountNumber,
+      account_number: result.accountNumber,
+      start_date: result.startDate,
+      end_date: result.endDate,
+      trades_count: result.trades.length,
+      trades: result.trades,
+      cash_count: result.cashTransactions.length,
+      cash_transactions: result.cashTransactions,
+    });
+  } catch (error: any) {
+    res.status(502).json({
+      success: false,
+      message: error?.message || "FP activity probe failed",
     });
   }
 });

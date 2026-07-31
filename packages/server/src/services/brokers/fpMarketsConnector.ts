@@ -202,6 +202,184 @@ export async function probeFpMarkets(range?: {
   };
 }
 
+// --- Trade / Cash Activity APIs (per single trading account, paginated) ---
+
+const TRADE_ACTIVITY_PATH = "/api/account/trade-activity";
+const CASH_ACTIVITY_PATH = "/api/account/cash-activity";
+const ACTIVITY_PER_PAGE = 200; // API max
+const ACTIVITY_MAX_PAGES = 50; // safety cap (50 * 200 = 10k records/account)
+
+export interface FpTrade {
+  transaction_id?: string;
+  product?: string;
+  open_time?: string;
+  open_price?: number;
+  close_time?: string;
+  close_price?: number;
+  volume?: number;
+  profit?: number;
+  commission?: number;
+  swaps?: number;
+  net_pnl?: number;
+}
+
+export interface FpCashTransaction {
+  transaction_id?: string;
+  type?: string; // deposit | withdrawal | balance adjustment | ...
+  amount?: number;
+  amount_in_usd?: number;
+  currency?: string;
+  date_time?: string;
+  comment?: string;
+}
+
+/** These endpoints use a flat error envelope: { messages: string[], httpStatusCode }. */
+function extractActivityError(payload: unknown): string | null {
+  const messages = (payload as any)?.messages;
+  if (Array.isArray(messages) && messages.length > 0) {
+    return typeof messages[0] === "string" ? messages[0] : JSON.stringify(messages[0]);
+  }
+  return extractError(payload);
+}
+
+interface ActivityParams {
+  rebateAccountNumber: string;
+  accountNumber: string;
+  startDate: string;
+  endDate: string;
+}
+
+/**
+ * POST a paginated activity endpoint and concatenate `field` records across all
+ * pages (following meta.last_page). Same auth as the performance API.
+ */
+async function fetchActivityPaged<T>(
+  config: FpMarketsConfig,
+  path: string,
+  field: "trades" | "transactions",
+  params: ActivityParams
+): Promise<T[]> {
+  const all: T[] = [];
+  let page = 1;
+
+  for (let guard = 0; guard < ACTIVITY_MAX_PAGES; guard++) {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const signature = signTimestamp(timestamp, config.secret);
+
+    const response = await fetch(`${config.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        token: config.token,
+        timestamp,
+        signature,
+      },
+      body: JSON.stringify({
+        rebate_account_number: params.rebateAccountNumber,
+        account_number: params.accountNumber,
+        start_date: params.startDate,
+        end_date: params.endDate,
+        page,
+        per_page: ACTIVITY_PER_PAGE,
+      }),
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(
+        extractActivityError(payload) ||
+          `FP Markets ${path} error (HTTP ${response.status})`
+      );
+    }
+
+    const resource = (payload as any)?.data?.resource;
+    const records = Array.isArray(resource?.[field]) ? resource[field] : [];
+    all.push(...(records as T[]));
+
+    const lastPage =
+      typeof resource?.meta?.last_page === "number" ? resource.meta.last_page : page;
+    if (page >= lastPage || records.length === 0) break;
+    page += 1;
+  }
+
+  return all;
+}
+
+export function fetchTradeActivity(
+  config: FpMarketsConfig,
+  params: ActivityParams
+): Promise<FpTrade[]> {
+  return fetchActivityPaged<FpTrade>(config, TRADE_ACTIVITY_PATH, "trades", params);
+}
+
+export function fetchCashActivity(
+  config: FpMarketsConfig,
+  params: ActivityParams
+): Promise<FpCashTransaction[]> {
+  return fetchActivityPaged<FpCashTransaction>(
+    config,
+    CASH_ACTIVITY_PATH,
+    "transactions",
+    params
+  );
+}
+
+export interface FpActivityProbeResult {
+  baseUrl: string;
+  rebateAccountNumber: string;
+  accountNumber: string;
+  startDate: string;
+  endDate: string;
+  trades: FpTrade[];
+  cashTransactions: FpCashTransaction[];
+}
+
+/**
+ * One live signed call to each activity endpoint for a single trading account,
+ * using the first configured rebate number. Proves the endpoints are live and
+ * lets us confirm the real response shape.
+ */
+export async function probeFpActivity(input: {
+  accountNumber: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<FpActivityProbeResult> {
+  const config = loadFpMarketsConfig();
+  const { startDate, endDate } =
+    input.startDate && input.endDate
+      ? {
+          startDate: toDateOnly(input.startDate),
+          endDate: toDateOnly(input.endDate),
+        }
+      : defaultRange();
+
+  const rebateAccountNumber = config.rebateAccountNumbers[0];
+  const [trades, cashTransactions] = await Promise.all([
+    fetchTradeActivity(config, {
+      rebateAccountNumber,
+      accountNumber: input.accountNumber,
+      startDate,
+      endDate,
+    }),
+    fetchCashActivity(config, {
+      rebateAccountNumber,
+      accountNumber: input.accountNumber,
+      startDate,
+      endDate,
+    }),
+  ]);
+
+  return {
+    baseUrl: config.baseUrl,
+    rebateAccountNumber,
+    accountNumber: input.accountNumber,
+    startDate,
+    endDate,
+    trades,
+    cashTransactions,
+  };
+}
+
 export const fpMarketsConnector: BrokerConnector = {
   type: "fpmarkets",
   supportsRawTrades: false,
