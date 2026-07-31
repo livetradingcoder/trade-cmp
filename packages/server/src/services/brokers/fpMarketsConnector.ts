@@ -208,6 +208,7 @@ const TRADE_ACTIVITY_PATH = "/api/account/trade-activity";
 const CASH_ACTIVITY_PATH = "/api/account/cash-activity";
 const ACTIVITY_PER_PAGE = 200; // API max
 const ACTIVITY_MAX_PAGES = 50; // safety cap (50 * 200 = 10k records/account)
+const ACTIVITY_TIMEOUT_MS = 15000; // never let a hung FP call stall the request
 
 export interface FpTrade {
   transaction_id?: string;
@@ -249,6 +250,54 @@ interface ActivityParams {
   endDate: string;
 }
 
+/** One signed POST to an activity endpoint (page-scoped), with a hard timeout. */
+async function activityRequest(
+  config: FpMarketsConfig,
+  path: string,
+  params: ActivityParams & { page: number }
+): Promise<{ status: number; ok: boolean; payload: any; rawText: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ACTIVITY_TIMEOUT_MS);
+  try {
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const signature = signTimestamp(timestamp, config.secret);
+    const response = await fetch(`${config.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        token: config.token,
+        timestamp,
+        signature,
+      },
+      body: JSON.stringify({
+        rebate_account_number: params.rebateAccountNumber,
+        account_number: params.accountNumber,
+        start_date: params.startDate,
+        end_date: params.endDate,
+        page: params.page,
+        per_page: ACTIVITY_PER_PAGE,
+      }),
+      signal: controller.signal,
+    });
+    const rawText = await response.text();
+    let payload: any = null;
+    try {
+      payload = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      payload = null;
+    }
+    return { status: response.status, ok: response.ok, payload, rawText };
+  } catch (error: any) {
+    const msg =
+      error?.name === "AbortError"
+        ? `timeout after ${ACTIVITY_TIMEOUT_MS}ms (endpoint not responding)`
+        : error?.message || "network error";
+    return { status: 0, ok: false, payload: { messages: [msg] }, rawText: msg };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * POST a paginated activity endpoint and concatenate `field` records across all
  * pages (following meta.last_page). Same auth as the performance API.
@@ -263,32 +312,15 @@ async function fetchActivityPaged<T>(
   let page = 1;
 
   for (let guard = 0; guard < ACTIVITY_MAX_PAGES; guard++) {
-    const timestamp = String(Math.floor(Date.now() / 1000));
-    const signature = signTimestamp(timestamp, config.secret);
-
-    const response = await fetch(`${config.baseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        token: config.token,
-        timestamp,
-        signature,
-      },
-      body: JSON.stringify({
-        rebate_account_number: params.rebateAccountNumber,
-        account_number: params.accountNumber,
-        start_date: params.startDate,
-        end_date: params.endDate,
-        page,
-        per_page: ACTIVITY_PER_PAGE,
-      }),
+    const { status, ok, payload } = await activityRequest(config, path, {
+      ...params,
+      page,
     });
-
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
+    if (!ok) {
       throw new Error(
-        extractActivityError(payload) ||
-          `FP Markets ${path} error (HTTP ${response.status})`
+        `FP Markets ${path} HTTP ${status}: ${
+          extractActivityError(payload) || "request failed"
+        }`
       );
     }
 
@@ -324,20 +356,29 @@ export function fetchCashActivity(
   );
 }
 
+export interface ActivityProbeSide {
+  status: number;
+  ok: boolean;
+  count: number;
+  sample: any;
+  raw: string;
+}
+
 export interface FpActivityProbeResult {
   baseUrl: string;
   rebateAccountNumber: string;
   accountNumber: string;
   startDate: string;
   endDate: string;
-  trades: FpTrade[];
-  cashTransactions: FpCashTransaction[];
+  trade: ActivityProbeSide;
+  cash: ActivityProbeSide;
 }
 
 /**
- * One live signed call to each activity endpoint for a single trading account,
- * using the first configured rebate number. Proves the endpoints are live and
- * lets us confirm the real response shape.
+ * Raw diagnostic: one page-1 signed call to each activity endpoint for a single
+ * trading account (first configured rebate number). Returns the HTTP status +
+ * a body snippet so we can confirm the endpoints are live and see the real
+ * response shape without a hung request stalling anything.
  */
 export async function probeFpActivity(input: {
   accountNumber: string;
@@ -354,20 +395,32 @@ export async function probeFpActivity(input: {
       : defaultRange();
 
   const rebateAccountNumber = config.rebateAccountNumbers[0];
-  const [trades, cashTransactions] = await Promise.all([
-    fetchTradeActivity(config, {
-      rebateAccountNumber,
-      accountNumber: input.accountNumber,
-      startDate,
-      endDate,
-    }),
-    fetchCashActivity(config, {
-      rebateAccountNumber,
-      accountNumber: input.accountNumber,
-      startDate,
-      endDate,
-    }),
+  const base = {
+    rebateAccountNumber,
+    accountNumber: input.accountNumber,
+    startDate,
+    endDate,
+    page: 1,
+  };
+
+  const [t, c] = await Promise.all([
+    activityRequest(config, TRADE_ACTIVITY_PATH, base),
+    activityRequest(config, CASH_ACTIVITY_PATH, base),
   ]);
+
+  const summarize = (
+    r: { status: number; ok: boolean; payload: any; rawText: string },
+    field: "trades" | "transactions"
+  ): ActivityProbeSide => {
+    const arr = r.payload?.data?.resource?.[field];
+    return {
+      status: r.status,
+      ok: r.ok,
+      count: Array.isArray(arr) ? arr.length : 0,
+      sample: Array.isArray(arr) && arr.length ? arr[0] : null,
+      raw: (r.rawText || "").slice(0, 600),
+    };
+  };
 
   return {
     baseUrl: config.baseUrl,
@@ -375,8 +428,8 @@ export async function probeFpActivity(input: {
     accountNumber: input.accountNumber,
     startDate,
     endDate,
-    trades,
-    cashTransactions,
+    trade: summarize(t, "trades"),
+    cash: summarize(c, "transactions"),
   };
 }
 

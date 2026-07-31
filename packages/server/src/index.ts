@@ -1258,18 +1258,7 @@ app.get("/api/admin/fp-activity-test", verifyToken, async (req: AuthRequest, res
       typeof req.query.end_date === "string" ? req.query.end_date : undefined;
 
     const result = await probeFpActivity({ accountNumber, startDate, endDate });
-    res.json({
-      success: true,
-      base_url: result.baseUrl,
-      rebate_account_number: result.rebateAccountNumber,
-      account_number: result.accountNumber,
-      start_date: result.startDate,
-      end_date: result.endDate,
-      trades_count: result.trades.length,
-      trades: result.trades,
-      cash_count: result.cashTransactions.length,
-      cash_transactions: result.cashTransactions,
-    });
+    res.json({ success: true, ...result });
   } catch (error: any) {
     res.status(502).json({
       success: false,
