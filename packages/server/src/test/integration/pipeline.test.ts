@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import request from "supertest";
 import jwt from "jsonwebtoken";
 import { afterAll, beforeAll, afterEach, describe, expect, it, vi } from "vitest";
+import TradingAccount from "../../models/TradingAccount";
 
 /**
  * Full-pipeline integration test against the real Express app and an in-memory
@@ -108,6 +109,14 @@ async function onboardParticipant(
   expect(approve.status).toBe(200);
   expect(approve.body.participant.status).toBe("approved");
 
+  // Approval auto-provisions a trading account under the fpmarkets integration.
+  // Drop it so the explicit onboard below can assign the connector this test
+  // actually exercises (fixture or fpmarkets).
+  await TradingAccount.deleteMany({
+    tournament_id: tournamentId,
+    broker_account_number: accountNumber,
+  });
+
   const account = await request(app)
     .post("/api/admin/trading-accounts")
     .set(auth())
@@ -130,11 +139,20 @@ describe("health & auth guards", () => {
       request(app).post("/api/admin/broker-integrations").send({ type: "fixture" }),
       request(app).post("/api/admin/trading-accounts").send({}),
       request(app).post("/api/admin/sync/000000000000000000000000"),
-      request(app).get("/api/leaderboard/000000000000000000000000"),
     ]) {
       const res = await call;
       expect(res.status).toBe(401);
     }
+  });
+
+  it("serves the public leaderboard without a token", async () => {
+    // The leaderboard is intentionally public (sanitized: masked accounts, no
+    // balances), so it must NOT require admin auth.
+    const res = await request(app).get(
+      "/api/leaderboard/000000000000000000000000"
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.leaderboard).toEqual([]);
   });
 });
 
