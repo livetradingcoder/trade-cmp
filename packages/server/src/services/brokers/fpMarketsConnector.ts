@@ -202,6 +202,33 @@ export async function probeFpMarkets(range?: {
   };
 }
 
+let rebateAccountsCache: { at: number; accounts: Set<string> } | null = null;
+const REBATE_CACHE_MS = 60_000;
+
+/**
+ * The set of trading account numbers currently mapped under our rebate/IB, per
+ * FP's Account Performance API. Cached for 60s. Used to verify (for real) that a
+ * participant's FP account is registered under our referral code — replacing the
+ * old self-declared is_new_user placeholder. Throws if FP is unreachable so
+ * callers can fall back to the stored value rather than wiping verification.
+ */
+export async function getRebateAccountNumbers(): Promise<Set<string>> {
+  if (
+    rebateAccountsCache &&
+    Date.now() - rebateAccountsCache.at < REBATE_CACHE_MS
+  ) {
+    return rebateAccountsCache.accounts;
+  }
+  const result = await probeFpMarkets();
+  const accounts = new Set(
+    result.accountsReturned
+      .map((a) => (a.account_number == null ? "" : String(a.account_number)))
+      .filter(Boolean)
+  );
+  rebateAccountsCache = { at: Date.now(), accounts };
+  return accounts;
+}
+
 // --- Trade / Cash Activity APIs (per single trading account, paginated) ---
 
 const TRADE_ACTIVITY_PATH = "/api/account/trade-activity";

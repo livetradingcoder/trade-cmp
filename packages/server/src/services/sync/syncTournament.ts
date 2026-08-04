@@ -5,7 +5,9 @@ import Trade from "../../models/Trade";
 import SyncRun from "../../models/SyncRun";
 import LeaderboardCache from "../../models/LeaderboardCache";
 import BrokerIntegration from "../../models/BrokerIntegration";
+import Participant from "../../models/Participant";
 import { getBrokerConnector } from "../brokers";
+import { getRebateAccountNumbers } from "../brokers/fpMarketsConnector";
 import { FetchCompetitionDataResult } from "../brokers/types";
 import { calculateLeaderboard, InputRow } from "../leaderboard/calculateLeaderboard";
 import {
@@ -278,6 +280,31 @@ export async function syncTournament(
       },
       { upsert: true }
     );
+  }
+
+  // Self-heal referral verification: a participant is "referred" iff their FP
+  // account is currently mapped under our rebate/IB. Best-effort — never fail
+  // the sync over it, and leave stored values untouched if FP is unreachable.
+  try {
+    const rebateAccounts = await getRebateAccountNumbers();
+    const tournamentParticipants = await Participant.find({
+      tournament_id: tournament._id,
+    }).populate("user_id", "fp_account_number");
+    await Promise.all(
+      tournamentParticipants.map(async (participant) => {
+        const account = (participant.user_id as any)?.fp_account_number;
+        if (!account) return;
+        const verified = rebateAccounts.has(String(account));
+        if (verified !== participant.referral_code_verified) {
+          await Participant.updateOne(
+            { _id: participant._id },
+            { $set: { referral_code_verified: verified } }
+          );
+        }
+      })
+    );
+  } catch {
+    // FP unreachable — leave stored referral flags as-is.
   }
 
   const status: SyncTournamentResult["status"] =

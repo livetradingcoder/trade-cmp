@@ -18,7 +18,11 @@ import { encrypt } from "./utils/encryption";
 import { getMailgunSettings, sendMailgunEmail } from "./utils/mailgunConfig";
 import { syncTournament } from "./services/sync/syncTournament";
 import { startSyncScheduler } from "./services/sync/scheduler";
-import { probeFpMarkets, probeFpActivity } from "./services/brokers/fpMarketsConnector";
+import {
+  probeFpMarkets,
+  probeFpActivity,
+  getRebateAccountNumbers,
+} from "./services/brokers/fpMarketsConnector";
 import { getBrokerConnector } from "./services/brokers";
 import BrokerIntegration from "./models/BrokerIntegration";
 import TradingAccount from "./models/TradingAccount";
@@ -617,6 +621,38 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
       .populate("disqualified_by", "username")
       .sort({ applied_at: -1 });
 
+    // Verify referral status for real: a participant is "referred" iff their FP
+    // account is currently mapped under our rebate/IB (per FP's performance API).
+    // This replaces the old self-declared is_new_user placeholder and self-heals
+    // as FP maps accounts. Falls back to the stored value if FP is unreachable.
+    let rebateAccounts: Set<string> | null = null;
+    try {
+      rebateAccounts = await Promise.race([
+        getRebateAccountNumbers(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("rebate lookup timeout")), 8000)
+        ),
+      ]);
+    } catch {
+      rebateAccounts = null;
+    }
+    if (rebateAccounts) {
+      await Promise.all(
+        participants.map(async (p) => {
+          const account = (p.user_id as any)?.fp_account_number;
+          if (!account) return;
+          const verified = rebateAccounts!.has(String(account));
+          if (verified !== p.referral_code_verified) {
+            p.referral_code_verified = verified;
+            await Participant.updateOne(
+              { _id: p._id },
+              { $set: { referral_code_verified: verified } }
+            );
+          }
+        })
+      );
+    }
+
     res.json({
       success: true,
       participants: participants.map(p => ({
@@ -624,6 +660,7 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
         tournament_id: p.tournament_id,
         user: p.user_id,
         status: p.status,
+        referral_code_verified: p.referral_code_verified,
         applied_at: p.applied_at,
         reviewed_at: p.reviewed_at,
         reviewed_by: p.reviewed_by,
