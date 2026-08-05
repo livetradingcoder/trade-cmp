@@ -413,12 +413,11 @@ export async function probeFpActivity(input: {
   endDate?: string;
 }): Promise<FpActivityProbeResult> {
   const config = loadFpMarketsConfig();
+  // Pass the dates through as given (no date-only truncation) so we can probe
+  // exactly what the activity API accepts — date-only vs full ISO 8601.
   const { startDate, endDate } =
     input.startDate && input.endDate
-      ? {
-          startDate: toDateOnly(input.startDate),
-          endDate: toDateOnly(input.endDate),
-        }
+      ? { startDate: input.startDate, endDate: input.endDate }
       : defaultRange();
 
   const rebateAccountNumber = config.rebateAccountNumbers[0];
