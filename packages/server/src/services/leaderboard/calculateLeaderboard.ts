@@ -31,18 +31,19 @@ export function calculateLeaderboard(rows: InputRow[]): OutputRow[] {
       row.endingEquity != null &&
       row.startingEquity > 0
     ) {
-      // Connectors that expose raw trades (fixture/simulation) give an exact
-      // P&L from the sum of closed trades. FP Markets returns no trades, so
-      // fall back to the equity change over the period — the same basis as ROI
-      // — instead of reporting $0 for accounts that clearly moved.
-      const pnl = row.closedTradePnls.length
-        ? row.closedTradePnls.reduce((sum, value) => sum + value, 0)
-        : row.endingEquity - row.startingEquity;
+      // When the connector exposes raw trades, P&L and ROI both come from the
+      // sum of closed-trade net PnL — exact, and immune to mid-competition
+      // deposits/withdrawals (which move balance but aren't trading profit).
+      // Without trades, fall back to the equity change over the period.
+      const tradePnl = row.closedTradePnls.reduce((sum, value) => sum + value, 0);
+      const hasTrades = row.closedTradePnls.length > 0;
+      const pnl = hasTrades ? tradePnl : row.endingEquity - row.startingEquity;
+      const roi = hasTrades
+        ? (tradePnl / row.startingEquity) * 100
+        : ((row.endingEquity - row.startingEquity) / row.startingEquity) * 100;
       const wins = row.closedTradePnls.filter((value) => value > 0).length;
       const tradeCount = row.closedTradePnls.length;
       const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0;
-      const roi =
-        ((row.endingEquity - row.startingEquity) / row.startingEquity) * 100;
 
       return {
         participantId: row.participantId,

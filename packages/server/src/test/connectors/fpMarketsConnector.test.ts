@@ -18,7 +18,16 @@ function setEnv() {
 }
 
 function mockFetch(impl: any) {
-  const fetchMock = vi.fn(impl);
+  // Wrap so every mocked Response also exposes text() (the activity client
+  // reads the raw text), mirroring json() when the impl only stubs json.
+  const wrapped = async (...args: any[]) => {
+    const res = await impl(...args);
+    if (res && typeof res.json === "function" && typeof res.text !== "function") {
+      res.text = async () => JSON.stringify(await res.json());
+    }
+    return res;
+  };
+  const fetchMock = vi.fn(wrapped);
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -152,6 +161,82 @@ describe("fpMarkets connector", () => {
     // snapshot is emitted for it, only the current-balance one.
     expect(result.snapshots).toHaveLength(1);
     expect(result.snapshots[0].capturedAt).toBe("2026-06-30T23:59:59.000Z");
+  });
+
+  it("fetches closed trades from the trade-activity API per account", async () => {
+    mockFetch(async (url: string) => {
+      if (url.includes("/api/account/trade-activity")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              resource: {
+                trades: [
+                  {
+                    transaction_id: "T1",
+                    product: "Gold-Raw",
+                    open_time: "2026-05-20T08:45:00+00:00",
+                    close_time: "2026-05-20T08:45:00+00:00",
+                    volume: 0.01,
+                    profit: 0.79,
+                    commission: 0,
+                    swaps: 0,
+                    net_pnl: 0.79,
+                  },
+                  {
+                    transaction_id: "T2",
+                    product: "FX-Raw",
+                    close_time: "2026-05-21T10:00:00+00:00",
+                    volume: 0.02,
+                    net_pnl: -2.52,
+                  },
+                ],
+                meta: { total: 2, per_page: 200, current_page: 1, last_page: 1 },
+              },
+            },
+          }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: {
+            resource: {
+              accounts: [
+                {
+                  account_number: "TC-1",
+                  currency: "usd",
+                  metrics: { roi: 0, starting_balance: 0, current_balance: 100 },
+                  last_trade_at: "2026-05-21T10:00:00+00:00",
+                  status: "active",
+                },
+              ],
+            },
+          },
+        }),
+      };
+    });
+
+    const result = await fpMarketsConnector.fetchCompetitionData({
+      tournamentId: "t1",
+      accounts: [{ accountNumber: "TC-1", userId: "u1" }],
+      startDate: "2026-01-01",
+      endDate: "2026-06-30",
+    });
+
+    expect(result.trades).toHaveLength(2);
+    expect(result.trades[0]).toMatchObject({
+      accountNumber: "TC-1",
+      tradeId: "T1",
+      closedAt: "2026-05-20T08:45:00+00:00",
+      symbol: "Gold-Raw",
+      netPnl: 0.79,
+      currency: "USD", // uppercased from the performance response
+      source: "broker",
+    });
+    expect(result.trades[1]).toMatchObject({ tradeId: "T2", netPnl: -2.52 });
   });
 
   it("throws the broker error message on a non-200 response", async () => {

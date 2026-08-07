@@ -4,6 +4,7 @@ import {
   FetchCompetitionDataInput,
   FetchCompetitionDataResult,
   NormalizedSnapshotInput,
+  NormalizedTradeInput,
 } from "./types";
 
 /**
@@ -47,6 +48,7 @@ interface FpMarketsConfig {
 
 interface FpAccountResource {
   account_number: string;
+  currency?: string | null;
   user_info?: { first_name?: string; last_name_masked?: string };
   metrics?: {
     roi?: number;
@@ -461,16 +463,22 @@ export async function probeFpActivity(input: {
 
 export const fpMarketsConnector: BrokerConnector = {
   type: "fpmarkets",
-  supportsRawTrades: false,
+  // Trades come from the per-account Trade Activity API; P&L / trade count /
+  // win rate are computed from them. roi is still reserved (always 0), so
+  // broker metrics are not used as a fallback.
+  supportsRawTrades: true,
   supportsSnapshots: true,
-  // roi from the API is reserved (always 0), so broker metrics are not usable
-  // as a leaderboard fallback. ROI is computed from balance snapshots instead.
   supportsBrokerMetrics: false,
   async fetchCompetitionData(
     input: FetchCompetitionDataInput
   ): Promise<FetchCompetitionDataResult> {
     const config = loadFpMarketsConfig();
     const { startDate, endDate } = resolveRange(input);
+    // The activity APIs accept full ISO 8601; use the tournament window when
+    // provided, otherwise the resolved day range.
+    const activityStart = input.startDate || `${startDate}T00:00:00.000Z`;
+    const activityEnd = input.endDate || `${endDate}T23:59:59.999Z`;
+    const rebateAccountNumber = config.rebateAccountNumbers[0];
 
     const resources = await callPerformanceApi(config, {
       account_numbers: config.rebateAccountNumbers,
@@ -487,6 +495,7 @@ export const fpMarketsConnector: BrokerConnector = {
 
     const matchedAccounts: FetchCompetitionDataResult["accounts"] = [];
     const snapshots: NormalizedSnapshotInput[] = [];
+    const trades: NormalizedTradeInput[] = [];
 
     const startCapturedAt = `${startDate}T00:00:00.000Z`;
 
@@ -499,6 +508,7 @@ export const fpMarketsConnector: BrokerConnector = {
 
       matchedAccounts.push(account);
 
+      const currency = (resource.currency || DEFAULT_CURRENCY).toUpperCase();
       const starting = resource.metrics?.starting_balance ?? 0;
       const current = resource.metrics?.current_balance ?? 0;
       const endCapturedAt = resource.last_trade_at
@@ -514,7 +524,7 @@ export const fpMarketsConnector: BrokerConnector = {
           capturedAt: startCapturedAt,
           balance: starting,
           equity: starting,
-          currency: DEFAULT_CURRENCY,
+          currency,
           source: "broker",
         });
       }
@@ -523,15 +533,45 @@ export const fpMarketsConnector: BrokerConnector = {
         capturedAt: endCapturedAt,
         balance: current,
         equity: current,
-        currency: DEFAULT_CURRENCY,
+        currency,
         source: "broker",
       });
+
+      // Closed trades for this account (paginated). Downstream this yields
+      // trade count, win rate, and an exact (deposit-immune) P&L / ROI.
+      const fpTrades = await fetchTradeActivity(config, {
+        rebateAccountNumber,
+        accountNumber: account.accountNumber,
+        startDate: activityStart,
+        endDate: activityEnd,
+      });
+      for (const ft of fpTrades) {
+        if (!ft.close_time) continue; // closed trades only
+        trades.push({
+          accountNumber: account.accountNumber,
+          tradeId: String(
+            ft.transaction_id ?? `${account.accountNumber}-${ft.close_time}`
+          ),
+          openedAt: ft.open_time || ft.close_time,
+          closedAt: ft.close_time,
+          symbol: ft.product || "",
+          side: "buy", // the activity API does not report trade direction
+          volume: ft.volume ?? 0,
+          openPrice: ft.open_price ?? 0,
+          closePrice: ft.close_price ?? 0,
+          fees: ft.commission ?? 0,
+          swap: ft.swaps ?? 0,
+          netPnl: ft.net_pnl ?? 0,
+          currency,
+          source: "broker",
+        });
+      }
     }
 
     return {
       accounts: matchedAccounts,
       snapshots,
-      trades: [],
+      trades,
       brokerMetrics: [],
     };
   },

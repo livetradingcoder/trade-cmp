@@ -277,24 +277,28 @@ describe("full pipeline with fpmarkets connector (mocked broker API)", () => {
     await onboardParticipant(tournamentId, "fp-trader@test.dev", "2058014", integrationId);
 
     // Mock the broker exactly as the live Account Performance API responds.
+    // Same response for performance + trade-activity calls; no `trades` key, so
+    // the account has no raw trades and ROI falls back to the balance change.
+    const fpResponse = {
+      data: {
+        resource: {
+          accounts: [
+            {
+              account_number: "2058014",
+              user_info: { first_name: "Paul", last_name_masked: "S***" },
+              metrics: { roi: 0, starting_balance: 5000, current_balance: 6250.75 },
+              last_trade_at: "2026-05-20T08:45:00+00:00",
+              status: "active",
+            },
+          ],
+        },
+      },
+    };
     const fetchMock = vi.fn(async () => ({
       ok: true,
       status: 200,
-      json: async () => ({
-        data: {
-          resource: {
-            accounts: [
-              {
-                account_number: "2058014",
-                user_info: { first_name: "Paul", last_name_masked: "S***" },
-                metrics: { roi: 0, starting_balance: 5000, current_balance: 6250.75 },
-                last_trade_at: "2026-05-20T08:45:00+00:00",
-                status: "active",
-              },
-            ],
-          },
-        },
-      }),
+      json: async () => fpResponse,
+      text: async () => JSON.stringify(fpResponse),
     }));
     vi.stubGlobal("fetch", fetchMock);
 
