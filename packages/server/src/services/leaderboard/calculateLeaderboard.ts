@@ -40,9 +40,15 @@ export function calculateLeaderboard(rows: InputRow[]): OutputRow[] {
       const tradePnl = row.closedTradePnls.reduce((sum, value) => sum + value, 0);
       const hasTrades = row.closedTradePnls.length > 0;
       const pnl = hasTrades ? tradePnl : row.endingEquity - row.startingEquity;
-      const roi = hasTrades
-        ? (tradePnl / row.startingEquity) * 100
-        : ((row.endingEquity - row.startingEquity) / row.startingEquity) * 100;
+      // ROI baseline = starting capital for the period. With trades, derive it
+      // from the current balance minus the window's trading P&L
+      // (current = start + ΣpnL, ignoring deposits) — a stable baseline that
+      // doesn't depend on FP's reserved starting_balance or a stale "first
+      // observed" balance. Without trades, use the first observed equity.
+      const baseline = hasTrades
+        ? row.endingEquity - tradePnl
+        : row.startingEquity;
+      const roi = baseline > 0 ? (pnl / baseline) * 100 : 0;
       const wins = row.closedTradePnls.filter((value) => value > 0).length;
       const tradeCount = row.closedTradePnls.length;
       const winRate = tradeCount > 0 ? (wins / tradeCount) * 100 : 0;

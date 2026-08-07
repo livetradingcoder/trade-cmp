@@ -69,16 +69,9 @@ const LeaderboardPage = () => {
     entry.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const currencySymbol = (code?: string) => {
-    const c = (code || "USD").toUpperCase();
-    const map: Record<string, string> = { USD: "$", EUR: "€", GBP: "£" };
-    return map[c] || `${c} `;
-  };
-  const formatPnL = (pnl: number, currency?: string) => {
-    const sign = pnl >= 0 ? "+" : "";
-    return `${sign}${currencySymbol(currency)}${pnl.toLocaleString()}`;
-  };
-
+  // P&L ($) is intentionally not shown on the PUBLIC leaderboard — the raw
+  // amount leaks account size and isn't comparable across account sizes.
+  // Public ranking is by ROI %. The $ P&L stays in the admin view.
   const formatROI = (roi: number) => {
     const sign = roi >= 0 ? "+" : "";
     return `${sign}${roi.toFixed(1)}%`;
@@ -338,7 +331,7 @@ const LeaderboardPage = () => {
                   <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
                     <thead>
                       <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid var(--panel-border)" }}>
-                        {["Rank", "Trader", "ROI %", "P&L", "Trades", "Win Rate", "Status"].map((h, i) => (
+                        {["Rank", "Trader", "ROI %", "Trades", "Win Rate", "Status"].map((h, i) => (
                           <th
                             key={i}
                             style={{
@@ -409,9 +402,6 @@ const LeaderboardPage = () => {
                           </td>
                           <td style={{ padding: "20px 16px", fontWeight: 900, color: entry.roi >= 0 ? "var(--success)" : "#ef4444", fontSize: "1rem" }}>
                             {formatROI(entry.roi)}
-                          </td>
-                          <td style={{ padding: "20px 16px", fontWeight: 800, color: entry.pnl >= 0 ? "var(--success)" : "#ef4444" }}>
-                            {formatPnL(entry.pnl, entry.currency)}
                           </td>
                           <td style={{ padding: "20px 16px" }}>{entry.trade_count > 0 ? entry.trade_count : "—"}</td>
                           <td style={{ padding: "20px 16px" }}>{entry.trade_count > 0 ? `${entry.win_rate.toFixed(1)}%` : "—"}</td>
@@ -487,7 +477,6 @@ const LeaderboardPage = () => {
                           <div style={{ fontWeight: 900, color: entry.roi >= 0 ? "var(--success)" : "#ef4444" }}>
                             {formatROI(entry.roi)}
                           </div>
-                          <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>{formatPnL(entry.pnl, entry.currency)}</div>
                         </div>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

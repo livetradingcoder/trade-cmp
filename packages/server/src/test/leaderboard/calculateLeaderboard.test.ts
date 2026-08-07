@@ -45,4 +45,24 @@ describe("calculateLeaderboard", () => {
     expect(rows[0].winRate).toBe(0);
     expect(rows[0].roi).toBeCloseTo(-4.623, 2);
   });
+
+  it("derives the ROI baseline from current balance minus trade P&L, not a stale first balance", () => {
+    // Account ended at 1.15 after losing 9484 in-window. Baseline must be
+    // reconstructed as 1.15 - (-9484) = 9485.15, NOT the stale 1.15 (which
+    // would give an absurd -824,706% ROI).
+    const rows = calculateLeaderboard([
+      {
+        participantId: "p1",
+        accountNumber: "82200517",
+        currency: "USD",
+        startingEquity: 1.15,
+        endingEquity: 1.15,
+        closedTradePnls: [-4742, -4742],
+        fallbackMetrics: null,
+      },
+    ]);
+
+    expect(rows[0].pnl).toBe(-9484);
+    expect(rows[0].roi).toBeCloseTo(-99.988, 2); // -9484 / 9485.15
+  });
 });
