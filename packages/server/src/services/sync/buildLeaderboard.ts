@@ -38,10 +38,14 @@ export function buildLeaderboardRows(
     string,
     { capturedAt: string; equity: number }[]
   >();
+  const currencyByAccount = new Map<string, string>();
   for (const snapshot of result.snapshots) {
     const list = snapshotsByAccount.get(snapshot.accountNumber) ?? [];
     list.push({ capturedAt: snapshot.capturedAt, equity: snapshot.equity });
     snapshotsByAccount.set(snapshot.accountNumber, list);
+    if (snapshot.currency) {
+      currencyByAccount.set(snapshot.accountNumber, snapshot.currency);
+    }
   }
 
   const tradePnlsByAccount = new Map<string, number[]>();
@@ -81,6 +85,7 @@ export function buildLeaderboardRows(
     rows.push({
       participantId: meta.participantId,
       accountNumber: account.accountNumber,
+      currency: currencyByAccount.get(account.accountNumber) ?? "USD",
       startingEquity,
       endingEquity,
       closedTradePnls: tradePnlsByAccount.get(account.accountNumber) ?? [],

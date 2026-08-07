@@ -1358,6 +1358,7 @@ app.get("/api/leaderboard/:tournamentId", async (req, res) => {
         account_masked: r.account_masked,
         roi: r.roi,
         pnl: r.pnl,
+        currency: r.currency,
         win_rate: r.win_rate,
         trade_count: r.trade_count,
         calculation_source: r.calculation_source,

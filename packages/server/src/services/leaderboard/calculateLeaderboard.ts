@@ -1,6 +1,7 @@
 export type InputRow = {
   participantId: string;
   accountNumber: string;
+  currency?: string;
   startingEquity?: number | null;
   endingEquity?: number | null;
   closedTradePnls: number[];
@@ -18,6 +19,7 @@ type OutputRow = {
   rank: number;
   roi: number;
   pnl: number;
+  currency: string;
   winRate: number;
   tradeCount: number;
   calculationSource: "computed_raw" | "broker_metrics";
@@ -51,6 +53,7 @@ export function calculateLeaderboard(rows: InputRow[]): OutputRow[] {
         rank: 0,
         roi,
         pnl,
+        currency: row.currency || "USD",
         winRate,
         tradeCount,
         calculationSource: "computed_raw" as const,
@@ -65,6 +68,7 @@ export function calculateLeaderboard(rows: InputRow[]): OutputRow[] {
         rank: 0,
         roi: row.fallbackMetrics.roi,
         pnl: row.fallbackMetrics.pnl,
+        currency: row.currency || "USD",
         winRate: row.fallbackMetrics.winRate,
         tradeCount: row.fallbackMetrics.tradeCount,
         calculationSource: "broker_metrics" as const,
@@ -78,6 +82,7 @@ export function calculateLeaderboard(rows: InputRow[]): OutputRow[] {
       rank: 0,
       roi: 0,
       pnl: 0,
+      currency: row.currency || "USD",
       winRate: 0,
       tradeCount: 0,
       calculationSource: "computed_raw" as const,

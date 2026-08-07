@@ -10,6 +10,7 @@ interface LeaderboardEntry {
   account_masked: string;
   roi: number;
   pnl: number;
+  currency?: string;
   trade_count: number;
   win_rate: number;
   updated_at: string;
@@ -68,9 +69,14 @@ const LeaderboardPage = () => {
     entry.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatPnL = (pnl: number) => {
+  const currencySymbol = (code?: string) => {
+    const c = (code || "USD").toUpperCase();
+    const map: Record<string, string> = { USD: "$", EUR: "€", GBP: "£" };
+    return map[c] || `${c} `;
+  };
+  const formatPnL = (pnl: number, currency?: string) => {
     const sign = pnl >= 0 ? "+" : "";
-    return `${sign}$${pnl.toLocaleString()}`;
+    return `${sign}${currencySymbol(currency)}${pnl.toLocaleString()}`;
   };
 
   const formatROI = (roi: number) => {
@@ -405,7 +411,7 @@ const LeaderboardPage = () => {
                             {formatROI(entry.roi)}
                           </td>
                           <td style={{ padding: "20px 16px", fontWeight: 800, color: entry.pnl >= 0 ? "var(--success)" : "#ef4444" }}>
-                            {formatPnL(entry.pnl)}
+                            {formatPnL(entry.pnl, entry.currency)}
                           </td>
                           <td style={{ padding: "20px 16px" }}>{entry.trade_count > 0 ? entry.trade_count : "—"}</td>
                           <td style={{ padding: "20px 16px" }}>{entry.trade_count > 0 ? `${entry.win_rate.toFixed(1)}%` : "—"}</td>
@@ -481,7 +487,7 @@ const LeaderboardPage = () => {
                           <div style={{ fontWeight: 900, color: entry.roi >= 0 ? "var(--success)" : "#ef4444" }}>
                             {formatROI(entry.roi)}
                           </div>
-                          <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>{formatPnL(entry.pnl)}</div>
+                          <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>{formatPnL(entry.pnl, entry.currency)}</div>
                         </div>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

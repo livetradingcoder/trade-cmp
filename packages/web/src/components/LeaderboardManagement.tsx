@@ -17,6 +17,7 @@ interface LeaderboardEntry {
   account_masked: string;
   roi: number;
   pnl: number;
+  currency?: string;
   trade_count: number;
   win_rate: number;
   updated_at: string;
@@ -68,9 +69,14 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
     }
   };
 
-  const formatPnL = (pnl: number) => {
+  const currencySymbol = (code?: string) => {
+    const c = (code || "USD").toUpperCase();
+    const map: Record<string, string> = { USD: "$", EUR: "€", GBP: "£" };
+    return map[c] || `${c} `;
+  };
+  const formatPnL = (pnl: number, currency?: string) => {
     const sign = pnl >= 0 ? "+" : "";
-    return `${sign}$${pnl.toLocaleString()}`;
+    return `${sign}${currencySymbol(currency)}${pnl.toLocaleString()}`;
   };
 
   const formatROI = (roi: number) => {
@@ -190,7 +196,7 @@ const LeaderboardManagement = ({ tournaments }: LeaderboardManagementProps) => {
                   </td>
                   <td>
                     <span className={`pnl ${entry.pnl >= 0 ? "positive" : "negative"}`}>
-                      {formatPnL(entry.pnl)}
+                      {formatPnL(entry.pnl, entry.currency)}
                     </span>
                   </td>
                   <td>{entry.trade_count > 0 ? entry.trade_count : "—"}</td>

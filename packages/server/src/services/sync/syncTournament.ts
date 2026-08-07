@@ -259,6 +259,7 @@ export async function syncTournament(
         account_masked: maskAccountNumber(row.accountNumber),
         roi: row.roi,
         pnl: row.pnl,
+        currency: row.currency,
         win_rate: row.winRate,
         trade_count: row.tradeCount,
         calculation_source: row.calculationSource,

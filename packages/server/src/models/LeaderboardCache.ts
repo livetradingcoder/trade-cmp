@@ -8,6 +8,7 @@ export interface ILeaderboardRanking {
   account_masked: string;
   roi: number;
   pnl: number;
+  currency: string;
   win_rate: number;
   trade_count: number;
   calculation_source: "computed_raw" | "broker_metrics";
@@ -41,6 +42,7 @@ const RankingSchema: Schema = new Schema(
     account_masked: { type: String, required: true },
     roi: { type: Number, required: true },
     pnl: { type: Number, required: true },
+    currency: { type: String, default: "USD" },
     win_rate: { type: Number, required: true },
     trade_count: { type: Number, required: true },
     calculation_source: {
