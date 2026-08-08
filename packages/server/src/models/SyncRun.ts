@@ -47,4 +47,13 @@ const SyncRunSchema: Schema = new Schema(
 
 SyncRunSchema.index({ tournament_id: 1, started_at: -1 });
 
+// One document per tournament per tick — 1,440/day at the current 1-minute
+// interval, forever. It's an audit log, not competition data, so expire it
+// rather than let it consume the cluster's storage quota.
+const SYNC_RUN_RETENTION_DAYS = 30;
+SyncRunSchema.index(
+  { started_at: 1 },
+  { expireAfterSeconds: SYNC_RUN_RETENTION_DAYS * 24 * 60 * 60 }
+);
+
 export default mongoose.model<ISyncRun>("SyncRun", SyncRunSchema);

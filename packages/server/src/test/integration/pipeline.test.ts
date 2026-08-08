@@ -132,6 +132,19 @@ describe("health & auth guards", () => {
     const res = await request(app).get("/api/health");
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("ok");
+    // Liveness stays 200 regardless, but the database field must report the
+    // real state — it was hardcoded to "mongodb" and read healthy through a
+    // 19-minute outage.
+    expect(res.body.database).toBe("connected");
+  });
+
+  it("reports readiness once the database answers", async () => {
+    const res = await request(app).get("/api/ready");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      status: "ready",
+      database: "connected",
+    });
   });
 
   it("rejects broker-sync admin endpoints without a token", async () => {

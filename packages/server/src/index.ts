@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import crypto from "crypto";
 import connectDB from "./config/database";
+import { pingDatabase, startDbWatchdog } from "./config/dbHealth";
 import cloudinary from "./config/cloudinary";
 import Tournament from "./models/Tournament";
 import Admin from "./models/Admin";
@@ -42,9 +43,29 @@ app.use(express.json());
 // Connect to MongoDB
 connectDB();
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", database: "mongodb" });
+// Liveness: the process is serving. Always 200, even when the database is
+// unreachable, so a boot ahead of the Atlas IP allowlist still passes
+// Railway's deploy healthcheck instead of failing the deploy. `database`
+// reports the real state — it used to be hardcoded to "mongodb", which read as
+// healthy through a 19-minute outage.
+app.get("/api/health", async (_req, res) => {
+  const connected = await pingDatabase();
+  res.json({
+    status: "ok",
+    driver: "mongodb",
+    database: connected ? "connected" : "unavailable",
+  });
+});
+
+// Readiness: 503 when the database cannot serve queries. This is the endpoint
+// to point uptime monitoring at — /api/health deliberately never fails.
+app.get("/api/ready", async (_req, res) => {
+  const connected = await pingDatabase();
+  if (!connected) {
+    res.status(503).json({ status: "unavailable", database: "unavailable" });
+    return;
+  }
+  res.json({ status: "ready", database: "connected" });
 });
 
 // Bootstrap helper: report this server's outbound IP so it can be whitelisted
@@ -1381,6 +1402,7 @@ if (process.env.VERCEL !== "1") {
     console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   });
   startSyncScheduler();
+  startDbWatchdog();
 }
 
 // Export for Vercel serverless
