@@ -8,7 +8,10 @@ import BrokerIntegration from "../../models/BrokerIntegration";
 import Participant from "../../models/Participant";
 import { getBrokerConnector } from "../brokers";
 import { getRebateAccountNumbers } from "../brokers/fpMarketsConnector";
-import { FetchCompetitionDataResult } from "../brokers/types";
+import {
+  FetchCompetitionDataResult,
+  NormalizedSnapshotInput,
+} from "../brokers/types";
 import { calculateLeaderboard, InputRow } from "../leaderboard/calculateLeaderboard";
 import {
   AccountMeta,
@@ -126,53 +129,73 @@ export async function syncTournament(
         group.map((account) => [account.broker_account_number, account])
       );
 
-      // Persist snapshots (idempotent on trading_account_id + captured_at).
+      // Persist snapshots + trades in one round trip each. These were
+      // per-document awaits, so a group of N trades cost N sequential round
+      // trips to Atlas — and the whole closed-trade history is re-sent every
+      // sync, not just the new rows. bulkWrite collapses that to a single
+      // request; unordered so one duplicate key can't abort the rest.
+      const snapshotOps = [];
       for (const snapshot of result.snapshots) {
         const account = accountByNumber.get(snapshot.accountNumber);
         if (!account) continue;
-        await AccountSnapshot.updateOne(
-          {
-            trading_account_id: account._id,
-            captured_at: new Date(snapshot.capturedAt),
-          },
-          {
-            $set: {
-              balance: snapshot.balance,
-              equity: snapshot.equity,
-              currency: snapshot.currency,
-              source: snapshot.source,
+        snapshotOps.push({
+          updateOne: {
+            filter: {
+              trading_account_id: account._id,
+              captured_at: new Date(snapshot.capturedAt),
             },
+            update: {
+              $set: {
+                balance: snapshot.balance,
+                equity: snapshot.equity,
+                currency: snapshot.currency,
+                source: snapshot.source,
+              },
+            },
+            upsert: true,
           },
-          { upsert: true }
-        );
-        snapshotsWritten++;
+        });
+      }
+      if (snapshotOps.length > 0) {
+        await AccountSnapshot.bulkWrite(snapshotOps, { ordered: false });
+        snapshotsWritten += snapshotOps.length;
       }
 
-      // Persist trades (idempotent on trading_account_id + broker_trade_id).
+      const tradeOps = [];
       for (const trade of result.trades) {
         const account = accountByNumber.get(trade.accountNumber);
         if (!account) continue;
-        await Trade.updateOne(
-          { trading_account_id: account._id, broker_trade_id: trade.tradeId },
-          {
-            $set: {
-              opened_at: new Date(trade.openedAt),
-              closed_at: trade.closedAt ? new Date(trade.closedAt) : undefined,
-              symbol: trade.symbol,
-              side: trade.side,
-              volume: trade.volume,
-              open_price: trade.openPrice,
-              close_price: trade.closePrice,
-              fees: trade.fees,
-              swap: trade.swap,
-              net_pnl: trade.netPnl,
-              currency: trade.currency,
-              source: trade.source,
+        tradeOps.push({
+          updateOne: {
+            filter: {
+              trading_account_id: account._id,
+              broker_trade_id: trade.tradeId,
             },
+            update: {
+              $set: {
+                opened_at: new Date(trade.openedAt),
+                closed_at: trade.closedAt
+                  ? new Date(trade.closedAt)
+                  : undefined,
+                symbol: trade.symbol,
+                side: trade.side,
+                volume: trade.volume,
+                open_price: trade.openPrice,
+                close_price: trade.closePrice,
+                fees: trade.fees,
+                swap: trade.swap,
+                net_pnl: trade.netPnl,
+                currency: trade.currency,
+                source: trade.source,
+              },
+            },
+            upsert: true,
           },
-          { upsert: true }
-        );
-        tradesWritten++;
+        });
+      }
+      if (tradeOps.length > 0) {
+        await Trade.bulkWrite(tradeOps, { ordered: false });
+        tradesWritten += tradeOps.length;
       }
 
       // Build leaderboard metadata + rows for this group.
@@ -193,30 +216,63 @@ export async function syncTournament(
         metaByAccount.set(account.broker_account_number, meta);
       }
 
-      // Build rows from the accumulated snapshot history rather than only
-      // this sync's result: FP's starting_balance is reserved (always 0), so
-      // each account's ROI baseline is the first non-zero equity we have ever
-      // observed for it — persisted across syncs — not what the broker claims.
+      // Build rows from the persisted snapshot history rather than only this
+      // sync's result, so the equity-delta fallback (used when an account has
+      // no closed trades) spans the whole competition. buildLeaderboardRows
+      // reads only the earliest and latest snapshot per account, so ask the
+      // server for those two rather than transferring every snapshot ever
+      // written — that set grows by one row per account per sync.
       const numberByAccountId = new Map(
         group.map((account) => [
           String(account._id),
           account.broker_account_number,
         ])
       );
-      const history = await AccountSnapshot.find({
-        trading_account_id: { $in: group.map((account) => account._id) },
-        equity: { $gt: 0 },
-      }).sort({ captured_at: 1 });
 
-      const historySnapshots = history.map((snapshot) => ({
-        accountNumber:
-          numberByAccountId.get(String(snapshot.trading_account_id)) ?? "",
-        capturedAt: snapshot.captured_at.toISOString(),
-        balance: snapshot.balance,
-        equity: snapshot.equity,
-        currency: snapshot.currency,
-        source: snapshot.source,
-      }));
+      type SnapshotDoc = {
+        _id: unknown;
+        captured_at: Date;
+        balance: number;
+        equity: number;
+        currency: string;
+        source: NormalizedSnapshotInput["source"];
+      };
+      const endpoints = await AccountSnapshot.aggregate<{
+        _id: unknown;
+        first: SnapshotDoc;
+        last: SnapshotDoc;
+      }>([
+        {
+          $match: {
+            trading_account_id: { $in: group.map((account) => account._id) },
+            equity: { $gt: 0 },
+          },
+        },
+        { $sort: { captured_at: 1 } },
+        {
+          $group: {
+            _id: "$trading_account_id",
+            first: { $first: "$$ROOT" },
+            last: { $last: "$$ROOT" },
+          },
+        },
+      ]);
+
+      const historySnapshots = endpoints.flatMap((entry) => {
+        const accountNumber = numberByAccountId.get(String(entry._id)) ?? "";
+        const bounds =
+          String(entry.first._id) === String(entry.last._id)
+            ? [entry.first]
+            : [entry.first, entry.last];
+        return bounds.map((snapshot) => ({
+          accountNumber,
+          capturedAt: snapshot.captured_at.toISOString(),
+          balance: snapshot.balance,
+          equity: snapshot.equity,
+          currency: snapshot.currency,
+          source: snapshot.source,
+        }));
+      });
 
       leaderboardRows.push(
         ...buildLeaderboardRows(

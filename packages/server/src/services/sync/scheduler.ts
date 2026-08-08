@@ -19,7 +19,24 @@ export function startSyncScheduler(): void {
   const minutes = Number(process.env.SYNC_INTERVAL_MINUTES || 60);
   const intervalMs = Math.max(1, minutes) * 60_000;
 
+  // A tick can outlast its interval (a wide date window against a high-trade
+  // account is the usual cause). Without this guard setInterval keeps firing
+  // and the runs stack, each one competing for the same broker rate limit and
+  // rewriting the same rows.
+  let running = false;
+  let skipped = 0;
+
   const tick = async () => {
+    if (running) {
+      skipped++;
+      console.warn(
+        `⏭  Previous sync still running — skipped this tick (${skipped} consecutive)`
+      );
+      return;
+    }
+    running = true;
+    const startedAt = Date.now();
+
     try {
       const tournaments = await Tournament.find({ status: "active" }).select(
         "_id title"
@@ -40,6 +57,16 @@ export function startSyncScheduler(): void {
       }
     } catch (error) {
       console.error("Sync scheduler tick error:", error);
+    } finally {
+      running = false;
+      skipped = 0;
+      const elapsedMs = Date.now() - startedAt;
+      if (elapsedMs > intervalMs) {
+        console.warn(
+          `⚠️  Sync tick took ${Math.round(elapsedMs / 1000)}s, longer than the ` +
+            `${minutes}min interval — ticks will be skipped until it fits`
+        );
+      }
     }
   };
 
