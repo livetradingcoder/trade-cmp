@@ -1,6 +1,22 @@
 import mongoose from "mongoose";
 
+import connectDB from "./database";
+
 const PING_TIMEOUT_MS = 5000;
+
+/**
+ * Drop the current MongoClient and connect again, so the driver rediscovers
+ * the replica set instead of reusing a topology it can no longer reconcile.
+ * connectDB() owns the retry loop, so a failure here is not fatal.
+ */
+async function rebuildConnection(): Promise<void> {
+  try {
+    await mongoose.disconnect();
+  } catch {
+    // Already down, or the socket is unusable — either way, reconnect next.
+  }
+  await connectDB();
+}
 
 /**
  * Does the database actually answer?
@@ -35,27 +51,34 @@ export async function pingDatabase(): Promise<boolean> {
 }
 
 /**
- * Exit the process when the database has been unreachable for a sustained
- * period, so the platform restarts us with a fresh driver topology.
+ * Rebuild the connection when the database has been unreachable for a
+ * sustained period.
  *
- * This is the only automatic recovery available here: Railway's healthcheck
- * runs at deploy time to gate the traffic switch, not continuously against a
- * running container — so an app that wedges mid-flight stays wedged. What does
- * fire is `restartPolicyType = "ON_FAILURE"` in railway.toml, and that needs a
- * non-zero exit. A restart re-runs server discovery from scratch, which is
- * what an operator would do by hand.
+ * The problem this solves: an Atlas tier migration can leave the driver
+ * holding a topology whose cached election state no longer matches the
+ * cluster, and every query then fails with `commonWireVersion: 0` while the
+ * driver never re-converges. A fresh client fixes it; nothing else does.
  *
- * Deliberately slow to pull the trigger: a brief blip should ride out on the
- * driver's own retries, and restarting into a genuinely down Atlas would just
- * be a crash loop. Only a sustained outage is worth a restart.
+ * It deliberately does NOT exit the process. An earlier version did, relying
+ * on `restartPolicyType = "ON_FAILURE"` to restart us, and that was a bad
+ * trade: exiting cannot tell a wedged driver apart from a database that is
+ * simply unreachable for a while, and in the latter case the container exits,
+ * restarts, exits again, and once the platform's retry budget is gone the app
+ * stays dead until a human intervenes. On 2026-08-10 that turned a
+ * database blip into a ~10-hour outage — far worse than the wedge it was
+ * written to prevent. Dropping and rebuilding the client in-process gets the
+ * same fresh topology, costs only the in-flight queries, and degrades to a
+ * harmless retry loop when the database is genuinely down: the server keeps
+ * serving, exactly as it did before any of this existed.
  *
- * `probe` exists so tests can drive the failure sequence directly; production
- * callers use the default.
+ * `probe` and `reconnect` are injectable so tests can drive the sequence;
+ * production callers use the defaults.
  *
  * Returns a stop function.
  */
 export function startDbWatchdog(
-  probe: () => Promise<boolean> = pingDatabase
+  probe: () => Promise<boolean> = pingDatabase,
+  reconnect: () => Promise<void> = rebuildConnection
 ): () => void {
   if (process.env.DB_WATCHDOG_ENABLED === "false") {
     console.log("⏸  DB watchdog disabled (DB_WATCHDOG_ENABLED=false)");
@@ -67,6 +90,7 @@ export function startDbWatchdog(
   const threshold = Number(process.env.DB_WATCHDOG_FAILURES || 5);
 
   let consecutiveFailures = 0;
+  let rebuilds = 0;
   let checking = false;
 
   const check = async () => {
@@ -89,11 +113,23 @@ export function startDbWatchdog(
       );
 
       if (consecutiveFailures >= threshold) {
+        rebuilds++;
         console.error(
-          "💥 Database unreachable for too long — exiting so the platform " +
-            "restarts this container with a fresh connection topology"
+          `♻️  Rebuilding the MongoDB connection (attempt ${rebuilds}) — ` +
+            "dropping the client so server discovery starts from scratch"
         );
-        process.exit(1);
+        // Start the count again so the next rebuild is another full threshold
+        // away: if the database is genuinely down this settles into a slow
+        // retry rather than thrashing the connection every tick.
+        consecutiveFailures = 0;
+        try {
+          await reconnect();
+        } catch (error) {
+          console.error(
+            "   rebuild failed:",
+            error instanceof Error ? error.message : error
+          );
+        }
       }
     } finally {
       checking = false;
@@ -102,7 +138,7 @@ export function startDbWatchdog(
 
   console.log(
     `🩺 DB watchdog enabled — checking every ${intervalMs / 1000}s, ` +
-      `restarting after ${threshold} consecutive failures`
+      `rebuilding the connection after ${threshold} consecutive failures`
   );
   const timer = setInterval(check, intervalMs);
   return () => clearInterval(timer);
