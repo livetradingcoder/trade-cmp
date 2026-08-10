@@ -2,7 +2,7 @@
 
 Snapshot for resuming in a fresh session. Repo: `github.com/livetradingcoder/trade-cmp`
 (monorepo: `packages/server` Express+Mongo, `packages/web` React/Vite). Local:
-`/Users/klev/Code/Ltl/trade-cmp`. Date of handoff: 2026-08-07.
+`/Users/klev/Code/Ltl/trade-cmp`. Date of handoff: 2026-08-10.
 
 ---
 
@@ -11,9 +11,9 @@ Snapshot for resuming in a fresh session. Repo: `github.com/livetradingcoder/tra
 The FP Markets leaderboard integration **works end-to-end on beta** (`ibbeta.fptrading.com`):
 join → approve (auto-provisions trading account) → referral-verified → 1-min sync pulls
 FP balances + trades → ranked leaderboard with **real ROI, P&L, trade count, win rate,
-currency**. Verified live on the public + admin boards. Server tests: **43 passing**.
+currency**. Verified live on the public + admin boards. Server tests: **47 passing**.
 
-`main` HEAD = **`34bcb18`**. Railway auto-deploys `main`; it's the live app.
+`main` HEAD = **`4af3b14`**. Railway auto-deploys `main`; it's the live app.
 
 **The only gate to production is FP's prod environment** (below). Nothing on our side blocks.
 
@@ -48,8 +48,10 @@ currency**. Verified live on the public + admin boards. Server tests: **43 passi
 
 - Admin: `app.livetradingleague.com/admin` → `ltl-admin-1` / `Adm!n2026`
   (API: `POST /api/admin/login`).
-- Active tournament right now: **`6a72c29797680f7156cbee2a`** ("poli", start 2026-08-05,
-  no end). Tournament ids rotate — get current via `GET /api/tournaments` (status "active").
+- Active tournament as of 2026-08-10: **`6a79365c27340ee05499f2cd`** ("Poli Sunday"). Ids
+  rotate often — **always** re-read the current one via `GET /api/tournaments` (status
+  "active") rather than trusting this line; querying a stale id returns a frozen
+  `fetched_at` that looks exactly like a broken sync.
 - FP rebate/IB: **477779**. FP base (beta): `https://ibbeta.fptrading.com`.
 - Test accounts under rebate: `81049662` (Raul/Poli, the main one being traded),
   `82200517` (Paul, ****0517). `GET /api/admin/fp-test` returns 11 accounts under 477779.
@@ -99,6 +101,16 @@ Admin probes we added: `GET /api/admin/fp-test?start_date&end_date` (performance
 ---
 
 ## What this session shipped (commits, newest first)
+
+**2026-08-08 → 08-10 (ops + sync):**
+
+- `4af3b14` watchdog rebuilds the DB connection instead of exiting (fixes the ~10h outage)
+- `26ccad0` 454-trade round-trip benchmark: 467 → 13 round trips, A/B'd against `aeba116`
+- `fc95832` this doc corrected against live infra
+- `34bcb18` real health check + `/api/ready` + DB watchdog + `SyncRun` 30-day TTL
+- `3717bc8` sync: `bulkWrite` batching, overlap guard, bounded snapshot-history read
+
+**2026-08-07 (leaderboard):**
 
 - `aeba116` stable ROI baseline (current_balance − Σpnl) + hide $ on public board
 - `d7fccc3` render P&L in account currency (USD $ / EUR € / GBP £), threaded end-to-end
@@ -196,11 +208,34 @@ Two things came out of it (`34bcb18`):
   healthy throughout. It now really pings Mongo. It still always returns 200 (so a boot ahead
   of the Atlas IP allowlist doesn't fail the deploy gate) — **point uptime monitoring at the
   new `/api/ready`, which 503s** when the DB can't serve.
-- A **DB watchdog** exits the process after 5 consecutive failed probes (~5 min), so
-  `restartPolicyType = "ON_FAILURE"` restarts it with fresh server discovery. This is the only
-  automatic recovery available: Railway's healthcheck gates the traffic switch on a *new
+- A **DB watchdog** (`config/dbHealth.ts`) drops and rebuilds the MongoClient after 5
+  consecutive failed probes (~5 min), so the driver rediscovers the replica set. This is the
+  only automatic recovery available: Railway's healthcheck gates the traffic switch on a *new
   deployment* and does **not** police a running container. Kill switch:
   `DB_WATCHDOG_ENABLED=false` (tune with `DB_WATCHDOG_INTERVAL_SECONDS`, `DB_WATCHDOG_FAILURES`).
+
+  ⚠️ **It must never call `process.exit`.** The first version did, leaning on
+  `restartPolicyType = "ON_FAILURE"`. That works for a wedged driver but is catastrophic when
+  the DB is merely unreachable: exit → restart → exit, until Railway's retry budget runs out
+  and the app stays dead. That caused the **second outage below**. Five tests fail if anyone
+  reintroduces the exit.
+
+## Outage 2026-08-10 03:23–13:08 UTC (~10h — caused by the watchdog above)
+
+A DB connection blip at ~03:22 tripped the watchdog, which exited the process; Railway
+restarted it into the same failure until it gave up, and the app sat at **502 for ~10 hours**.
+The database itself had recovered long before — a fresh process at 13:08 connected in under a
+second. Fixed in `4af3b14` by rebuilding the connection in-process instead of exiting, so a
+sustained DB outage now degrades to a retry loop with the server still serving.
+
+Two traps this exposed, both still worth knowing:
+
+- **The admin login screen reports any failed response as "Invalid username or password."** A
+  502 renders identically to a wrong password, which is how this outage was first reported.
+  Check `/api/health` before believing the login form. (Not yet fixed.)
+- **Tournament ids rotate.** Debugging used a stale id and a fresh-but-unchanging
+  `fetched_at` briefly looked like a broken sync. Always re-read the active id from
+  `GET /api/tournaments`.
 
 `SyncRun` also gained a 30-day TTL — it was accumulating 1,440 docs/day forever.
 
