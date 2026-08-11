@@ -33,6 +33,14 @@ interface Participant {
     equity: number;
     currency: string;
     captured_at: string;
+    /**
+     * First balance we ever observed, not what FP says the account opened
+     * with — FP's starting_balance is reserved and always 0. Only as old as
+     * our first snapshot for this account.
+     */
+    starting_balance: number;
+    starting_equity: number;
+    first_seen_at: string;
   } | null;
   applied_at: string;
   reviewed_at?: string;
@@ -346,6 +354,23 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                         <strong>Account:</strong> ****{participant.user.fp_account_number.slice(-4)}
                       </span>
                       <span>
+                        <strong>Start:</strong>{" "}
+                        {participant.account_balance ? (
+                          <span
+                            title={`First balance we observed, at ${new Date(
+                              participant.account_balance.first_seen_at
+                            ).toLocaleString()}. FP does not report a true opening balance (their starting_balance is reserved and always 0), so this is the account's balance when we first synced it.`}
+                          >
+                            {formatMoney(
+                              participant.account_balance.starting_balance,
+                              participant.account_balance.currency
+                            )}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-muted, #94a3b8)" }}>—</span>
+                        )}
+                      </span>
+                      <span>
                         <strong>Balance:</strong>{" "}
                         {participant.account_balance ? (
                           <span
@@ -360,6 +385,24 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                               participant.account_balance.balance,
                               participant.account_balance.currency
                             )}
+                            {(() => {
+                              const b = participant.account_balance!;
+                              const delta = b.balance - b.starting_balance;
+                              if (Math.abs(delta) < 0.005) return null;
+                              return (
+                                <span
+                                  style={{
+                                    marginLeft: "6px",
+                                    fontSize: "0.85em",
+                                    color: delta >= 0 ? "#22c55e" : "#ef4444",
+                                  }}
+                                  title="Change since the first balance we observed. Includes deposits and withdrawals, not just trading."
+                                >
+                                  {delta >= 0 ? "+" : "−"}
+                                  {formatMoney(Math.abs(delta), b.currency)}
+                                </span>
+                              );
+                            })()}
                           </span>
                         ) : (
                           <span

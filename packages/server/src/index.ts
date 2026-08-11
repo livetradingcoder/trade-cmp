@@ -685,6 +685,14 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
     // verifyToken — balances never appear on the public leaderboard. Sourced
     // from the snapshots the 60s sync already writes, so no extra broker calls.
     // It is reporting only: nothing here blocks or gates an approval.
+    // `starting_balance` is the FIRST balance we ever observed for the account,
+    // not what FP says it opened with — FP's own starting_balance is reserved
+    // and always returns 0, so there is nothing authoritative to read. It is
+    // therefore only as old as our first snapshot: if the trader was already
+    // trading before joining, this is their balance at join time, not at
+    // account opening. Good enough for "were they funded when they entered",
+    // which is what it is for. Deposits after that point move `balance` and
+    // leave this untouched, so the pair also shows funding changes.
     const balanceByParticipant = new Map<
       string,
       {
@@ -692,6 +700,9 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
         equity: number;
         currency: string;
         captured_at: Date;
+        starting_balance: number;
+        starting_equity: number;
+        first_seen_at: Date;
       }
     >();
     try {
@@ -706,14 +717,16 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
             String(a.participant_id),
           ])
         );
-        const latest = await AccountSnapshot.aggregate<{
+        type SnapshotDoc = {
+          balance: number;
+          equity: number;
+          currency: string;
+          captured_at: Date;
+        };
+        const bounds = await AccountSnapshot.aggregate<{
           _id: unknown;
-          last: {
-            balance: number;
-            equity: number;
-            currency: string;
-            captured_at: Date;
-          };
+          first: SnapshotDoc;
+          last: SnapshotDoc;
         }>([
           {
             $match: {
@@ -723,10 +736,16 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
             },
           },
           { $sort: { captured_at: 1 } },
-          { $group: { _id: "$trading_account_id", last: { $last: "$$ROOT" } } },
+          {
+            $group: {
+              _id: "$trading_account_id",
+              first: { $first: "$$ROOT" },
+              last: { $last: "$$ROOT" },
+            },
+          },
         ]);
 
-        for (const entry of latest) {
+        for (const entry of bounds) {
           const participantId = participantByAccount.get(String(entry._id));
           if (!participantId) continue;
           balanceByParticipant.set(participantId, {
@@ -734,6 +753,9 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
             equity: entry.last.equity,
             currency: entry.last.currency,
             captured_at: entry.last.captured_at,
+            starting_balance: entry.first.balance,
+            starting_equity: entry.first.equity,
+            first_seen_at: entry.first.captured_at,
           });
         }
       }

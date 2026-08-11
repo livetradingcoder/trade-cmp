@@ -357,6 +357,20 @@ describe("full pipeline with fixture connector", () => {
       expect(participant.account_balance.balance).toBeGreaterThan(0);
       expect(participant.account_balance.currency).toBe("USD");
       expect(participant.account_balance.captured_at).toBeTruthy();
+
+      // Starting balance is the earliest snapshot, current is the latest. The
+      // fixture connector rises over the window, so these must not collapse
+      // onto the same value — that would mean one endpoint is being read twice.
+      expect(participant.account_balance.starting_balance).toBeGreaterThan(0);
+      expect(participant.account_balance.first_seen_at).toBeTruthy();
+      expect(
+        new Date(participant.account_balance.first_seen_at).getTime()
+      ).toBeLessThan(
+        new Date(participant.account_balance.captured_at).getTime()
+      );
+      expect(participant.account_balance.balance).toBeGreaterThan(
+        participant.account_balance.starting_balance
+      );
     }
 
     // Same figures must never reach the public board.
