@@ -436,13 +436,16 @@ describe("full pipeline with fixture connector", () => {
     expect(provisioned!.broker_account_number).toBe(secondAccount);
     expect(provisioned!.broker_account_number).not.toBe(firstAccount);
 
-    // The user record still anchors on the original account.
+    // The user record still anchors on the original account, but the entry
+    // must report the competing one — the admin UI renders this field, and
+    // showing the user's number would display an account we are not tracking.
     const listed = await request(app)
       .get(`/api/participants/${secondTournament}`)
       .set(auth());
     expect(listed.body.participants[0].user.fp_account_number).toBe(
       firstAccount
     );
+    expect(listed.body.participants[0].fp_account_number).toBe(secondAccount);
   });
 
   it("lets an admin correct a participant's account and clears the old history", async () => {

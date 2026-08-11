@@ -780,6 +780,14 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
         id: p._id,
         tournament_id: p.tournament_id,
         user: p.user_id,
+        // The account competing in THIS tournament. Falls back to the user's
+        // number for entries created before per-tournament accounts existed.
+        // Show this, not user.fp_account_number — they differ whenever a
+        // returning entrant used a different account.
+        fp_account_number:
+          p.fp_account_number ||
+          (p.user_id as any)?.fp_account_number ||
+          null,
         status: p.status,
         referral_code_verified: p.referral_code_verified,
         account_balance: balanceByParticipant.get(String(p._id)) ?? null,

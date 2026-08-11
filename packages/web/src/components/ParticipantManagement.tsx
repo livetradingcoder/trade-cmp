@@ -21,6 +21,12 @@ interface Participant {
   id: string;
   tournament_id: string;
   user: User;
+  /**
+   * The account competing in THIS tournament. Differs from
+   * user.fp_account_number whenever a returning entrant used a different
+   * account — the user field is only an identity anchor, set at first signup.
+   */
+  fp_account_number?: string | null;
   status: "pending" | "approved" | "declined" | "disqualified";
   referral_code_verified: boolean;
   /**
@@ -63,6 +69,14 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   EUR: "€",
   GBP: "£",
 };
+
+/**
+ * The account this entry is actually competing with. Never render
+ * user.fp_account_number directly — that is the identity anchor from first
+ * signup and is stale for anyone who entered with a different account.
+ */
+const competingAccount = (p: Participant) =>
+  p.fp_account_number || p.user.fp_account_number || "";
 
 const formatMoney = (amount: number, currency?: string) => {
   const code = (currency || "USD").toUpperCase();
@@ -226,7 +240,7 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
       `participants-${selectedTournament}-${activeTab}.csv`,
       [
         { header: "Email", value: (p: Participant) => p.user.email },
-        { header: "FP Account Number", value: (p: Participant) => p.user.fp_account_number },
+        { header: "FP Account Number", value: (p: Participant) => competingAccount(p) },
         { header: "Status", value: (p: Participant) => p.status },
         { header: "Applied At", value: (p: Participant) => p.applied_at },
         { header: "Reviewed At", value: (p: Participant) => p.reviewed_at || "" },
@@ -351,7 +365,7 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                     </div>
                     <div className="participant-meta">
                       <span>
-                        <strong>Account:</strong> ****{participant.user.fp_account_number.slice(-4)}
+                        <strong>Account:</strong> ****{competingAccount(participant).slice(-4)}
                       </span>
                       <span>
                         <strong>Start:</strong>{" "}
