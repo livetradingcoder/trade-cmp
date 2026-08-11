@@ -18,6 +18,7 @@ import {
   AuthRequest,
 } from "./middleware/auth";
 import AccountSnapshot from "./models/AccountSnapshot";
+import Trade from "./models/Trade";
 import { upload } from "./middleware/upload";
 import { sendPasswordResetEmail } from "./utils/email";
 import { sendEmail, emailTemplates } from "./utils/emailService";
@@ -575,7 +576,11 @@ app.post("/api/participants/apply", async (req, res) => {
     // flagged for manual admin verification against FP's IB portal.
     const referralCodeVerified = !!is_new_user;
 
-    // Find or create user
+    // Find or create user. NOTE: a returning entrant keeps their original
+    // User.fp_account_number — it is unique across users and is only an
+    // identity anchor. The account they are actually competing with goes on
+    // the participant below. Overwriting it here would silently rewrite their
+    // history and can collide with another user's account number.
     let user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
@@ -609,6 +614,9 @@ app.post("/api/participants/apply", async (req, res) => {
     const participant = await Participant.create({
       tournament_id,
       user_id: user._id,
+      // The account submitted for THIS tournament — the number the entrant
+      // actually typed, which is what the sync must track.
+      fp_account_number: String(fp_account_number).trim(),
       status: "pending",
       referral_code_verified: referralCodeVerified,
       applied_at: new Date(),
@@ -666,7 +674,9 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
     if (rebateAccounts) {
       await Promise.all(
         participants.map(async (p) => {
-          const account = (p.user_id as any)?.fp_account_number;
+          // Verify the account being competed with, not the identity anchor.
+          const account =
+            p.fp_account_number || (p.user_id as any)?.fp_account_number;
           if (!account) return;
           const verified = rebateAccounts!.has(String(account));
           if (verified !== p.referral_code_verified) {
@@ -853,12 +863,19 @@ app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, r
         { new: true, upsert: true, setDefaultsOnInsert: true }
       );
 
+      // The account entered for THIS tournament. Falls back to the user's
+      // number only for participants created before per-tournament accounts
+      // existed — using the user's number unconditionally is what made a
+      // returning entrant compete on their first-ever account.
+      const competingAccount =
+        participant.fp_account_number || user.fp_account_number;
+
       await TradingAccount.create({
         user_id: user._id,
         participant_id: participant._id,
         tournament_id: participant.tournament_id,
         broker_integration_id: integration._id,
-        broker_account_number: user.fp_account_number,
+        broker_account_number: competingAccount,
         status: "active",
         validated_at: new Date(),
       });
@@ -1283,6 +1300,88 @@ app.get("/api/admin/broker-integrations", verifyToken, async (_req: AuthRequest,
   } catch (error) {
     console.error("Broker integration list error:", error);
     res.status(500).json({ success: false, message: "Failed to list broker integrations" });
+  }
+});
+
+/**
+ * Correct the broker account a participant is competing with.
+ *
+ * Needed because entrants pick the wrong account, and because before
+ * per-tournament accounts existed a returning entrant was silently assigned
+ * their first-ever account regardless of what they typed.
+ *
+ * The stored snapshots and trades belong to the OLD account, so they are
+ * deleted rather than carried over — keeping them would corrupt the starting
+ * balance and the ROI baseline, which is derived from them. The next sync
+ * repopulates from the correct account within a minute.
+ */
+app.put("/api/participants/:id/trading-account", verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const raw = req.body?.fp_account_number;
+    const fpAccountNumber = typeof raw === "string" ? raw.trim() : "";
+    if (!fpAccountNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "fp_account_number is required",
+      });
+    }
+
+    const participant = await Participant.findById(req.params.id);
+    if (!participant) {
+      return res.status(404).json({ success: false, message: "Participant not found" });
+    }
+
+    const previous =
+      participant.fp_account_number ||
+      ((await User.findById(participant.user_id))?.fp_account_number ?? null);
+
+    if (previous === fpAccountNumber) {
+      return res.json({
+        success: true,
+        message: "Participant already competes with that account",
+        fp_account_number: fpAccountNumber,
+        history_cleared: false,
+      });
+    }
+
+    participant.fp_account_number = fpAccountNumber;
+    await participant.save();
+
+    // Repoint the trading account and drop the previous account's history.
+    const accounts = await TradingAccount.find({ participant_id: participant._id });
+    let snapshotsRemoved = 0;
+    let tradesRemoved = 0;
+    for (const account of accounts) {
+      const snapshots = await AccountSnapshot.deleteMany({
+        trading_account_id: account._id,
+      });
+      const trades = await Trade.deleteMany({ trading_account_id: account._id });
+      snapshotsRemoved += snapshots.deletedCount ?? 0;
+      tradesRemoved += trades.deletedCount ?? 0;
+
+      account.broker_account_number = fpAccountNumber;
+      account.sync_state = "idle";
+      account.last_synced_at = undefined as any;
+      await account.save();
+    }
+
+    console.log(
+      `🔁 Participant ${participant._id} moved from ${previous ?? "(none)"} to ` +
+        `${fpAccountNumber} — cleared ${snapshotsRemoved} snapshot(s), ${tradesRemoved} trade(s)`
+    );
+
+    res.json({
+      success: true,
+      message: "Trading account updated",
+      previous_account: previous,
+      fp_account_number: fpAccountNumber,
+      trading_accounts_updated: accounts.length,
+      snapshots_cleared: snapshotsRemoved,
+      trades_cleared: tradesRemoved,
+    });
+  } catch (error) {
+    console.error("Participant trading-account update error:", error);
+    res.status(500).json({ success: false, message: "Failed to update trading account" });
   }
 });
 

@@ -349,7 +349,12 @@ export async function syncTournament(
     }).populate("user_id", "fp_account_number");
     await Promise.all(
       tournamentParticipants.map(async (participant) => {
-        const account = (participant.user_id as any)?.fp_account_number;
+        // The account competing in this tournament, not the user's identity
+        // anchor — a returning entrant's user record still holds their first
+        // ever account number.
+        const account =
+          participant.fp_account_number ||
+          (participant.user_id as any)?.fp_account_number;
         if (!account) return;
         const verified = rebateAccounts.has(String(account));
         if (verified !== participant.referral_code_verified) {

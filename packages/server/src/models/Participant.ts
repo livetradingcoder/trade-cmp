@@ -3,6 +3,17 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IParticipant extends Document {
   tournament_id: mongoose.Types.ObjectId;
   user_id: mongoose.Types.ObjectId;
+  /**
+   * The broker account entered for THIS tournament.
+   *
+   * A trader has many accounts and picks a different one per competition, so
+   * the account belongs to the participation, not the identity. It used to be
+   * read from User.fp_account_number, which is written once at first signup
+   * and never again — so a returning entrant silently competed on their
+   * original account. Optional only for rows created before this field
+   * existed; those fall back to the user's number.
+   */
+  fp_account_number?: string;
   status: "pending" | "approved" | "declined" | "disqualified";
   referral_code_verified: boolean;
   applied_at: Date;
@@ -21,6 +32,8 @@ const ParticipantSchema: Schema = new Schema(
   {
     tournament_id: { type: Schema.Types.ObjectId, ref: "Tournament", required: true },
     user_id: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    // Not unique: the same account may legitimately enter several tournaments.
+    fp_account_number: { type: String },
     status: {
       type: String,
       enum: ["pending", "approved", "declined", "disqualified"],

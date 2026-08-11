@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import { afterAll, beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import TradingAccount from "../../models/TradingAccount";
 import LeaderboardCache from "../../models/LeaderboardCache";
+import AccountSnapshot from "../../models/AccountSnapshot";
+import Trade from "../../models/Trade";
 
 /**
  * Full-pipeline integration test against the real Express app and an in-memory
@@ -387,6 +389,137 @@ describe("full pipeline with fixture connector", () => {
 
   it("requires a token for the participants list", async () => {
     const res = await request(app).get(`/api/participants/${tournamentId}`);
+    expect(res.status).toBe(401);
+  });
+
+  it("competes a returning entrant on the account they entered, not their first one", async () => {
+    // The reported bug: a trader who already had an account on file entered a
+    // different one for a later tournament and was silently competed on the
+    // original. Their user record keeps the first number as an identity
+    // anchor; the tournament must use what they actually typed.
+    const email = "returning.entrant@example.test";
+    const firstAccount = "70000001";
+    const secondAccount = "70000002";
+
+    const firstTournament = await createTournament("Returning entrant #1");
+    await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: firstTournament,
+        email,
+        fp_account_number: firstAccount,
+        is_new_user: true,
+      })
+      .expect(200);
+
+    const secondTournament = await createTournament("Returning entrant #2");
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: secondTournament,
+        email,
+        fp_account_number: secondAccount,
+        is_new_user: false,
+      });
+    expect(apply.status).toBe(200);
+    const participantId = apply.body.participant.id;
+
+    await request(app)
+      .put(`/api/participants/${participantId}/approve`)
+      .set(auth())
+      .expect(200);
+
+    const provisioned = await TradingAccount.findOne({
+      tournament_id: secondTournament,
+    });
+    expect(provisioned).toBeTruthy();
+    expect(provisioned!.broker_account_number).toBe(secondAccount);
+    expect(provisioned!.broker_account_number).not.toBe(firstAccount);
+
+    // The user record still anchors on the original account.
+    const listed = await request(app)
+      .get(`/api/participants/${secondTournament}`)
+      .set(auth());
+    expect(listed.body.participants[0].user.fp_account_number).toBe(
+      firstAccount
+    );
+  });
+
+  it("lets an admin correct a participant's account and clears the old history", async () => {
+    const email = "wrong.account@example.test";
+    const wrongAccount = "70000010";
+    const rightAccount = "70000011";
+
+    const tid = await createTournament("Account correction");
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: tid,
+        email,
+        fp_account_number: wrongAccount,
+        is_new_user: true,
+      })
+      .expect(200);
+    const participantId = apply.body.participant.id;
+
+    await request(app)
+      .put(`/api/participants/${participantId}/approve`)
+      .set(auth())
+      .expect(200);
+
+    const account = await TradingAccount.findOne({ tournament_id: tid });
+    expect(account!.broker_account_number).toBe(wrongAccount);
+
+    // History belonging to the wrong account.
+    await AccountSnapshot.create({
+      trading_account_id: account!._id,
+      captured_at: new Date("2026-04-01T00:00:00.000Z"),
+      balance: 500,
+      equity: 500,
+      currency: "USD",
+      source: "broker",
+    });
+    await Trade.create({
+      trading_account_id: account!._id,
+      broker_trade_id: "old-trade-1",
+      opened_at: new Date("2026-04-01T09:00:00.000Z"),
+      closed_at: new Date("2026-04-01T10:00:00.000Z"),
+      symbol: "EURUSD",
+      side: "buy",
+      volume: 1,
+      open_price: 1.08,
+      close_price: 1.09,
+      net_pnl: 42,
+      currency: "USD",
+      source: "broker",
+    });
+
+    const fix = await request(app)
+      .put(`/api/participants/${participantId}/trading-account`)
+      .set(auth())
+      .send({ fp_account_number: rightAccount });
+    expect(fix.status).toBe(200);
+    expect(fix.body.previous_account).toBe(wrongAccount);
+    expect(fix.body.snapshots_cleared).toBe(1);
+    expect(fix.body.trades_cleared).toBe(1);
+
+    const moved = await TradingAccount.findById(account!._id);
+    expect(moved!.broker_account_number).toBe(rightAccount);
+
+    // The old account's history must not survive — it would poison the
+    // starting balance and the ROI baseline derived from it.
+    expect(
+      await AccountSnapshot.countDocuments({ trading_account_id: account!._id })
+    ).toBe(0);
+    expect(
+      await Trade.countDocuments({ trading_account_id: account!._id })
+    ).toBe(0);
+  });
+
+  it("refuses an account correction without a token", async () => {
+    const res = await request(app)
+      .put("/api/participants/000000000000000000000000/trading-account")
+      .send({ fp_account_number: "70000099" });
     expect(res.status).toBe(401);
   });
 
