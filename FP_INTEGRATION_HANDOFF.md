@@ -11,9 +11,9 @@ Snapshot for resuming in a fresh session. Repo: `github.com/livetradingcoder/tra
 The FP Markets leaderboard integration **works end-to-end on beta** (`ibbeta.fptrading.com`):
 join → approve (auto-provisions trading account) → referral-verified → 1-min sync pulls
 FP balances + trades → ranked leaderboard with **real ROI, P&L, trade count, win rate,
-currency**. Verified live on the public + admin boards. Server tests: **47 passing**.
+currency**. Verified live on the public + admin boards. Server tests: **54 passing**.
 
-`main` HEAD = **`4af3b14`**. Railway auto-deploys `main`; it's the live app.
+`main` HEAD = **`18df76f`**. Railway auto-deploys `main`; it's the live app.
 
 **The only gate to production is FP's prod environment** (below). Nothing on our side blocks.
 
@@ -101,6 +101,14 @@ Admin probes we added: `GET /api/admin/fp-test?start_date&end_date` (performance
 ---
 
 ## What this session shipped (commits, newest first)
+
+**2026-08-11 (client-reported):**
+
+- `18df76f` admin shows the account an entry competes with, not the user's
+- `b78b454` compete on the account entered, not the first one on file
+  (+ `PUT /api/participants/:id/trading-account` to correct an entry)
+- `cd6b4ad` starting balance alongside current, on the admin participants list
+- `f135309` participant balances for admins; `$` P&L withheld from anonymous API callers
 
 **2026-08-08 → 08-10 (ops + sync):**
 
@@ -238,6 +246,33 @@ Two traps this exposed, both still worth knowing:
   `GET /api/tournaments`.
 
 `SyncRun` also gained a 30-day TTL — it was accumulating 1,440 docs/day forever.
+
+## Two competitions at once — known limits (deferred 2026-08-11)
+
+The data model is fine with it. `TradingAccount` is unique on
+`(tournament_id, broker_account_number)`, snapshots/trades/cache all key on
+`trading_account_id`, and since the per-participation account fix a trader can
+enter several competitions with the same or different accounts. No collisions.
+
+What degrades is throughput:
+
+- The scheduler syncs **every active tournament serially inside one tick**
+  (`for (const tournament of tournaments)` in `services/sync/scheduler.ts`).
+  Two competitions both run in the same 60s window; if the pair overruns, the
+  overlap guard skips ticks and the board goes stale rather than breaking.
+- **FP's rate limit is 60/min app-wide** and shared across competitions, with
+  trade-activity paginating per account. This is the real ceiling and it is
+  FP's, not ours.
+
+Failure mode is a slow leaderboard, not wrong data. Accepted for now — the
+client does not expect concurrent competitions soon. Fix when needed: sync
+tournaments in parallel with a shared rate-limit budget, or poll trades on a
+slower cadence than balances.
+
+Unrelated landmine in the same area: **`User.fp_account_number` is
+`unique: true` across all users**, so two people can never register the same FP
+account and a re-registration under a new email fails with a raw duplicate-key
+error.
 
 ## Gotchas
 
