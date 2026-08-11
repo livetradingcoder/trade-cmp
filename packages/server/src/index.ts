@@ -30,6 +30,7 @@ import {
   probeFpMarkets,
   probeFpActivity,
   getRebateAccountNumbers,
+  getRebateAccountBalances,
 } from "./services/brokers/fpMarketsConnector";
 import { getBrokerConnector } from "./services/brokers";
 import BrokerIntegration from "./models/BrokerIntegration";
@@ -713,6 +714,7 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
         starting_balance: number;
         starting_equity: number;
         first_seen_at: Date;
+        source: "snapshot" | "broker_live";
       }
     >();
     try {
@@ -766,12 +768,55 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
             starting_balance: entry.first.balance,
             starting_equity: entry.first.equity,
             first_seen_at: entry.first.captured_at,
+            source: "snapshot",
           });
         }
       }
     } catch (error) {
       // Reporting only — never fail the participants list over it.
       console.error("Participant balance lookup failed:", error);
+    }
+
+    // A PENDING applicant has no trading account and therefore no snapshot, so
+    // the figure an admin most needs — is this person actually funded? — was
+    // blank at exactly the moment they decide whether to approve. Fall back to
+    // the live balance from FP's Account Performance response, which the
+    // referral check above has already fetched and cached, so this adds no
+    // broker calls. Only fills gaps: a stored snapshot always wins.
+    try {
+      const missing = participants.filter(
+        (p) => !balanceByParticipant.has(String(p._id))
+      );
+      if (missing.length > 0) {
+        const liveBalances = await Promise.race([
+          getRebateAccountBalances(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("balance lookup timeout")), 8000)
+          ),
+        ]);
+        const now = new Date();
+        for (const p of missing) {
+          const account =
+            p.fp_account_number || (p.user_id as any)?.fp_account_number;
+          if (!account) continue;
+          const live = liveBalances.get(String(account));
+          if (!live) continue;
+          balanceByParticipant.set(String(p._id), {
+            balance: live.balance,
+            equity: live.balance, // performance reports balance only
+            currency: live.currency,
+            captured_at: now,
+            // No history for an account we have never synced, so "start" is
+            // simply what it holds now.
+            starting_balance: live.balance,
+            starting_equity: live.balance,
+            first_seen_at: now,
+            source: "broker_live",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Live balance fallback failed:", error);
     }
 
     res.json({

@@ -47,6 +47,12 @@ interface Participant {
     starting_balance: number;
     starting_equity: number;
     first_seen_at: string;
+    /**
+     * "snapshot" = from our stored sync history. "broker_live" = read straight
+     * from FP because no snapshot exists yet (a pending applicant); there is no
+     * history behind it, so start and current are the same number.
+     */
+    source: "snapshot" | "broker_live";
   } | null;
   applied_at: string;
   reviewed_at?: string;
@@ -371,9 +377,13 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                         <strong>Start:</strong>{" "}
                         {participant.account_balance ? (
                           <span
-                            title={`First balance we observed, at ${new Date(
-                              participant.account_balance.first_seen_at
-                            ).toLocaleString()}. FP does not report a true opening balance (their starting_balance is reserved and always 0), so this is the account's balance when we first synced it.`}
+                            title={
+                              participant.account_balance.source === "broker_live"
+                                ? "Live balance from FP — this entry has no sync history yet, so there is no separate starting figure."
+                                : `First balance we observed, at ${new Date(
+                                    participant.account_balance.first_seen_at
+                                  ).toLocaleString()}. FP does not report a true opening balance (their starting_balance is reserved and always 0), so this is the account's balance when we first synced it.`
+                            }
                           >
                             {formatMoney(
                               participant.account_balance.starting_balance,
@@ -388,12 +398,16 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                         <strong>Balance:</strong>{" "}
                         {participant.account_balance ? (
                           <span
-                            title={`Equity ${formatMoney(
-                              participant.account_balance.equity,
-                              participant.account_balance.currency
-                            )} · as of ${new Date(
-                              participant.account_balance.captured_at
-                            ).toLocaleString()}`}
+                            title={
+                              participant.account_balance.source === "broker_live"
+                                ? "Live from FP, not yet synced — appears once the entry is approved and a trading account is provisioned."
+                                : `Equity ${formatMoney(
+                                    participant.account_balance.equity,
+                                    participant.account_balance.currency
+                                  )} · as of ${new Date(
+                                    participant.account_balance.captured_at
+                                  ).toLocaleString()}`
+                            }
                           >
                             {formatMoney(
                               participant.account_balance.balance,

@@ -204,8 +204,59 @@ export async function probeFpMarkets(range?: {
   };
 }
 
-let rebateAccountsCache: { at: number; accounts: Set<string> } | null = null;
+let rebateAccountsCache: {
+  at: number;
+  accounts: FpAccountResource[];
+} | null = null;
 const REBATE_CACHE_MS = 60_000;
+
+/** One cached Account Performance call, shared by every rebate-list consumer. */
+async function getRebateAccounts(): Promise<FpAccountResource[]> {
+  if (
+    rebateAccountsCache &&
+    Date.now() - rebateAccountsCache.at < REBATE_CACHE_MS
+  ) {
+    return rebateAccountsCache.accounts;
+  }
+  const result = await probeFpMarkets();
+  rebateAccountsCache = { at: Date.now(), accounts: result.accountsReturned };
+  return result.accountsReturned;
+}
+
+export interface FpLiveBalance {
+  balance: number;
+  currency: string;
+}
+
+/**
+ * Live balance per account currently mapped under our rebate/IB.
+ *
+ * Reads the same cached Account Performance response the referral check already
+ * makes, so it costs no extra broker calls and cannot push us into FP's 60/min
+ * limit. Use it where a stored snapshot does not exist yet — notably a PENDING
+ * applicant, who has no trading account and therefore no snapshot, but whose
+ * funding an admin needs to see *before* deciding whether to approve.
+ *
+ * Note `metrics.starting_balance` is deliberately not exposed: FP reserves it
+ * and it is always 0.
+ */
+export async function getRebateAccountBalances(): Promise<
+  Map<string, FpLiveBalance>
+> {
+  const accounts = await getRebateAccounts();
+  const balances = new Map<string, FpLiveBalance>();
+  for (const account of accounts) {
+    const number =
+      account.account_number == null ? "" : String(account.account_number);
+    const balance = account.metrics?.current_balance;
+    if (!number || typeof balance !== "number") continue;
+    balances.set(number, {
+      balance,
+      currency: (account.currency || "USD").toUpperCase(),
+    });
+  }
+  return balances;
+}
 
 /**
  * The set of trading account numbers currently mapped under our rebate/IB, per
@@ -215,20 +266,12 @@ const REBATE_CACHE_MS = 60_000;
  * callers can fall back to the stored value rather than wiping verification.
  */
 export async function getRebateAccountNumbers(): Promise<Set<string>> {
-  if (
-    rebateAccountsCache &&
-    Date.now() - rebateAccountsCache.at < REBATE_CACHE_MS
-  ) {
-    return rebateAccountsCache.accounts;
-  }
-  const result = await probeFpMarkets();
-  const accounts = new Set(
-    result.accountsReturned
+  const accounts = await getRebateAccounts();
+  return new Set(
+    accounts
       .map((a) => (a.account_number == null ? "" : String(a.account_number)))
       .filter(Boolean)
   );
-  rebateAccountsCache = { at: Date.now(), accounts };
-  return accounts;
 }
 
 // --- Trade / Cash Activity APIs (per single trading account, paginated) ---

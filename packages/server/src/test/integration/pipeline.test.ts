@@ -519,6 +519,64 @@ describe("full pipeline with fixture connector", () => {
     ).toBe(0);
   });
 
+  it("shows a pending applicant's live balance before approval", async () => {
+    // The whole point of the balance column is deciding whether to approve
+    // someone. A pending applicant has no trading account and therefore no
+    // snapshot, so without a live fallback the number is blank at exactly the
+    // moment it is needed.
+    const account = "70000042";
+    const tid = await createTournament("Pending balance");
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: tid,
+        email: "pending.applicant@example.test",
+        fp_account_number: account,
+        is_new_user: true,
+      });
+    expect(apply.status).toBe(200);
+
+    const fpResponse = {
+      data: {
+        resource: {
+          accounts: [
+            {
+              account_number: account,
+              currency: "usd",
+              metrics: { roi: 0, starting_balance: 0, current_balance: 28.78 },
+              status: "active",
+            },
+          ],
+        },
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => fpResponse,
+        text: async () => JSON.stringify(fpResponse),
+      }))
+    );
+
+    const res = await request(app)
+      .get(`/api/participants/${tid}`)
+      .set(auth());
+    expect(res.status).toBe(200);
+
+    const pending = res.body.participants.find(
+      (p: any) => p.fp_account_number === account
+    );
+    expect(pending).toBeTruthy();
+    expect(pending.status).toBe("pending");
+    expect(pending.account_balance).not.toBeNull();
+    expect(pending.account_balance.balance).toBeCloseTo(28.78, 6);
+    expect(pending.account_balance.currency).toBe("USD");
+    // Flagged as live so the UI does not present it as synced history.
+    expect(pending.account_balance.source).toBe("broker_live");
+  });
+
   it("refuses an account correction without a token", async () => {
     const res = await request(app)
       .put("/api/participants/000000000000000000000000/trading-account")
