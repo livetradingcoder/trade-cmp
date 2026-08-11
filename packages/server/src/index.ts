@@ -11,7 +11,13 @@ import Settings from "./models/Settings";
 import User from "./models/User";
 import Participant from "./models/Participant";
 import LeaderboardCache from "./models/LeaderboardCache";
-import { generateToken, verifyToken, AuthRequest } from "./middleware/auth";
+import {
+  generateToken,
+  verifyToken,
+  isAdminRequest,
+  AuthRequest,
+} from "./middleware/auth";
+import AccountSnapshot from "./models/AccountSnapshot";
 import { upload } from "./middleware/upload";
 import { sendPasswordResetEmail } from "./utils/email";
 import { sendEmail, emailTemplates } from "./utils/emailService";
@@ -674,6 +680,68 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
       );
     }
 
+    // Latest known balance per participant, so an admin can see how funded an
+    // account is when reviewing it. Admin-only by virtue of this route's
+    // verifyToken — balances never appear on the public leaderboard. Sourced
+    // from the snapshots the 60s sync already writes, so no extra broker calls.
+    // It is reporting only: nothing here blocks or gates an approval.
+    const balanceByParticipant = new Map<
+      string,
+      {
+        balance: number;
+        equity: number;
+        currency: string;
+        captured_at: Date;
+      }
+    >();
+    try {
+      const tournamentAccounts = await TradingAccount.find({
+        tournament_id: req.params.tournamentId,
+      }).select("_id participant_id");
+
+      if (tournamentAccounts.length > 0) {
+        const participantByAccount = new Map(
+          tournamentAccounts.map((a) => [
+            String(a._id),
+            String(a.participant_id),
+          ])
+        );
+        const latest = await AccountSnapshot.aggregate<{
+          _id: unknown;
+          last: {
+            balance: number;
+            equity: number;
+            currency: string;
+            captured_at: Date;
+          };
+        }>([
+          {
+            $match: {
+              trading_account_id: {
+                $in: tournamentAccounts.map((a) => a._id),
+              },
+            },
+          },
+          { $sort: { captured_at: 1 } },
+          { $group: { _id: "$trading_account_id", last: { $last: "$$ROOT" } } },
+        ]);
+
+        for (const entry of latest) {
+          const participantId = participantByAccount.get(String(entry._id));
+          if (!participantId) continue;
+          balanceByParticipant.set(participantId, {
+            balance: entry.last.balance,
+            equity: entry.last.equity,
+            currency: entry.last.currency,
+            captured_at: entry.last.captured_at,
+          });
+        }
+      }
+    } catch (error) {
+      // Reporting only — never fail the participants list over it.
+      console.error("Participant balance lookup failed:", error);
+    }
+
     res.json({
       success: true,
       participants: participants.map(p => ({
@@ -682,6 +750,7 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
         user: p.user_id,
         status: p.status,
         referral_code_verified: p.referral_code_verified,
+        account_balance: balanceByParticipant.get(String(p._id)) ?? null,
         applied_at: p.applied_at,
         reviewed_at: p.reviewed_at,
         reviewed_by: p.reviewed_by,
@@ -1352,12 +1421,16 @@ app.get("/api/admin/sync-runs/:tournamentId", verifyToken, async (req: AuthReque
   }
 });
 
-// Get leaderboard for a tournament (protected - admin only)
-// Public: leaderboard response is already sanitized (masked account numbers,
-// no balances) — no admin auth needed, matches spec's public leaderboard requirement.
+// Leaderboard for a tournament. Open to everyone, but the $ P&L is admin-only:
+// it leaks account size and isn't comparable across account sizes, so the
+// public ranking is by ROI % alone. The public page never rendered it, but the
+// figure was still in the JSON for anyone reading the network tab — hiding it
+// in the UI is not hiding it. Admins get the full row (the admin board reads
+// this same endpoint, with a Bearer token).
 app.get("/api/leaderboard/:tournamentId", async (req, res) => {
   try {
     const { tournamentId } = req.params;
+    const includeMoney = isAdminRequest(req);
 
     const cache = await LeaderboardCache.findOne({ tournament_id: tournamentId });
 
@@ -1378,8 +1451,7 @@ app.get("/api/leaderboard/:tournamentId", async (req, res) => {
         display_name: r.display_name,
         account_masked: r.account_masked,
         roi: r.roi,
-        pnl: r.pnl,
-        currency: r.currency,
+        ...(includeMoney ? { pnl: r.pnl, currency: r.currency } : {}),
         win_rate: r.win_rate,
         trade_count: r.trade_count,
         calculation_source: r.calculation_source,

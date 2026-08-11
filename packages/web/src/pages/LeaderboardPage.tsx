@@ -9,8 +9,8 @@ interface LeaderboardEntry {
   display_name: string;
   account_masked: string;
   roi: number;
-  pnl: number;
-  currency?: string;
+  // No pnl/currency here on purpose: the API omits the $ figure for
+  // unauthenticated callers, and this page ranks by ROI % alone.
   trade_count: number;
   win_rate: number;
   updated_at: string;

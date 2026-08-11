@@ -14,6 +14,21 @@ export const generateToken = (adminId: string, username: string): string => {
   });
 };
 
+/**
+ * Is this request from a signed-in admin? Unlike verifyToken this never
+ * rejects — it's for endpoints that serve everyone but reveal more to admins.
+ */
+export const isAdminRequest = (req: Request): boolean => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) return false;
+    jwt.verify(token, JWT_SECRET);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const verifyToken = (
   req: AuthRequest,
   res: Response,

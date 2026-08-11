@@ -4,6 +4,7 @@ import request from "supertest";
 import jwt from "jsonwebtoken";
 import { afterAll, beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import TradingAccount from "../../models/TradingAccount";
+import LeaderboardCache from "../../models/LeaderboardCache";
 
 /**
  * Full-pipeline integration test against the real Express app and an in-memory
@@ -167,6 +168,81 @@ describe("health & auth guards", () => {
     expect(res.status).toBe(200);
     expect(res.body.leaderboard).toEqual([]);
   });
+
+  it("withholds the $ P&L from anonymous leaderboard callers", async () => {
+    const tournamentId = await createTournament("PnL visibility");
+    await LeaderboardCache.create({
+      tournament_id: tournamentId,
+      rankings: [
+        {
+          rank: 1,
+          participant_id: new mongoose.Types.ObjectId(),
+          trading_account_id: new mongoose.Types.ObjectId(),
+          display_name: "Trader ****9662",
+          account_masked: "****9662",
+          roi: 1.25,
+          pnl: 1234.56,
+          currency: "USD",
+          win_rate: 50,
+          trade_count: 4,
+          calculation_source: "computed_raw",
+          calculation_status: "ranked",
+          updated_at: new Date(),
+        },
+      ],
+      fetched_at: new Date(),
+      expires_at: new Date(Date.now() + 15 * 60_000),
+    });
+
+    // Anonymous: ROI and trade stats yes, money no. Hiding the column in the
+    // UI is not hiding it — the figure must not be in the payload at all.
+    const anon = await request(app).get(`/api/leaderboard/${tournamentId}`);
+    expect(anon.status).toBe(200);
+    expect(anon.body.leaderboard[0].roi).toBeCloseTo(1.25, 6);
+    expect(anon.body.leaderboard[0].trade_count).toBe(4);
+    expect(anon.body.leaderboard[0]).not.toHaveProperty("pnl");
+    expect(anon.body.leaderboard[0]).not.toHaveProperty("currency");
+    expect(JSON.stringify(anon.body)).not.toContain("1234.56");
+
+    // Admin reads the same endpoint and still needs the money column.
+    const admin = await request(app)
+      .get(`/api/leaderboard/${tournamentId}`)
+      .set(auth());
+    expect(admin.body.leaderboard[0].pnl).toBeCloseTo(1234.56, 6);
+    expect(admin.body.leaderboard[0].currency).toBe("USD");
+  });
+
+  it("ignores a bogus token rather than trusting it", async () => {
+    const tournamentId = await createTournament("PnL bogus token");
+    await LeaderboardCache.create({
+      tournament_id: tournamentId,
+      rankings: [
+        {
+          rank: 1,
+          participant_id: new mongoose.Types.ObjectId(),
+          trading_account_id: new mongoose.Types.ObjectId(),
+          display_name: "Trader ****0517",
+          account_masked: "****0517",
+          roi: 0.5,
+          pnl: 999.99,
+          currency: "USD",
+          win_rate: 0,
+          trade_count: 0,
+          calculation_source: "computed_raw",
+          calculation_status: "ranked",
+          updated_at: new Date(),
+        },
+      ],
+      fetched_at: new Date(),
+      expires_at: new Date(Date.now() + 15 * 60_000),
+    });
+
+    const res = await request(app)
+      .get(`/api/leaderboard/${tournamentId}`)
+      .set({ Authorization: "Bearer not-a-real-token" });
+    expect(res.status).toBe(200);
+    expect(res.body.leaderboard[0]).not.toHaveProperty("pnl");
+  });
 });
 
 describe("full pipeline with fixture connector", () => {
@@ -261,6 +337,43 @@ describe("full pipeline with fixture connector", () => {
     for (const account of list.body.accounts) {
       expect(account.sync_state).toBe("ready");
     }
+  });
+
+  it("reports each participant's latest balance to admins only", async () => {
+    // Admins need to see how funded an account is when reviewing it. The
+    // figure comes from the snapshots the sync already writes, so it only
+    // exists once a sync has run — the test above.
+    const res = await request(app)
+      .get(`/api/participants/${tournamentId}`)
+      .set(auth());
+    expect(res.status).toBe(200);
+
+    const approved = res.body.participants.filter(
+      (p: any) => p.status === "approved"
+    );
+    expect(approved.length).toBeGreaterThan(0);
+    for (const participant of approved) {
+      expect(participant.account_balance).not.toBeNull();
+      expect(participant.account_balance.balance).toBeGreaterThan(0);
+      expect(participant.account_balance.currency).toBe("USD");
+      expect(participant.account_balance.captured_at).toBeTruthy();
+    }
+
+    // Same figures must never reach the public board.
+    const publicBoard = await request(app).get(
+      `/api/leaderboard/${tournamentId}`
+    );
+    const serialized = JSON.stringify(publicBoard.body);
+    for (const participant of approved) {
+      expect(serialized).not.toContain(
+        String(participant.account_balance.balance)
+      );
+    }
+  });
+
+  it("requires a token for the participants list", async () => {
+    const res = await request(app).get(`/api/participants/${tournamentId}`);
+    expect(res.status).toBe(401);
   });
 
   it("re-sync is idempotent (no duplicate snapshots)", async () => {

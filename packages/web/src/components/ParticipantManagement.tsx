@@ -23,6 +23,17 @@ interface Participant {
   user: User;
   status: "pending" | "approved" | "declined" | "disqualified";
   referral_code_verified: boolean;
+  /**
+   * Latest balance from the 60s sync, or null when no snapshot exists yet
+   * (a brand-new applicant, or the broker hasn't reported). Admin-only —
+   * never present on the public leaderboard.
+   */
+  account_balance: {
+    balance: number;
+    equity: number;
+    currency: string;
+    captured_at: string;
+  } | null;
   applied_at: string;
   reviewed_at?: string;
   reviewed_by?: { username: string };
@@ -38,6 +49,21 @@ interface ParticipantManagementProps {
   selectedTournamentId?: string | number;
   onTournamentChange?: (id: string | number) => void;
 }
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+};
+
+const formatMoney = (amount: number, currency?: string) => {
+  const code = (currency || "USD").toUpperCase();
+  const symbol = CURRENCY_SYMBOLS[code] ?? `${code} `;
+  return `${symbol}${amount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournamentChange }: ParticipantManagementProps) => {
   const [selectedTournament, setSelectedTournament] = useState<string | number>(selectedTournamentId || "");
@@ -318,6 +344,31 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                     <div className="participant-meta">
                       <span>
                         <strong>Account:</strong> ****{participant.user.fp_account_number.slice(-4)}
+                      </span>
+                      <span>
+                        <strong>Balance:</strong>{" "}
+                        {participant.account_balance ? (
+                          <span
+                            title={`Equity ${formatMoney(
+                              participant.account_balance.equity,
+                              participant.account_balance.currency
+                            )} · as of ${new Date(
+                              participant.account_balance.captured_at
+                            ).toLocaleString()}`}
+                          >
+                            {formatMoney(
+                              participant.account_balance.balance,
+                              participant.account_balance.currency
+                            )}
+                          </span>
+                        ) : (
+                          <span
+                            style={{ color: "var(--text-muted, #94a3b8)" }}
+                            title="No balance reported by the broker yet — appears after the first sync once a trading account is assigned."
+                          >
+                            —
+                          </span>
+                        )}
                       </span>
                       <span>
                         <strong>Applied:</strong> {new Date(participant.applied_at).toLocaleDateString()}
