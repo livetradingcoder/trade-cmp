@@ -182,15 +182,13 @@ const Hero = () => {
                     <div className='hero-prize-label'>Current prize pool</div>
                   </div>
                 )}
-                {[
-                  { label: "EARLY ACCESS SEASON", value: "Limited participants, access closes automatically" },
-
-                ].map((stat, i) => (
-                  <div key={i} className='hero-stat-item'>
-                    <div className='hero-stat-value'>{stat.label}</div>
-                    <div className='hero-stat-label'>{stat.value}</div>
+                {/* "EARLY ACCESS SEASON" heading dropped per the client; the
+                    scarcity line under it stays, in its existing caption style. */}
+                <div className='hero-stat-item'>
+                  <div className='hero-stat-label'>
+                    Limited participants, access closes automatically
                   </div>
-                ))}
+                </div>
               </motion.div>
 
               {/* Background Glow behind image */}

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 
 // Layout Components
+import Ticker from "./components/Ticker";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
@@ -38,6 +39,7 @@ export default function App() {
           path='*'
           element={
             <div className='app-container'>
+              <Ticker />
               <Navbar />
               <main>
                 <Routes>

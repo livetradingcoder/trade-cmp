@@ -48,6 +48,19 @@ export const CHAMPIONSHIPS = [
     },
 ];
 
+/**
+ * Static ticker lines, shown after the live competition line.
+ *
+ * Keep these verifiable — each one restates a claim the hero already makes.
+ * The original set invented traders climbing the leaderboard, badges and a
+ * $50K championship, which is fabricated activity about named people on a page
+ * promising real money.
+ */
+export const TICKER_ITEMS = [
+    "TRADE WITH YOUR OWN CAPITAL 💰",
+    "WIN REAL MONEY — NOT DEMO POINTS ⚡",
+];
+
 export const TOP_TRADERS = [
     { rank: 1, name: 'CryptoKev', pnl: '+$42,450', roi: '142%', streak: 8, tier: 'Elite' },
     { rank: 2, name: 'PaperHands_RIP', pnl: '+$38,120', roi: '115%', streak: 5, tier: 'Elite' },
@@ -55,4 +68,3 @@ export const TOP_TRADERS = [
     { rank: 4, name: 'TraderJoe', pnl: '+$15,200', roi: '76%', streak: 3, tier: 'Gold' },
     { rank: 5, name: 'AlphaSeeker', pnl: '+$12,400', roi: '62%', streak: 4, tier: 'Gold' },
 ];
-
