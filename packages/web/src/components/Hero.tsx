@@ -8,6 +8,15 @@ import { useTournaments } from "../context/TournamentContext";
 const HERO_VIDEO_BASE_OPACITY = 0.65;
 const HERO_VIDEO_CROSSFADE_SECONDS = 0.4;
 
+// Prizes come from the admin as either a bare amount ("100", "10 000") or an
+// already-labelled string ("50K Competition"). Only the bare amounts get the
+// currency prefix and grouping; anything else is passed through untouched.
+const formatPrize = (prize: string) => {
+  const digits = prize.replace(/[\s,]/g, "");
+  if (!/^\d+(\.\d+)?$/.test(digits)) return prize;
+  return `$${Number(digits).toLocaleString("en-US")}`;
+};
+
 const Hero = () => {
   const heroVideoARef = useRef<HTMLVideoElement>(null);
   const heroVideoBRef = useRef<HTMLVideoElement>(null);
@@ -167,10 +176,13 @@ const Hero = () => {
                 transition={{ duration: 0.8, delay: 0.8 }}
                 className='hero-stats'
               >
+                {activeTournament && (
+                  <div className='hero-prize'>
+                    <div className='hero-prize-value'>{formatPrize(activeTournament.prize)}</div>
+                    <div className='hero-prize-label'>Current prize pool</div>
+                  </div>
+                )}
                 {[
-                  ...(activeTournament
-                    ? [{ label: activeTournament.prize, value: "Current prize pool" }]
-                    : []),
                   { label: "EARLY ACCESS SEASON", value: "Limited participants, access closes automatically" },
 
                 ].map((stat, i) => (
@@ -202,6 +214,31 @@ const Hero = () => {
           top: -140px;
           position: relative;
           z-index: 5;
+        }
+
+        /* Prize sits directly on the video — no panel, no border. */
+        .hero-prize {
+          text-align: center;
+          padding: 4px 0 2px;
+        }
+
+        .hero-prize-value {
+          font-size: clamp(2rem, 4vw, 3.25rem);
+          font-weight: 900;
+          line-height: 1.05;
+          color: #fff;
+          letter-spacing: -0.02em;
+          text-shadow: 0 2px 20px rgba(0, 0, 0, 0.7);
+        }
+
+        .hero-prize-label {
+          font-size: 0.7rem;
+          color: var(--text-dim);
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          margin-top: 4px;
+          text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
         }
 
         .hero-stat-item {
@@ -556,6 +593,10 @@ const Hero = () => {
             max-width: 400px;
             padding: 0 16px;
             gap: 10px;
+          }
+
+          .hero-prize-value {
+            font-size: clamp(1.75rem, 8vw, 2.5rem);
           }
 
           .hero-stat-item {
