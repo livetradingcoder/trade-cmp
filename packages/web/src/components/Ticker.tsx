@@ -42,7 +42,12 @@ const Ticker = () => {
     const items: string[] = [];
 
     if (active) {
-        const duration = formatDuration(active.start_date, active.end_date);
+        // Prefer the real run length; fall back to the admin's own cadence
+        // label (e.g. "Bi-Weekly") when a competition has no dates set, which
+        // is common while it is still a draft.
+        const duration =
+            formatDuration(active.start_date, active.end_date) ||
+            (active.tier ? active.tier.toUpperCase() : null);
         const prize = active.prize ? formatPrize(active.prize) : null;
         if (duration && prize) {
             items.push(`${duration} COMPETITION · ${prize} CASH PRIZE POOL 💰`);
