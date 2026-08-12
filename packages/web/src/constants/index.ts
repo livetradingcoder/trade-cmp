@@ -56,16 +56,3 @@ export const TOP_TRADERS = [
     { rank: 5, name: 'AlphaSeeker', pnl: '+$12,400', roi: '62%', streak: 4, tier: 'Gold' },
 ];
 
-/**
- * Static ticker lines, shown after the live competition line.
- *
- * These must stay verifiable. The previous set invented traders climbing the
- * leaderboard, badges and a $50K championship — fabricated activity about
- * named people on a page that promises real money. Every line here restates a
- * claim already made in the hero.
- */
-export const TICKER_ITEMS = [
-    "TRADE WITH YOUR OWN CAPITAL — NO FUNDED ACCOUNTS, NO PROFIT SPLITS",
-    "KEEP 100% OF YOUR PROFITS 💰",
-    "WIN REAL MONEY — NOT DEMO POINTS ⚡",
-];
