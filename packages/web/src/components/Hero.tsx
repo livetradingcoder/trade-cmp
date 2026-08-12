@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useRef } from "react";
 import { ASSETS } from "../constants";
 import { useTournaments } from "../context/TournamentContext";
-import { competitionDuration, formatPrize } from "../utils/competition";
+import { formatPrize } from "../utils/competition";
 
 const HERO_VIDEO_BASE_OPACITY = 0.65;
 const HERO_VIDEO_CROSSFADE_SECONDS = 0.4;
@@ -175,11 +175,7 @@ const Hero = () => {
                 {activeTournament && (
                   <div className='hero-prize'>
                     <div className='hero-prize-value'>{formatPrize(activeTournament.prize)}</div>
-                    <div className='hero-prize-label'>
-                      {competitionDuration(activeTournament)
-                        ? `${competitionDuration(activeTournament)} competition · cash prize pool`
-                        : "Cash prize pool"}
-                    </div>
+                    <div className='hero-prize-label'>2 weeks competition · cash prize pool</div>
                   </div>
                 )}
                 {/* "EARLY ACCESS SEASON" heading dropped per the client; the

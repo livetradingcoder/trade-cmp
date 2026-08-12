@@ -57,6 +57,7 @@ export const CHAMPIONSHIPS = [
  * promising real money.
  */
 export const TICKER_ITEMS = [
+    "2 WEEKS COMPETITION · $2,000 CASH PRIZE POOL 💰",
     "TRADE WITH YOUR OWN CAPITAL 💰",
     "WIN REAL MONEY — NOT DEMO POINTS ⚡",
 ];
