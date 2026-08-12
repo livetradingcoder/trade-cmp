@@ -3,6 +3,7 @@ import { Gamepad2, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useRef } from "react";
 import { ASSETS } from "../constants";
+import { useTournaments } from "../context/TournamentContext";
 
 const HERO_VIDEO_BASE_OPACITY = 0.65;
 const HERO_VIDEO_CROSSFADE_SECONDS = 0.4;
@@ -10,6 +11,8 @@ const HERO_VIDEO_CROSSFADE_SECONDS = 0.4;
 const Hero = () => {
   const heroVideoARef = useRef<HTMLVideoElement>(null);
   const heroVideoBRef = useRef<HTMLVideoElement>(null);
+  const { tournaments } = useTournaments();
+  const activeTournament = tournaments.find((t) => t.status === "active") || tournaments[0];
 
   // The source video's last frame doesn't match its first, so a plain loop
   // flashes at the seam. Two copies of the same video play in parallel, offset
@@ -165,6 +168,9 @@ const Hero = () => {
                 className='hero-stats'
               >
                 {[
+                  ...(activeTournament
+                    ? [{ label: activeTournament.prize, value: "Current prize pool" }]
+                    : []),
                   { label: "EARLY ACCESS SEASON", value: "Limited participants, access closes automatically" },
 
                 ].map((stat, i) => (
