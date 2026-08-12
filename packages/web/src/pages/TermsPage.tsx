@@ -11,6 +11,11 @@ import {
   ClipboardCheck,
   AlertCircle,
   Scale,
+  Eye,
+  Database,
+  RefreshCw,
+  Gavel,
+  CheckCircle2,
   type LucideIcon,
 } from "lucide-react";
 import termsData from "../data/termsData.json";
@@ -27,6 +32,11 @@ const iconMap: Record<string, LucideIcon> = {
   ClipboardCheck,
   AlertCircle,
   Scale,
+  Eye,
+  Database,
+  RefreshCw,
+  Gavel,
+  CheckCircle2,
 };
 
 // Reusable bullet list component

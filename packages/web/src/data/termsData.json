@@ -31,8 +31,8 @@
       "title": "Broker Partnership & No Client Funds",
       "icon": "Handshake",
       "paragraphs": [
-        "The platform operates in partnership with FpmTrading, a globally regulated, top-tier brokerage provider.",
-        "All trading activity and participant capital remain entirely and exclusively with FpmTrading at all times."
+        "The platform operates in partnership with FpTrading, a globally regulated brokerage provider.",
+        "All trading activity and participant capital remain entirely and exclusively with FpTrading at all times."
       ],
       "introText": "The company:",
       "items": [
@@ -48,15 +48,24 @@
       "title": "Trading Activity & Participant Responsibility",
       "icon": "Users",
       "paragraphs": [
-        "Participants trade independently through accounts held with FpmTrading."
+        "Participants trade independently through accounts held with FpTrading."
       ],
       "subsections": [
         {
           "introText": "Participants are solely responsible for:",
           "items": [
-            "opening and maintaining their trading accounts with FpmTrading",
-            "complying with FpmTrading's terms, rules, and applicable regulations",
+            "opening and maintaining their trading accounts with FpTrading",
+            "complying with FpTrading's terms, rules, and applicable regulations",
             "all trading decisions and risk management"
+          ]
+        },
+        {
+          "type": "info",
+          "paragraphs": [
+            "Participants are required to comply with both, LTL Platform Terms & Conditions and all applicable terms, conditions, policies, rules, procedures, and regulatory requirements of FpTrading governing their trading account and trading activity.",
+            "https://www.fptrading.com/faq/",
+            "By participating in a competition, participants acknowledge that their trading account and trading activity remain subject to FpTrading's applicable terms and conditions at all times.",
+            "Any breach of FpTrading's terms, conditions, policies, rules, or applicable requirements may result in the participant being deemed ineligible or disqualified from the competition where such breach affects the participant's eligibility or the integrity of the competition."
           ]
         },
         {
@@ -86,11 +95,13 @@
         "investment products",
         "trading services",
         "financial instruments",
-        "profit-sharing schemes"
+        "profit-sharing schemes",
+        "offers to invest or participate in any investment opportunity"
       ],
       "additionalParagraphs": [
         "All rankings and displayed statistics are used exclusively for competitive evaluation and do not represent investment performance.",
-        "Competition registration remains open until three (3) calendar days prior to the official competition end date. Once registration is closed, no additional participants may enter the competition."
+        "Competition registration remains open until three (3) calendar days prior to the official competition end date. Once registration is closed, no additional participants may enter the competition.",
+        "The company reserves the right to modify, suspend, postpone, or cancel a competition where reasonably necessary, including in circumstances involving technical issues, broker-related disruptions, regulatory requirements, force majeure events, suspected manipulation, fraud, or other circumstances affecting the integrity or proper operation of the competition."
       ]
     },
     {
@@ -109,7 +120,8 @@
           "Rankings are calculated purely on percentage performance",
           "Percentage results are used solely for competition ranking purposes"
         ]
-      }
+      },
+      "footer": "In the event of a tie, the company may apply a predetermined tie-breaking method communicated on the relevant competition page."
     },
     {
       "id": "performance-calculation",
@@ -124,29 +136,36 @@
           "title": "Account Rules:",
           "type": "warning",
           "items": [
-            "Additional deposits into the same trading account are not permitted during the competition",
-            "Each trading account may participate in the competition only with its initial deposit",
-            "If a participant's trading account balance reaches zero (0), that account is considered to have lost the competition and is automatically disqualified from ranking"
-          ]
-        },
-        {
-          "title": "Re-Entry Conditions:",
-          "type": "info",
-          "paragraphs": [
-            "A participant whose account has reached zero (0) may open a new trading account with FpmTrading and re-enter the same competition, provided registration remains open."
-          ],
-          "items": [
-            "Each new account is treated as a separate competition entry",
-            "The new account's performance starts from 0% ROI and is not affected by any previous account losses or results"
+            "Additional deposits into the same trading account are not permitted unless the account's trading positions have been closed due to insufficient margin",
+            "Each trading account participates in the competition based on its active deposit balance",
+            "Participants may not use multiple accounts to circumvent competition rules or obtain an unfair competitive advantage unless multiple-account participation is expressly permitted for the relevant competition"
           ]
         },
         {
           "title": "Disqualification:",
           "type": "default",
+          "paragraphs": [
+            "A participant's trading account is considered to have lost the competition and is automatically disqualified from ranking when all open positions are closed by the broker due to insufficient margin, margin stop-out, or forced liquidation.",
+            "The company reserves the right to disqualify any participant where there is reasonable evidence of fraud, manipulation, exploitation of technical errors, falsification of information, abuse of the competition rules, or other conduct that compromises the fairness or integrity of the competition."
+          ]
+        },
+        {
+          "title": "Re-Entry & Redeposit Conditions:",
+          "type": "info",
+          "paragraphs": [
+            "If a participant's positions are closed due to insufficient margin, the participant may redeposit funds into the same trading account and continue participating in the same competition, subject to the conditions below."
+          ],
+          "introText": "Upon redeposit:",
           "items": [
-            "applies only to the specific trading account that reached zero (0)",
-            "is based solely on account status during the competition period",
-            "does not constitute financial advice or risk management guidance"
+            "The participant's competition performance resets to 0% ROI",
+            "Any losses, results, or performance from the previous trading cycle do not influence or affect the new deposit",
+            "The redeposit is treated as a new competition entry for ranking purposes"
+          ]
+        },
+        {
+          "type": "default",
+          "paragraphs": [
+            "Redeposits are allowed only while competition registration remains open."
           ]
         }
       ]
@@ -161,7 +180,21 @@
         "fixed and predefined",
         "not derived from pooled participant trading capital",
         "not based on profit sharing or capital allocation"
-      ]
+      ],
+      "additionalParagraphs": [
+        "All prizes will be credited directly to the winners' trading accounts held with FpTrading."
+      ],
+      "subsections": [
+        {
+          "introText": "Prize crediting:",
+          "items": [
+            "is performed by the broker",
+            "is subject to the broker's standard processing timelines and account conditions",
+            "does not involve the platform holding or transferring participant funds"
+          ]
+        }
+      ],
+      "footer": "The company does not guarantee the timing of prize crediting where processing is dependent on FpTrading or other third parties."
     },
     {
       "id": "conditions-participation",
@@ -170,7 +203,7 @@
       "icon": "ClipboardCheck",
       "introText": "To be eligible for participation in any competition, participants must:",
       "items": [
-        "Open a trading account with FpmTrading using the referral code displayed on the competition page or by clicking the official competition registration link",
+        "Open a trading account with FpTrading using the referral code displayed on the competition page or by clicking the official competition registration link",
         "Have a minimum account balance equal to or greater than the \"Minimum Deposit Required\" specified for the selected competition"
       ],
       "subsections": [
@@ -180,15 +213,29 @@
           "items": [
             "is displayed on the individual competition page",
             "may vary depending on the specific competition",
-            "must be met for each new trading account used to participate"
+            "must be met for each trading account used to participate"
           ]
         }
+      ],
+      "additionalParagraphs": [
+        "Participation may also be subject to geographic, age, eligibility, and regulatory restrictions applicable to the participant or the relevant competition."
       ],
       "footer": "Failure to meet these conditions may result in ineligibility or exclusion from the competition."
     },
     {
-      "id": "no-investment-advice",
+      "id": "leaderboard-name-display",
       "number": "9",
+      "title": "Public Leaderboard & Name Display",
+      "icon": "Eye",
+      "paragraphs": [
+        "Participant names will be publicly displayed on the platform's competition leaderboard for the purpose of ranking visibility and performance comparison.",
+        "By entering a competition, participants expressly consent to the public display of their name on the competition ranking page, allowing all participants to view relative positioning and performance throughout the competition period."
+      ],
+      "footer": "The public display of participant names is limited strictly to competition ranking and transparency purposes and does not constitute marketing, endorsement, or performance promotion."
+    },
+    {
+      "id": "no-investment-advice",
+      "number": "10",
       "title": "No Investment Advice Disclaimer",
       "icon": "AlertCircle",
       "introText": "All content, rankings, statistics, competition results, and information provided on the platform:",
@@ -201,18 +248,74 @@
     },
     {
       "id": "limitation-liability",
-      "number": "10",
+      "number": "11",
       "title": "Limitation of Liability",
       "icon": "Scale",
-      "introText": "The company shall not be liable for:",
+      "introText": "To the maximum extent permitted by applicable law, the company shall not be liable for:",
       "items": [
         "trading losses",
         "broker actions or failures",
         "execution quality",
         "account performance",
-        "margin calls, liquidation, or financial outcomes resulting from participant trading activity"
+        "margin calls, liquidation, or financial outcomes resulting from participant trading activity",
+        "delays, interruptions, or technical failures affecting the platform or competition",
+        "inaccurate, delayed, or unavailable market or account data supplied by third parties",
+        "failure by FpTrading or any other third party to process deposits, withdrawals, prizes, or other transactions"
+      ],
+      "footer": "Nothing in these Terms & Conditions excludes or limits liability that cannot legally be excluded or limited under applicable law."
+    },
+    {
+      "id": "competition-data-accuracy",
+      "number": "12",
+      "title": "Competition Data & Technical Accuracy",
+      "icon": "Database",
+      "paragraphs": [
+        "Competition rankings and performance statistics may rely on data received from FpTrading or other third-party systems.",
+        "While the company will take reasonable measures to maintain accurate competition data, the company does not guarantee that all data will always be complete, uninterrupted, instantaneous, or error-free.",
+        "Where a technical error, data discrepancy, or system malfunction materially affects competition rankings, the company reserves the right to investigate and, where reasonably necessary, correct rankings, suspend affected results, or take other measures necessary to preserve the integrity of the competition."
+      ]
+    },
+    {
+      "id": "changes-competition-rules",
+      "number": "13",
+      "title": "Changes to Competition Rules & FpTrading Terms",
+      "icon": "RefreshCw",
+      "paragraphs": [
+        "Competition-specific rules, prize structures, eligibility requirements, minimum deposits, registration deadlines, and other conditions may vary between competitions.",
+        "The rules applicable to a particular competition will be displayed on the relevant competition page."
+      ],
+      "introText": "Participants must comply with:",
+      "items": [
+        "these Platform Terms & Conditions",
+        "the specific rules applicable to the relevant competition",
+        "all applicable terms, conditions, policies, rules, procedures, and requirements imposed by FpTrading in connection with their trading account and trading activity"
+      ],
+      "additionalParagraphs": [
+        "By entering a competition, participants agree to comply with both these Terms & Conditions and any competition-specific rules published for that competition.",
+        "In the event of a conflict between these Platform Terms & Conditions and FpTrading's terms and conditions regarding the operation, maintenance, regulation, or use of the participant's trading account, FpTrading's applicable terms and conditions shall govern matters relating to the participant's trading account and trading activity.",
+        "Participants are responsible for reviewing and understanding FpTrading's applicable terms and conditions before opening or using their trading account."
+      ]
+    },
+    {
+      "id": "governing-law",
+      "number": "14",
+      "title": "Governing Law & Dispute Resolution",
+      "icon": "Gavel",
+      "paragraphs": [
+        "These Terms & Conditions shall be governed by and interpreted in accordance with the laws applicable to the company's jurisdiction.",
+        "Any dispute arising out of or relating to these Terms & Conditions or participation in a competition shall be subject to the jurisdiction specified by the company in its applicable legal and corporate documentation."
+      ]
+    },
+    {
+      "id": "acceptance-of-terms",
+      "number": "15",
+      "title": "Acceptance of Terms",
+      "icon": "CheckCircle2",
+      "paragraphs": [
+        "By registering for or participating in any competition, the participant confirms that they have read, understood, and agreed to these Terms & Conditions, the applicable competition-specific rules, and the applicable terms and conditions of FpTrading.",
+        "If a participant does not agree to these Terms & Conditions, the applicable competition rules, or FpTrading's applicable terms and conditions, they must not register for or participate in any competition."
       ]
     }
   ],
-  "lastUpdated": "February 2026"
+  "lastUpdated": "August 2026"
 }
