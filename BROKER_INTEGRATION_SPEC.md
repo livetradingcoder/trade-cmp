@@ -46,6 +46,12 @@ const signature = crypto.createHmac("sha256", secret)
   workable floor.
 - **Timeouts:** respond within 15 seconds or we abort the request.
 
+### Timestamps
+
+All timestamps **MUST be true UTC**. Do not label broker-local or server-local
+time as `+00:00` — we compare your times against real UTC, and an undeclared
+offset silently shifts every trade into the wrong competition window.
+
 ### Errors
 
 Non-2xx responses must carry a human-readable reason:
@@ -121,10 +127,10 @@ applicant's balance before we approve them.
 | `account_number` | **yes** | Trading account number, as a string |
 | `metrics.current_balance` | **yes** | Account balance now, in `currency` |
 | `currency` | yes | ISO 4217; case-insensitive, we uppercase it |
-| `last_trade_at` | no | Must agree with Trade Activity — see §5 |
+| `last_trade_at` | no | Must agree with the times reported by Trade Activity |
 | `status` | no | Free text |
 | `metrics.roi` | no | **We ignore it** and compute ROI ourselves |
-| `metrics.starting_balance` | no | **We ignore it** — see §5 |
+| `metrics.starting_balance` | no | **We ignore it** — we derive starting capital ourselves (§4) |
 
 Return **all** accounts under the rebate number. Do not filter to accounts with
 activity: an applicant with a funded but untraded account must still appear, or
@@ -181,7 +187,7 @@ One account per call. `per_page` maximum is 200.
 |---|---|---|
 | `transaction_id` | **yes** | Stable and unique per trade. We key on it — a changing id duplicates trades |
 | `close_time` | **yes** | Closed trades only |
-| `net_pnl` | **yes** | **Net of commission and swap.** See §5 |
+| `net_pnl` | **yes** | **MUST be net of commission and swap.** If yours is gross, every trader's P&L is overstated |
 | `product` | yes | Instrument symbol |
 | `open_time`, `open_price`, `close_price`, `volume` | yes | Display only |
 | `commission`, `swaps` | yes | Reported separately as well as inside `net_pnl` |
@@ -202,7 +208,7 @@ Deposits and withdrawals. Same request shape as trade-activity; the array is
 `transactions` instead of `trades`.
 
 **Optional today.** We do not consume it yet — our ROI is already
-deposit-immune (§5). Implement it if you can; it lets us show funding changes.
+deposit-immune (§4). Implement it if you can; it lets us show funding changes.
 
 ---
 
@@ -227,37 +233,10 @@ and cash P&L are never published — they leak account size.
 
 ---
 
-## 5. Answer these before you build
+## 5. Going live
 
-Ambiguity in these four cost us real debugging time with FP Markets. Please
-confirm each in writing.
-
-1. **Timestamp timezone.** FP's timestamps are labelled `+00:00` but are
-   actually broker-server time, roughly UTC+3. If your times are not true UTC,
-   say so explicitly and state the offset. Do not label local time as UTC.
-
-2. **Is `net_pnl` net of commission and swap?** We take it literally. If yours
-   is gross, our leaderboard overstates every trader.
-
-3. **Propagation delay.** How long after a trade closes does it appear in
-   Trade Activity, worst case? FP's is about 13 minutes, which is visible to
-   competitors on a live board. State a maximum, and tell us whether a push or
-   websocket feed exists.
-
-4. **Do Performance and Trade Activity share a clock?** FP's
-   `last_trade_at` has run two days behind what Trade Activity returns. If the
-   two are fed by different systems, tell us, because we read balance from one
-   and trades from the other in the same calculation.
-
-Also useful: whether `transaction_id` is stable across restatements, and what
-happens to a trade that is later corrected or cancelled.
-
----
-
-## 6. Going live
-
-1. Send us: base URL, token, secret, our rebate account number(s), rate limit,
-   and the answers to §5.
+1. Send us: base URL, token, secret, our rebate account number(s), and your
+   rate limit.
 2. Allowlist our egress IPs — we will send them.
 3. We register your broker in our admin and run a read-only probe against
    Performance and Trade Activity for one test account.
