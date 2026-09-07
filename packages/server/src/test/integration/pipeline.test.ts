@@ -251,7 +251,9 @@ describe("full pipeline with fixture connector", () => {
   let tournamentId: string;
   let integrationId: string;
 
-  it("ensures a fixture broker integration (idempotently)", async () => {
+  it("ensures a broker integration idempotently by name", async () => {
+    // Integrations are keyed by name, not type: several brokers can speak the
+    // same protocol, so re-posting a type must not collapse them into one row.
     const first = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
@@ -259,12 +261,20 @@ describe("full pipeline with fixture connector", () => {
     expect(first.status).toBe(200);
     integrationId = first.body.integration._id;
 
-    const second = await request(app)
+    const again = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
-      .send({ type: "fixture" });
-    expect(second.status).toBe(200);
-    expect(second.body.integration._id).toBe(integrationId);
+      .send({ type: "fixture", name: "Fixture (test)" });
+    expect(again.status).toBe(200);
+    expect(again.body.integration._id).toBe(integrationId);
+
+    // A different name on the same protocol is a different broker.
+    const other = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fixture", name: "Fixture (second venue)" });
+    expect(other.status).toBe(200);
+    expect(other.body.integration._id).not.toBe(integrationId);
 
     expect(first.body.integration.supports_snapshots).toBe(true);
   });
@@ -656,6 +666,56 @@ describe("full pipeline with fixture connector", () => {
     const list = await request(app).get("/api/tournaments");
     const listed = list.body.find((t: any) => t.id === tid);
     expect(listed.broker_integration_id).toBe(String(integrationId));
+  });
+
+  it("runs two brokers on the same protocol without overwriting each other", async () => {
+    // The point of the broker spec: several brokers speak one protocol and are
+    // distinguished by their credentials, not by needing separate connectors.
+    const a = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({
+        type: "fpmarkets",
+        name: "Broker A",
+        config: {
+          base_url: "https://a.example.test",
+          token: "tok-a",
+          secret: "sec-a",
+          rebate_accounts: "1001",
+        },
+      });
+    expect(a.status).toBe(200);
+
+    const b = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({
+        type: "fpmarkets",
+        name: "Broker B",
+        config: {
+          base_url: "https://b.example.test",
+          token: "tok-b",
+          secret: "sec-b",
+          rebate_accounts: "2002",
+        },
+      });
+    expect(b.status).toBe(200);
+    expect(b.body.integration._id).not.toBe(a.body.integration._id);
+
+    const list = await request(app)
+      .get("/api/admin/broker-integrations")
+      .set(auth());
+    const names = list.body.integrations.map((i: any) => i.name);
+    expect(names).toContain("Broker A");
+    expect(names).toContain("Broker B");
+
+    // Each keeps its own endpoint, and neither leaks its credentials.
+    const rowA = list.body.integrations.find((i: any) => i.name === "Broker A");
+    const rowB = list.body.integrations.find((i: any) => i.name === "Broker B");
+    expect(rowA.config.base_url).toBe("https://a.example.test");
+    expect(rowB.config.base_url).toBe("https://b.example.test");
+    expect(JSON.stringify(list.body)).not.toContain("sec-a");
+    expect(JSON.stringify(list.body)).not.toContain("tok-b");
   });
 
   it("refuses an account correction without a token", async () => {

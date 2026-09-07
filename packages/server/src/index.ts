@@ -1331,13 +1331,19 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
       });
     }
 
-    const existing = await BrokerIntegration.findOne({ type });
+    // Keyed by name, not type: several brokers can speak the same protocol
+    // (see docs/BROKER_INTEGRATION_SPEC.md), so upserting by type would make
+    // a second broker overwrite the first instead of joining it. Name defaults
+    // to type, so an existing single integration keeps matching itself.
+    const integrationName = name || type;
+    const existing = await BrokerIntegration.findOne({ name: integrationName });
 
     const integration = await BrokerIntegration.findOneAndUpdate(
-      { type },
+      { name: integrationName },
       {
         $set: {
-          name: name || type,
+          type,
+          name: integrationName,
           enabled: true,
           supports_raw_trades: connector.supportsRawTrades,
           supports_snapshots: connector.supportsSnapshots,
