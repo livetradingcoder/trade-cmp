@@ -8,6 +8,7 @@ import BrokerIntegration from "../../models/BrokerIntegration";
 import Participant from "../../models/Participant";
 import { getBrokerConnector } from "../brokers";
 import { listManagedAccounts } from "../brokers/managedAccounts";
+import { BrokerConfig, resolveBrokerConfig } from "../brokers/config";
 import {
   FetchCompetitionDataResult,
   NormalizedSnapshotInput,
@@ -123,6 +124,9 @@ export async function syncTournament(
           })),
           startDate,
           endDate,
+          // This integration's own credentials, so two accounts of the same
+          // broker don't pull each other's data.
+          config: resolveBrokerConfig(integration.config as BrokerConfig),
         });
 
       const accountByNumber = new Map(

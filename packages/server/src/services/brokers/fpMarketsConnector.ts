@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import {
   BrokerAccountBalance,
+  BrokerConfig,
   BrokerConnector,
   FetchCompetitionDataInput,
   FetchCompetitionDataResult,
@@ -65,32 +66,47 @@ export function signTimestamp(timestamp: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(timestamp).digest("hex");
 }
 
-export function loadFpMarketsConfig(): FpMarketsConfig {
-  const token = process.env.FP_MARKETS_TOKEN;
-  const secret = process.env.FP_MARKETS_SECRET;
+function asString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function asAccountList(value: unknown): string[] {
+  const raw = Array.isArray(value) ? value : String(value ?? "").split(",");
+  return raw.map((v) => String(v).trim()).filter(Boolean);
+}
+
+/**
+ * Credentials for one FP integration.
+ *
+ * Prefers the integration's own config so several FP accounts can coexist;
+ * falls back to the FP_MARKETS_* env vars, which is how the original single
+ * integration is configured and must keep working untouched.
+ */
+export function loadFpMarketsConfig(config?: BrokerConfig): FpMarketsConfig {
+  const token = asString(config?.token) || process.env.FP_MARKETS_TOKEN;
+  const secret = asString(config?.secret) || process.env.FP_MARKETS_SECRET;
 
   if (!token || !secret) {
     throw new Error(
-      "FP Markets connector requires FP_MARKETS_TOKEN and FP_MARKETS_SECRET"
+      "FP Markets connector requires a token and secret (integration config or FP_MARKETS_TOKEN/FP_MARKETS_SECRET)"
     );
   }
 
-  const rebateAccountNumbers = (process.env.FP_MARKETS_REBATE_ACCOUNTS || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
+  const rebateAccountNumbers = config?.rebate_accounts
+    ? asAccountList(config.rebate_accounts)
+    : asAccountList(process.env.FP_MARKETS_REBATE_ACCOUNTS);
 
   if (rebateAccountNumbers.length === 0) {
     throw new Error(
-      "FP Markets connector requires FP_MARKETS_REBATE_ACCOUNTS (comma-separated rebate account numbers)"
+      "FP Markets connector requires rebate account numbers (integration config `rebate_accounts` or FP_MARKETS_REBATE_ACCOUNTS)"
     );
   }
 
+  const baseUrl =
+    asString(config?.base_url) || process.env.FP_MARKETS_BASE_URL || DEFAULT_BASE_URL;
+
   return {
-    baseUrl: (process.env.FP_MARKETS_BASE_URL || DEFAULT_BASE_URL).replace(
-      /\/+$/,
-      ""
-    ),
+    baseUrl: baseUrl.replace(/\/+$/, ""),
     token,
     secret,
     rebateAccountNumbers,
@@ -180,11 +196,14 @@ export interface FpMarketsProbeResult {
  * signing, and IP whitelisting are all working. Throws with the broker's error
  * message otherwise (e.g. "Access denied: IP not whitelisted.").
  */
-export async function probeFpMarkets(range?: {
-  startDate?: string;
-  endDate?: string;
-}): Promise<FpMarketsProbeResult> {
-  const config = loadFpMarketsConfig();
+export async function probeFpMarkets(
+  range?: {
+    startDate?: string;
+    endDate?: string;
+  },
+  brokerConfig?: BrokerConfig
+): Promise<FpMarketsProbeResult> {
+  const config = loadFpMarketsConfig(brokerConfig);
   const { startDate, endDate } =
     range?.startDate && range?.endDate
       ? { startDate: toDateOnly(range.startDate), endDate: toDateOnly(range.endDate) }
@@ -205,22 +224,33 @@ export async function probeFpMarkets(range?: {
   };
 }
 
-let rebateAccountsCache: {
-  at: number;
-  accounts: FpAccountResource[];
-} | null = null;
+const rebateAccountsCache = new Map<
+  string,
+  { at: number; accounts: FpAccountResource[] }
+>();
 const REBATE_CACHE_MS = 60_000;
 
-/** One cached Account Performance call, shared by every rebate-list consumer. */
-async function getRebateAccounts(): Promise<FpAccountResource[]> {
-  if (
-    rebateAccountsCache &&
-    Date.now() - rebateAccountsCache.at < REBATE_CACHE_MS
-  ) {
-    return rebateAccountsCache.accounts;
+/**
+ * One cached Account Performance call per credential set, shared by every
+ * rebate-list consumer. Keyed by base URL + rebate numbers: a single global
+ * cache would serve one FP integration's accounts to another.
+ */
+async function getRebateAccounts(
+  brokerConfig?: BrokerConfig
+): Promise<FpAccountResource[]> {
+  const config = loadFpMarketsConfig(brokerConfig);
+  const cacheKey = `${config.baseUrl}|${config.rebateAccountNumbers.join(",")}`;
+
+  const cached = rebateAccountsCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < REBATE_CACHE_MS) {
+    return cached.accounts;
   }
-  const result = await probeFpMarkets();
-  rebateAccountsCache = { at: Date.now(), accounts: result.accountsReturned };
+
+  const result = await probeFpMarkets(undefined, brokerConfig);
+  rebateAccountsCache.set(cacheKey, {
+    at: Date.now(),
+    accounts: result.accountsReturned,
+  });
   return result.accountsReturned;
 }
 
@@ -239,10 +269,10 @@ export type FpLiveBalance = BrokerAccountBalance;
  * Note `metrics.starting_balance` is deliberately not exposed: FP reserves it
  * and it is always 0.
  */
-export async function getRebateAccountBalances(): Promise<
-  Map<string, FpLiveBalance>
-> {
-  const accounts = await getRebateAccounts();
+export async function getRebateAccountBalances(
+  brokerConfig?: BrokerConfig
+): Promise<Map<string, FpLiveBalance>> {
+  const accounts = await getRebateAccounts(brokerConfig);
   const balances = new Map<string, FpLiveBalance>();
   for (const account of accounts) {
     const number =
@@ -264,8 +294,10 @@ export async function getRebateAccountBalances(): Promise<
  * old self-declared is_new_user placeholder. Throws if FP is unreachable so
  * callers can fall back to the stored value rather than wiping verification.
  */
-export async function getRebateAccountNumbers(): Promise<Set<string>> {
-  const accounts = await getRebateAccounts();
+export async function getRebateAccountNumbers(
+  brokerConfig?: BrokerConfig
+): Promise<Set<string>> {
+  const accounts = await getRebateAccounts(brokerConfig);
   return new Set(
     accounts
       .map((a) => (a.account_number == null ? "" : String(a.account_number)))
@@ -451,12 +483,15 @@ export interface FpActivityProbeResult {
  * a body snippet so we can confirm the endpoints are live and see the real
  * response shape without a hung request stalling anything.
  */
-export async function probeFpActivity(input: {
-  accountNumber: string;
-  startDate?: string;
-  endDate?: string;
-}): Promise<FpActivityProbeResult> {
-  const config = loadFpMarketsConfig();
+export async function probeFpActivity(
+  input: {
+    accountNumber: string;
+    startDate?: string;
+    endDate?: string;
+  },
+  brokerConfig?: BrokerConfig
+): Promise<FpActivityProbeResult> {
+  const config = loadFpMarketsConfig(brokerConfig);
   // Pass the dates through as given (no date-only truncation) so we can probe
   // exactly what the activity API accepts — date-only vs full ISO 8601.
   const { startDate, endDate } =
@@ -518,7 +553,7 @@ export const fpMarketsConnector: BrokerConnector = {
   async fetchCompetitionData(
     input: FetchCompetitionDataInput
   ): Promise<FetchCompetitionDataResult> {
-    const config = loadFpMarketsConfig();
+    const config = loadFpMarketsConfig(input.config);
     const { startDate, endDate } = resolveRange(input);
     // The activity APIs accept full ISO 8601; use the tournament window when
     // provided, otherwise the resolved day range.

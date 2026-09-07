@@ -3,6 +3,10 @@ export interface ConnectorAccountInput {
   userId: string;
 }
 
+import { BrokerConfig } from "./config";
+
+export type { BrokerConfig };
+
 export interface FetchCompetitionDataInput {
   tournamentId: string;
   accounts: ConnectorAccountInput[];
@@ -11,6 +15,8 @@ export interface FetchCompetitionDataInput {
   // ignore them. When omitted the connector falls back to its own default.
   startDate?: string;
   endDate?: string;
+  /** Credentials for the integration this call belongs to. */
+  config?: BrokerConfig;
 }
 
 export interface NormalizedSnapshotInput {
@@ -76,7 +82,7 @@ export interface BrokerConnector {
    * referral code. Optional: a broker that cannot report its managed accounts
    * simply skips referral verification rather than failing it.
    */
-  listManagedAccounts?(): Promise<Set<string>>;
+  listManagedAccounts?(config?: BrokerConfig): Promise<Set<string>>;
 
   /**
    * Live balance per managed account.
@@ -84,5 +90,7 @@ export interface BrokerConnector {
    * Lets an admin see how funded a PENDING applicant is — they have no trading
    * account yet, so no stored snapshot exists. Optional for the same reason.
    */
-  getAccountBalances?(): Promise<Map<string, BrokerAccountBalance>>;
+  getAccountBalances?(
+    config?: BrokerConfig
+  ): Promise<Map<string, BrokerAccountBalance>>;
 }

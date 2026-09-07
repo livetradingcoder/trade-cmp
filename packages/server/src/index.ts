@@ -35,6 +35,10 @@ import {
   getManagedAccountBalances,
 } from "./services/brokers/managedAccounts";
 import { getBrokerConnector } from "./services/brokers";
+import {
+  encryptBrokerConfig,
+  redactBrokerConfig,
+} from "./services/brokers/config";
 import BrokerIntegration from "./models/BrokerIntegration";
 import TradingAccount from "./models/TradingAccount";
 import SyncRun from "./models/SyncRun";
@@ -1309,7 +1313,7 @@ app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) =
 // Ensure a broker integration exists for a connector type (idempotent upsert).
 // Capability flags come from the connector implementation itself.
 app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest, res) => {
-  const { type, name } = req.body;
+  const { type, name, config } = req.body;
 
   try {
     if (!type) {
@@ -1326,6 +1330,8 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
       });
     }
 
+    const existing = await BrokerIntegration.findOne({ type });
+
     const integration = await BrokerIntegration.findOneAndUpdate(
       { type },
       {
@@ -1335,12 +1341,29 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
           supports_raw_trades: connector.supportsRawTrades,
           supports_snapshots: connector.supportsSnapshots,
           supports_broker_metrics: connector.supportsBrokerMetrics,
+          // Credentials live per integration so a second broker — or a second
+          // account of the same broker — needs no redeploy. Omitting config
+          // leaves the stored one alone rather than wiping it.
+          ...(config && typeof config === "object"
+            ? {
+                config: encryptBrokerConfig(
+                  config,
+                  (existing?.config as any) || {}
+                ),
+              }
+            : {}),
         },
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
-    res.json({ success: true, integration });
+    res.json({
+      success: true,
+      integration: {
+        ...integration.toObject(),
+        config: redactBrokerConfig(integration.config as any),
+      },
+    });
   } catch (error) {
     console.error("Broker integration ensure error:", error);
     res.status(500).json({ success: false, message: "Failed to ensure broker integration" });
@@ -1351,7 +1374,13 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
 app.get("/api/admin/broker-integrations", verifyToken, async (_req: AuthRequest, res) => {
   try {
     const integrations = await BrokerIntegration.find().sort({ type: 1 });
-    res.json({ success: true, integrations });
+    res.json({
+      success: true,
+      integrations: integrations.map((integration) => ({
+        ...integration.toObject(),
+        config: redactBrokerConfig(integration.config as any),
+      })),
+    });
   } catch (error) {
     console.error("Broker integration list error:", error);
     res.status(500).json({ success: false, message: "Failed to list broker integrations" });

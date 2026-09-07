@@ -1,6 +1,7 @@
 import BrokerIntegration from "../../models/BrokerIntegration";
 import { getBrokerConnector } from "./index";
 import { BrokerAccountBalance, BrokerConnector } from "./types";
+import { BrokerConfig, resolveBrokerConfig } from "./config";
 
 /**
  * Broker-agnostic access to "which accounts do we manage, and what do they
@@ -18,25 +19,39 @@ import { BrokerAccountBalance, BrokerConnector } from "./types";
  * blank out another's accounts.
  */
 
-async function enabledConnectors(): Promise<BrokerConnector[]> {
+interface EnabledBroker {
+  connector: BrokerConnector;
+  config: BrokerConfig;
+}
+
+/**
+ * Every enabled integration paired with its own credentials.
+ *
+ * Keyed by connector type AND credentials: two integrations sharing a
+ * connector but pointing at different accounts are both real, and must each be
+ * queried. Only an exact duplicate is collapsed.
+ */
+async function enabledBrokers(): Promise<EnabledBroker[]> {
   const integrations = await BrokerIntegration.find({ enabled: true }).select(
-    "type"
+    "type config"
   );
 
-  const connectors: BrokerConnector[] = [];
+  const brokers: EnabledBroker[] = [];
   const seen = new Set<string>();
   for (const integration of integrations) {
     const type = String(integration.type);
-    if (seen.has(type)) continue; // several integrations can share a connector
-    seen.add(type);
+    const config = resolveBrokerConfig(integration.config as BrokerConfig);
+    const key = `${type}|${JSON.stringify(config)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     try {
-      connectors.push(getBrokerConnector(type));
+      brokers.push({ connector: getBrokerConnector(type), config });
     } catch {
       // An integration row naming a connector this build doesn't ship.
       // Skip it rather than breaking every other broker.
     }
   }
-  return connectors;
+  return brokers;
 }
 
 /**
@@ -44,20 +59,22 @@ async function enabledConnectors(): Promise<BrokerConnector[]> {
  * Throws only when nothing answered and at least one broker errored.
  */
 async function collect<T>(
-  pick: (connector: BrokerConnector) => (() => Promise<T>) | undefined,
+  pick: (
+    connector: BrokerConnector
+  ) => ((config?: BrokerConfig) => Promise<T>) | undefined,
   merge: (into: T, from: T) => void,
   empty: () => T
 ): Promise<T> {
-  const connectors = await enabledConnectors();
+  const brokers = await enabledBrokers();
   const result = empty();
   let answered = 0;
   let firstError: unknown = null;
 
-  for (const connector of connectors) {
+  for (const { connector, config } of brokers) {
     const capability = pick(connector);
     if (!capability) continue; // broker can't report this — not an error
     try {
-      merge(result, await capability.call(connector));
+      merge(result, await capability.call(connector, config));
       answered++;
     } catch (error) {
       if (firstError === null) firstError = error;
