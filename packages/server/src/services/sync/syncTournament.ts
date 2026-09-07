@@ -7,7 +7,7 @@ import LeaderboardCache from "../../models/LeaderboardCache";
 import BrokerIntegration from "../../models/BrokerIntegration";
 import Participant from "../../models/Participant";
 import { getBrokerConnector } from "../brokers";
-import { getRebateAccountNumbers } from "../brokers/fpMarketsConnector";
+import { listManagedAccounts } from "../brokers/managedAccounts";
 import {
   FetchCompetitionDataResult,
   NormalizedSnapshotInput,
@@ -343,7 +343,7 @@ export async function syncTournament(
   // account is currently mapped under our rebate/IB. Best-effort — never fail
   // the sync over it, and leave stored values untouched if FP is unreachable.
   try {
-    const rebateAccounts = await getRebateAccountNumbers();
+    const rebateAccounts = await listManagedAccounts();
     const tournamentParticipants = await Participant.find({
       tournament_id: tournament._id,
     }).populate("user_id", "fp_account_number");

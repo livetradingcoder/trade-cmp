@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import {
+  BrokerAccountBalance,
   BrokerConnector,
   FetchCompetitionDataInput,
   FetchCompetitionDataResult,
@@ -223,10 +224,8 @@ async function getRebateAccounts(): Promise<FpAccountResource[]> {
   return result.accountsReturned;
 }
 
-export interface FpLiveBalance {
-  balance: number;
-  currency: string;
-}
+/** @deprecated Use BrokerAccountBalance; kept as an alias for existing imports. */
+export type FpLiveBalance = BrokerAccountBalance;
 
 /**
  * Live balance per account currently mapped under our rebate/IB.
@@ -506,6 +505,10 @@ export async function probeFpActivity(input: {
 
 export const fpMarketsConnector: BrokerConnector = {
   type: "fpmarkets",
+  // Both read the same cached Account Performance response, so neither adds
+  // broker calls on top of what referral verification already fetches.
+  listManagedAccounts: getRebateAccountNumbers,
+  getAccountBalances: getRebateAccountBalances,
   // Trades come from the per-account Trade Activity API; P&L / trade count /
   // win rate are computed from them. roi is still reserved (always 0), so
   // broker metrics are not used as a fallback.

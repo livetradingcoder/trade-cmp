@@ -29,9 +29,11 @@ import { startSyncScheduler } from "./services/sync/scheduler";
 import {
   probeFpMarkets,
   probeFpActivity,
-  getRebateAccountNumbers,
-  getRebateAccountBalances,
 } from "./services/brokers/fpMarketsConnector";
+import {
+  listManagedAccounts,
+  getManagedAccountBalances,
+} from "./services/brokers/managedAccounts";
 import { getBrokerConnector } from "./services/brokers";
 import BrokerIntegration from "./models/BrokerIntegration";
 import TradingAccount from "./models/TradingAccount";
@@ -664,7 +666,7 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
     let rebateAccounts: Set<string> | null = null;
     try {
       rebateAccounts = await Promise.race([
-        getRebateAccountNumbers(),
+        listManagedAccounts(),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("rebate lookup timeout")), 8000)
         ),
@@ -789,7 +791,7 @@ app.get("/api/participants/:tournamentId", verifyToken, async (req: AuthRequest,
       );
       if (missing.length > 0) {
         const liveBalances = await Promise.race([
-          getRebateAccountBalances(),
+          getManagedAccountBalances(),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error("balance lookup timeout")), 8000)
           ),

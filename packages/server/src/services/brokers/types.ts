@@ -54,6 +54,12 @@ export interface FetchCompetitionDataResult {
   brokerMetrics: BrokerMetricInput[];
 }
 
+/** A balance a broker can report for an account it manages. */
+export interface BrokerAccountBalance {
+  balance: number;
+  currency: string;
+}
+
 export interface BrokerConnector {
   type: string;
   supportsRawTrades: boolean;
@@ -62,4 +68,21 @@ export interface BrokerConnector {
   fetchCompetitionData(
     input: FetchCompetitionDataInput
   ): Promise<FetchCompetitionDataResult>;
+
+  /**
+   * Account numbers currently mapped under this broker's IB/rebate.
+   *
+   * Used to verify for real that a participant is registered under our
+   * referral code. Optional: a broker that cannot report its managed accounts
+   * simply skips referral verification rather than failing it.
+   */
+  listManagedAccounts?(): Promise<Set<string>>;
+
+  /**
+   * Live balance per managed account.
+   *
+   * Lets an admin see how funded a PENDING applicant is — they have no trading
+   * account yet, so no stored snapshot exists. Optional for the same reason.
+   */
+  getAccountBalances?(): Promise<Map<string, BrokerAccountBalance>>;
 }
