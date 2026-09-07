@@ -11,6 +11,12 @@ export interface ITournament extends Document {
   cover: string;
   image?: string;
   registrationLink: string;
+  /**
+   * Which broker this competition runs on. Optional: competitions created
+   * before multi-broker support have none, and fall back to the fpmarkets
+   * integration so they keep behaving exactly as before.
+   */
+  broker_integration_id?: mongoose.Types.ObjectId;
   status: "draft" | "active" | "completed" | "archived";
   start_date?: Date;
   end_date?: Date;
@@ -30,6 +36,10 @@ const TournamentSchema: Schema = new Schema(
     cover: { type: String, required: true },
     image: { type: String, default: "" },
     registrationLink: { type: String, required: true },
+    broker_integration_id: {
+      type: Schema.Types.ObjectId,
+      ref: "BrokerIntegration",
+    },
     status: {
       type: String,
       enum: ["draft", "active", "completed", "archived"],

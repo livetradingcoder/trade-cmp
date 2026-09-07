@@ -304,6 +304,69 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
   }
 });
 
+/**
+ * One shape for a tournament over the API (the frontend expects `id`, not
+ * `_id`). This was copy-pasted at four call sites, which is how a new field
+ * ends up present on create and missing on list.
+ */
+function transformTournament(t: any) {
+  return {
+    id: t._id.toString(),
+    title: t.title,
+    tier: t.tier,
+    prize: t.prize,
+    fee: t.fee,
+    participants: t.participants,
+    timeLabel: t.timeLabel,
+    timeLeft: t.timeLeft,
+    cover: t.cover,
+    image: t.image,
+    registrationLink: t.registrationLink,
+    broker_integration_id: t.broker_integration_id
+      ? String(t.broker_integration_id)
+      : null,
+    status: t.status,
+    start_date: t.start_date,
+    end_date: t.end_date,
+  };
+}
+
+/**
+ * The broker integration a competition runs on.
+ *
+ * Falls back to fpmarkets (creating the row if absent) for competitions that
+ * predate the broker selector, so existing tournaments keep provisioning
+ * exactly as they did. Throws if the competition names an integration that is
+ * missing or disabled — silently provisioning under the wrong broker would
+ * put the participant on a leaderboard fed by someone else's data.
+ */
+async function resolveTournamentBroker(brokerIntegrationId?: unknown) {
+  if (brokerIntegrationId) {
+    const integration = await BrokerIntegration.findById(brokerIntegrationId);
+    if (!integration || !integration.enabled) {
+      throw new Error(
+        `Broker integration ${brokerIntegrationId} is missing or disabled`
+      );
+    }
+    return integration;
+  }
+
+  const connector = getBrokerConnector("fpmarkets");
+  return BrokerIntegration.findOneAndUpdate(
+    { type: "fpmarkets" },
+    {
+      $set: {
+        name: "fpmarkets",
+        enabled: true,
+        supports_raw_trades: connector.supportsRawTrades,
+        supports_snapshots: connector.supportsSnapshots,
+        supports_broker_metrics: connector.supportsBrokerMetrics,
+      },
+    },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+}
+
 // ==================== TOURNAMENT ENDPOINTS ====================
 
 // Get all tournaments
@@ -311,22 +374,7 @@ app.get("/api/tournaments", async (req, res) => {
   try {
     const tournaments = await Tournament.find().sort({ createdAt: 1 });
     // Transform _id to id for frontend compatibility
-    const transformedTournaments = tournaments.map((t) => ({
-      id: t._id.toString(),
-      title: t.title,
-      tier: t.tier,
-      prize: t.prize,
-      fee: t.fee,
-      participants: t.participants,
-      timeLabel: t.timeLabel,
-      timeLeft: t.timeLeft,
-      cover: t.cover,
-      image: t.image,
-      registrationLink: t.registrationLink,
-      status: t.status,
-      start_date: t.start_date,
-      end_date: t.end_date,
-    }));
+    const transformedTournaments = tournaments.map((t) => (transformTournament(t)));
     res.json(transformedTournaments);
   } catch (error) {
     console.error("Fetch tournaments error:", error);
@@ -340,22 +388,7 @@ app.get("/api/tournaments/:id", async (req, res) => {
     const tournament = await Tournament.findById(req.params.id);
     if (tournament) {
       // Transform _id to id for frontend compatibility
-      const transformed = {
-        id: tournament._id.toString(),
-        title: tournament.title,
-        tier: tournament.tier,
-        prize: tournament.prize,
-        fee: tournament.fee,
-        participants: tournament.participants,
-        timeLabel: tournament.timeLabel,
-        timeLeft: tournament.timeLeft,
-        cover: tournament.cover,
-        image: tournament.image,
-        registrationLink: tournament.registrationLink,
-        status: tournament.status,
-        start_date: tournament.start_date,
-        end_date: tournament.end_date,
-      };
+      const transformed = transformTournament(tournament);
       res.json(transformed);
     } else {
       res.status(404).json({ error: "Tournament not found" });
@@ -396,22 +429,7 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
 
     const tournament = await Tournament.create(tournamentData);
     // Transform _id to id for frontend compatibility
-    const transformed = {
-      id: tournament._id.toString(),
-      title: tournament.title,
-      tier: tournament.tier,
-      prize: tournament.prize,
-      fee: tournament.fee,
-      participants: tournament.participants,
-      timeLabel: tournament.timeLabel,
-      timeLeft: tournament.timeLeft,
-      cover: tournament.cover,
-      image: tournament.image,
-      registrationLink: tournament.registrationLink,
-      status: tournament.status,
-      start_date: tournament.start_date,
-      end_date: tournament.end_date,
-    };
+    const transformed = transformTournament(tournament);
     res.json(transformed);
   } catch (error) {
     console.error("Create tournament error:", error);
@@ -434,22 +452,7 @@ app.put("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) => {
     });
     if (tournament) {
       // Transform _id to id for frontend compatibility
-      const transformed = {
-        id: tournament._id.toString(),
-        title: tournament.title,
-        tier: tournament.tier,
-        prize: tournament.prize,
-        fee: tournament.fee,
-        participants: tournament.participants,
-        timeLabel: tournament.timeLabel,
-        timeLeft: tournament.timeLeft,
-        cover: tournament.cover,
-        image: tournament.image,
-        registrationLink: tournament.registrationLink,
-        status: tournament.status,
-        start_date: tournament.start_date,
-        end_date: tournament.end_date,
-      };
+      const transformed = transformTournament(tournament);
       res.json(transformed);
     } else {
       res.status(404).json({ error: "Tournament not found" });
@@ -881,7 +884,13 @@ app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, r
 
     // Populate user info and tournament for email
     await participant.populate("user_id", "email fp_account_number");
-    await participant.populate("tournament_id", "title start_date end_date");
+    // broker_integration_id is needed below to provision under the
+    // competition's own broker — omitting it from the projection silently
+    // fell back to fpmarkets for every competition.
+    await participant.populate(
+      "tournament_id",
+      "title start_date end_date broker_integration_id"
+    );
 
     // Send approval email with the tournament's real dates
     const user = participant.user_id as any;
@@ -907,19 +916,11 @@ app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, r
     // Auto-provision the trading account so this participant is picked up by
     // the next sync immediately — no manual E2E-panel step required.
     try {
-      const connector = getBrokerConnector("fpmarkets");
-      const integration = await BrokerIntegration.findOneAndUpdate(
-        { type: "fpmarkets" },
-        {
-          $set: {
-            name: "fpmarkets",
-            enabled: true,
-            supports_raw_trades: connector.supportsRawTrades,
-            supports_snapshots: connector.supportsSnapshots,
-            supports_broker_metrics: connector.supportsBrokerMetrics,
-          },
-        },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
+      // The competition's own broker. Competitions created before multi-broker
+      // support carry none, so fall back to the fpmarkets integration — which
+      // is what this used to do unconditionally.
+      const integration = await resolveTournamentBroker(
+        (tournament as any)?.broker_integration_id
       );
 
       // The account entered for THIS tournament. Falls back to the user's

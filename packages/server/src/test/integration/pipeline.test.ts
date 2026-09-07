@@ -577,6 +577,87 @@ describe("full pipeline with fixture connector", () => {
     expect(pending.account_balance.source).toBe("broker_live");
   });
 
+  it("provisions under the competition's own broker", async () => {
+    // Multi-broker: approval used to hardcode fpmarkets, so every participant
+    // landed on FP no matter which broker the competition ran on.
+    const fixtureIntegration = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fixture", name: "Fixture (broker choice)" });
+    expect(fixtureIntegration.status).toBe(200);
+    const integrationId = fixtureIntegration.body.integration._id;
+
+    const tid = await createTournament("Broker choice");
+    await request(app)
+      .put(`/api/tournaments/${tid}`)
+      .set(auth())
+      .send({ broker_integration_id: integrationId })
+      .expect(200);
+
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: tid,
+        email: "broker.choice@example.test",
+        fp_account_number: "70000200",
+        is_new_user: true,
+      })
+      .expect(200);
+
+    await request(app)
+      .put(`/api/participants/${apply.body.participant.id}/approve`)
+      .set(auth())
+      .expect(200);
+
+    const account = await TradingAccount.findOne({ tournament_id: tid });
+    expect(String(account!.broker_integration_id)).toBe(String(integrationId));
+  });
+
+  it("falls back to fpmarkets for a competition with no broker set", async () => {
+    // Competitions created before the selector existed must keep working.
+    const tid = await createTournament("No broker set");
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: tid,
+        email: "legacy.broker@example.test",
+        fp_account_number: "70000201",
+        is_new_user: true,
+      })
+      .expect(200);
+
+    await request(app)
+      .put(`/api/participants/${apply.body.participant.id}/approve`)
+      .set(auth())
+      .expect(200);
+
+    const account = await TradingAccount.findOne({
+      tournament_id: tid,
+    }).populate("broker_integration_id");
+    expect((account!.broker_integration_id as any).type).toBe("fpmarkets");
+  });
+
+  it("returns the competition's broker over the API", async () => {
+    const integration = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fixture" });
+    const integrationId = integration.body.integration._id;
+
+    const tid = await createTournament("Broker in payload");
+    await request(app)
+      .put(`/api/tournaments/${tid}`)
+      .set(auth())
+      .send({ broker_integration_id: integrationId })
+      .expect(200);
+
+    // Present on the list too, not just on the update response — the admin
+    // form reads the list to preselect the broker.
+    const list = await request(app).get("/api/tournaments");
+    const listed = list.body.find((t: any) => t.id === tid);
+    expect(listed.broker_integration_id).toBe(String(integrationId));
+  });
+
   it("refuses an account correction without a token", async () => {
     const res = await request(app)
       .put("/api/participants/000000000000000000000000/trading-account")

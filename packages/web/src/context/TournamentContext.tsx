@@ -17,6 +17,8 @@ export interface Tournament {
   cover: string;
   image?: string;
   registrationLink: string;
+  /** Broker this competition runs on; empty means the server default. */
+  broker_integration_id?: string | null;
   status?: "draft" | "active" | "completed" | "archived";
   start_date?: string;
   end_date?: string;

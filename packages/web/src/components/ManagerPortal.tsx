@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, X, Lock, User, Edit3, Trash2, ExternalLink, Save, XCircle, LogOut, Trophy, Plus, Info } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
@@ -96,7 +96,43 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
     image: "",
     registrationLink: "",
+    broker_integration_id: "",
   });
+
+  const API_URL =
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD ? "" : "http://localhost:3001");
+
+  // Brokers a competition can run on. A competition left without one falls
+  // back to fpmarkets server-side, which is how every competition behaved
+  // before the selector existed.
+  const [brokerIntegrations, setBrokerIntegrations] = useState<
+    { _id: string; type: string; name: string; enabled: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+    fetch(`${API_URL}/api/admin/broker-integrations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setBrokerIntegrations(d?.integrations || []))
+      .catch(() => setBrokerIntegrations([]));
+  }, []);
+
+  const brokerOptions = (
+    <>
+      <option value=''>Default (FP Markets)</option>
+      {brokerIntegrations
+        .filter((i) => i.enabled)
+        .map((i) => (
+          <option key={i._id} value={i._id}>
+            {i.name || i.type}
+          </option>
+        ))}
+    </>
+  );
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +167,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
       cover: tournament.cover,
       image: tournament.image || "",
       registrationLink: tournament.registrationLink,
+      broker_integration_id: (tournament as any).broker_integration_id || "",
     });
   };
 
@@ -180,6 +217,7 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
             "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
           image: "",
           registrationLink: "",
+          broker_integration_id: "",
         });
       }
     }
@@ -474,6 +512,23 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                           />
                         </FieldWithTooltip>
                         <FieldWithTooltip
+                          label='Broker'
+                          tooltip='Which broker this competition runs on. Participant accounts are provisioned against it and the leaderboard is synced from it. Leave as Default unless the competition uses another broker.'
+                        >
+                          <select
+                            value={newTournament.broker_integration_id || ""}
+                            onChange={(e) =>
+                              setNewTournament({
+                                ...newTournament,
+                                broker_integration_id: e.target.value,
+                              })
+                            }
+                            style={inputStyle}
+                          >
+                            {brokerOptions}
+                          </select>
+                        </FieldWithTooltip>
+                        <FieldWithTooltip
                           label='Time Label'
                           tooltip='The label showing the time status (e.g., "Starts in" for upcoming, "Ends in" for active)'
                         >
@@ -631,6 +686,23 @@ const ManagerPortal = ({ onClose }: ManagerPortalProps) => {
                                 style={{ ...inputStyle, gridColumn: "1 / -1" }}
                               />
                             </FieldWithTooltip>
+                              <FieldWithTooltip
+                                label='Broker'
+                                tooltip='Which broker this competition runs on. Changing it affects participants approved from now on; accounts already provisioned keep their broker.'
+                              >
+                                <select
+                                  value={editData.broker_integration_id || ""}
+                                  onChange={(e) =>
+                                    setEditData({
+                                      ...editData,
+                                      broker_integration_id: e.target.value,
+                                    })
+                                  }
+                                  style={inputStyle}
+                                >
+                                  {brokerOptions}
+                                </select>
+                              </FieldWithTooltip>
                             <FieldWithTooltip label='Cover Image URL' tooltip='The main cover/banner image URL for the tournament card'>
                               <input
                                 type='text'

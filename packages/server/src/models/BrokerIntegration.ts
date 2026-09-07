@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IBrokerIntegration extends Document {
-  type: "fixture" | "simulation" | "fpmarkets";
+  type: string;
   name: string;
   enabled: boolean;
   supports_account_validation: boolean;
@@ -20,7 +20,10 @@ const BrokerIntegrationSchema: Schema = new Schema(
   {
     type: {
       type: String,
-      enum: ["fixture", "simulation", "fpmarkets"],
+      // Deliberately not an enum: the connector registry is the source of
+      // truth for which brokers exist, and the admin endpoint already rejects
+      // a type it cannot resolve. A schema enum would mean a model change for
+      // every new broker.
       required: true,
     },
     name: { type: String, required: true },
