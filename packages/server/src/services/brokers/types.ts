@@ -1,6 +1,14 @@
 export interface ConnectorAccountInput {
   accountNumber: string;
   userId: string;
+  /**
+   * Where to resume pulling this account's activity from (ISO 8601).
+   *
+   * Brokers that support incremental reads use it instead of a date range, so
+   * each sync fetches only what is new. Absent on the first sync for an
+   * account, which then backfills from the competition start.
+   */
+  cursor?: string | null;
 }
 
 import { BrokerConfig } from "./config";
@@ -58,6 +66,12 @@ export interface FetchCompetitionDataResult {
   snapshots: NormalizedSnapshotInput[];
   trades: NormalizedTradeInput[];
   brokerMetrics: BrokerMetricInput[];
+  /**
+   * Where the next sync should resume, per account. Persisted by the caller
+   * and handed back as ConnectorAccountInput.cursor. Omit for brokers that
+   * have no incremental read.
+   */
+  cursors?: { accountNumber: string; cursor: string }[];
 }
 
 /** A balance a broker can report for an account it manages. */

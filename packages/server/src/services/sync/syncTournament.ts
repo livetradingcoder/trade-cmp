@@ -121,6 +121,9 @@ export async function syncTournament(
           accounts: group.map((account) => ({
             accountNumber: account.broker_account_number,
             userId: String((account.user_id as any)?._id ?? account.user_id),
+            // Resume where the last sync stopped, so a steady-state run reads
+            // only new activity instead of the whole competition each minute.
+            cursor: account.activity_cursor,
           })),
           startDate,
           endDate,
@@ -289,11 +292,29 @@ export async function syncTournament(
       accountsProcessed += result.accounts.length;
       succeededGroups++;
 
-      // Mark this group's accounts as freshly synced.
-      await TradingAccount.updateMany(
-        { _id: { $in: group.map((account) => account._id) } },
-        { $set: { last_synced_at: now, sync_state: "ready" } }
+      // Mark this group's accounts as freshly synced, and store each one's
+      // resume point. Written per account because the cursors differ.
+      const cursorByNumber = new Map(
+        (result.cursors ?? []).map((c) => [c.accountNumber, c.cursor])
       );
+      const accountUpdates = group.map((account) => {
+        const cursor = cursorByNumber.get(account.broker_account_number);
+        return {
+          updateOne: {
+            filter: { _id: account._id },
+            update: {
+              $set: {
+                last_synced_at: now,
+                sync_state: "ready" as const,
+                ...(cursor ? { activity_cursor: cursor } : {}),
+              },
+            },
+          },
+        };
+      });
+      if (accountUpdates.length > 0) {
+        await TradingAccount.bulkWrite(accountUpdates, { ordered: false });
+      }
     } catch (error: any) {
       failedGroups++;
       const message = error?.message || "Unknown sync error";

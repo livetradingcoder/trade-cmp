@@ -269,3 +269,162 @@ describe("fpMarkets connector", () => {
     ).rejects.toThrow("FP_MARKETS_TOKEN");
   });
 });
+
+/**
+ * FP changed trade-activity on 2026-09-03: a start_date/end_date span wider
+ * than 3 days now returns 422, and their `net_pnl` was documented as profit
+ * only — not net of commission and swaps, despite the name.
+ */
+describe("fpMarkets trade activity (post 2026-09-03)", () => {
+  beforeEach(() => {
+    setEnv();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env = OLD_ENV;
+  });
+
+  const performancePayload = {
+    data: {
+      resource: {
+        accounts: [
+          {
+            account_number: "81049662",
+            currency: "usd",
+            metrics: { roi: 0, starting_balance: 0, current_balance: 1000 },
+            status: "active",
+          },
+        ],
+      },
+    },
+  };
+
+  function tradePayload(trades: any[], next: string | null) {
+    return {
+      data: {
+        resource: {
+          trades,
+          next_since_timestamp: next,
+          meta: { total: trades.length, per_page: 200, current_page: 1, last_page: 1 },
+        },
+      },
+    };
+  }
+
+  /** Capture every activity request body the connector sends. */
+  function runWith(tradeResponses: any[]) {
+    const bodies: any[] = [];
+    let call = 0;
+    mockFetch(async (url: string, init: any) => {
+      const body = JSON.parse(init.body);
+      if (String(url).includes("/api/account/performance")) {
+        return { ok: true, status: 200, json: async () => performancePayload };
+      }
+      bodies.push(body);
+      const payload = tradeResponses[Math.min(call, tradeResponses.length - 1)];
+      call++;
+      return { ok: true, status: 200, json: async () => payload };
+    });
+    return bodies;
+  }
+
+  it("asks by cursor, never by a date range wider than FP allows", async () => {
+    const bodies = runWith([tradePayload([], null)]);
+
+    await fpMarketsConnector.fetchCompetitionData({
+      tournamentId: "t1",
+      accounts: [{ accountNumber: "81049662", userId: "u1" }],
+      // A two-week competition: range mode would 422 on this.
+      startDate: "2026-08-01T00:00:00.000Z",
+      endDate: "2026-08-15T00:00:00.000Z",
+    });
+
+    expect(bodies.length).toBeGreaterThan(0);
+    for (const body of bodies) {
+      expect(body.since_timestamp).toBeTruthy();
+      // Sending both modes is rejected by FP; sending a range is what broke.
+      expect(body.start_date).toBeUndefined();
+      expect(body.end_date).toBeUndefined();
+    }
+  });
+
+  it("resumes from the account's stored cursor instead of the competition start", async () => {
+    const bodies = runWith([tradePayload([], null)]);
+
+    await fpMarketsConnector.fetchCompetitionData({
+      tournamentId: "t1",
+      accounts: [
+        {
+          accountNumber: "81049662",
+          userId: "u1",
+          cursor: "2026-08-10T00:00:00.000Z",
+        },
+      ],
+      startDate: "2026-08-01T00:00:00.000Z",
+      endDate: "2026-08-15T00:00:00.000Z",
+    });
+
+    expect(bodies[0].since_timestamp).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  it("walks forward until the broker stops advancing, and reports the resume point", async () => {
+    // Each cursor call covers at most 3 days, so a backfill takes several.
+    const bodies = runWith([
+      tradePayload([], "2026-08-04T00:00:00.000Z"),
+      tradePayload([], "2026-08-07T00:00:00.000Z"),
+      tradePayload([], "2026-08-07T00:00:00.000Z"), // no advance -> stop
+    ]);
+
+    const result = await fpMarketsConnector.fetchCompetitionData({
+      tournamentId: "t1",
+      accounts: [{ accountNumber: "81049662", userId: "u1" }],
+      startDate: "2026-08-01T00:00:00.000Z",
+      endDate: "2026-08-15T00:00:00.000Z",
+    });
+
+    expect(bodies.length).toBe(3);
+    expect(bodies[1].since_timestamp).toBe("2026-08-04T00:00:00.000Z");
+    expect(result.cursors).toEqual([
+      { accountNumber: "81049662", cursor: "2026-08-07T00:00:00.000Z" },
+    ]);
+  });
+
+  it("nets commission and swaps out of P&L", async () => {
+    runWith([
+      tradePayload(
+        [
+          {
+            transaction_id: 1,
+            product: "FX-Raw",
+            open_time: "2026-08-02T10:00:00+00:00",
+            close_time: "2026-08-02T11:00:00+00:00",
+            open_price: 1.1,
+            close_price: 1.2,
+            volume: 1,
+            profit: 100,
+            commission: 7,
+            swaps: 3,
+            // FP sends net_pnl === profit; the name is misleading.
+            net_pnl: 100,
+          },
+        ],
+        null
+      ),
+    ]);
+
+    const result = await fpMarketsConnector.fetchCompetitionData({
+      tournamentId: "t1",
+      accounts: [{ accountNumber: "81049662", userId: "u1" }],
+      startDate: "2026-08-01T00:00:00.000Z",
+      endDate: "2026-08-15T00:00:00.000Z",
+    });
+
+    // 100 gross - 7 commission - 3 swaps. Taking net_pnl at face value would
+    // overstate this trader by 10 on a single trade.
+    expect(result.trades).toHaveLength(1);
+    expect(result.trades[0].netPnl).toBeCloseTo(90, 6);
+    expect(result.trades[0].fees).toBe(7);
+    expect(result.trades[0].swap).toBe(3);
+  });
+});

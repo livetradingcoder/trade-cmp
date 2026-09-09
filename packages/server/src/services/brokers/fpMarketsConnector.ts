@@ -353,11 +353,25 @@ function extractActivityError(payload: unknown): string | null {
   return extractError(payload);
 }
 
+/**
+ * Trade/cash activity accepts two mutually exclusive modes:
+ *
+ * - range  (`start_date` + `end_date`) reads the cron-refreshed local table.
+ *   Since FP's 2026-09-03 change the span may not exceed 3 days; a wider one
+ *   returns 422, which silently broke every competition longer than that.
+ * - cursor (`since_timestamp`) reads live from the trading DB, skipping the
+ *   cron lag that put trades ~13 minutes behind, and returns
+ *   `next_since_timestamp` to resume from.
+ *
+ * We use cursor mode: it is both the real-time path and the one that is not
+ * bounded by the competition's length.
+ */
 interface ActivityParams {
   rebateAccountNumber: string;
   accountNumber: string;
-  startDate: string;
-  endDate: string;
+  startDate?: string;
+  endDate?: string;
+  sinceTimestamp?: string;
 }
 
 /** One signed POST to an activity endpoint (page-scoped), with a hard timeout. */
@@ -382,8 +396,10 @@ async function activityRequest(
       body: JSON.stringify({
         rebate_account_number: params.rebateAccountNumber,
         account_number: params.accountNumber,
-        start_date: params.startDate,
-        end_date: params.endDate,
+        // Exactly one mode per request — sending both is rejected.
+        ...(params.sinceTimestamp
+          ? { since_timestamp: params.sinceTimestamp }
+          : { start_date: params.startDate, end_date: params.endDate }),
         page: params.page,
         per_page: ACTIVITY_PER_PAGE,
       }),
@@ -412,14 +428,16 @@ async function activityRequest(
  * POST a paginated activity endpoint and concatenate `field` records across all
  * pages (following meta.last_page). Same auth as the performance API.
  */
+/** Every page of one request window. */
 async function fetchActivityPaged<T>(
   config: FpMarketsConfig,
   path: string,
   field: "trades" | "transactions",
   params: ActivityParams
-): Promise<T[]> {
+): Promise<{ records: T[]; nextSinceTimestamp: string | null }> {
   const all: T[] = [];
   let page = 1;
+  let nextSinceTimestamp: string | null = null;
 
   for (let guard = 0; guard < ACTIVITY_MAX_PAGES; guard++) {
     const { status, ok, payload } = await activityRequest(config, path, {
@@ -438,32 +456,81 @@ async function fetchActivityPaged<T>(
     const records = Array.isArray(resource?.[field]) ? resource[field] : [];
     all.push(...(records as T[]));
 
+    if (typeof resource?.next_since_timestamp === "string") {
+      nextSinceTimestamp = resource.next_since_timestamp;
+    }
+
     const lastPage =
       typeof resource?.meta?.last_page === "number" ? resource.meta.last_page : page;
     if (page >= lastPage || records.length === 0) break;
     page += 1;
   }
 
-  return all;
+  return { records: all, nextSinceTimestamp };
 }
 
-export function fetchTradeActivity(
+/** Each cursor call covers at most 3 days, so catching up needs several. */
+const ACTIVITY_MAX_WINDOWS = 40;
+
+/**
+ * Walk cursor windows from `since` until the broker stops advancing.
+ *
+ * Returns the records and the timestamp the next sync should resume from, so
+ * a steady-state sync fetches only what is new instead of re-reading the whole
+ * competition every 60 seconds.
+ */
+async function fetchActivitySince<T>(
+  config: FpMarketsConfig,
+  path: string,
+  field: "trades" | "transactions",
+  base: { rebateAccountNumber: string; accountNumber: string },
+  since: string
+): Promise<{ records: T[]; cursor: string }> {
+  const all: T[] = [];
+  let cursor = since;
+
+  for (let window = 0; window < ACTIVITY_MAX_WINDOWS; window++) {
+    const { records, nextSinceTimestamp } = await fetchActivityPaged<T>(
+      config,
+      path,
+      field,
+      { ...base, sinceTimestamp: cursor }
+    );
+    all.push(...records);
+
+    // No advance means we have reached the live edge; stop rather than spin.
+    if (!nextSinceTimestamp || nextSinceTimestamp <= cursor) break;
+    cursor = nextSinceTimestamp;
+    if (new Date(cursor).getTime() >= Date.now()) break;
+  }
+
+  return { records: all, cursor };
+}
+
+export async function fetchTradeActivity(
   config: FpMarketsConfig,
   params: ActivityParams
 ): Promise<FpTrade[]> {
-  return fetchActivityPaged<FpTrade>(config, TRADE_ACTIVITY_PATH, "trades", params);
+  const { records } = await fetchActivityPaged<FpTrade>(
+    config,
+    TRADE_ACTIVITY_PATH,
+    "trades",
+    params
+  );
+  return records;
 }
 
-export function fetchCashActivity(
+export async function fetchCashActivity(
   config: FpMarketsConfig,
   params: ActivityParams
 ): Promise<FpCashTransaction[]> {
-  return fetchActivityPaged<FpCashTransaction>(
+  const { records } = await fetchActivityPaged<FpCashTransaction>(
     config,
     CASH_ACTIVITY_PATH,
     "transactions",
     params
   );
+  return records;
 }
 
 export interface ActivityProbeSide {
@@ -584,6 +651,7 @@ export const fpMarketsConnector: BrokerConnector = {
     const matchedAccounts: FetchCompetitionDataResult["accounts"] = [];
     const snapshots: NormalizedSnapshotInput[] = [];
     const trades: NormalizedTradeInput[] = [];
+    const cursors: { accountNumber: string; cursor: string }[] = [];
 
     const startCapturedAt = `${startDate}T00:00:00.000Z`;
 
@@ -625,14 +693,22 @@ export const fpMarketsConnector: BrokerConnector = {
         source: "broker",
       });
 
-      // Closed trades for this account (paginated). Downstream this yields
-      // trade count, win rate, and an exact (deposit-immune) P&L / ROI.
-      const fpTrades = await fetchTradeActivity(config, {
-        rebateAccountNumber,
-        accountNumber: account.accountNumber,
-        startDate: activityStart,
-        endDate: activityEnd,
-      });
+      // Closed trades for this account, read incrementally. Downstream this
+      // yields trade count, win rate, and an exact (deposit-immune) P&L / ROI.
+      //
+      // Resume from this account's cursor; on the first sync there is none, so
+      // start at the competition's start date. Range mode is not usable here —
+      // FP caps a range at 3 days, which is shorter than any real competition.
+      const since =
+        account.cursor || input.startDate || `${startDate}T00:00:00.000Z`;
+      const { records: fpTrades, cursor } = await fetchActivitySince<FpTrade>(
+        config,
+        TRADE_ACTIVITY_PATH,
+        "trades",
+        { rebateAccountNumber, accountNumber: account.accountNumber },
+        new Date(since).toISOString()
+      );
+      cursors.push({ accountNumber: account.accountNumber, cursor });
       for (const ft of fpTrades) {
         if (!ft.close_time) continue; // closed trades only
         trades.push({
@@ -649,7 +725,12 @@ export const fpMarketsConnector: BrokerConnector = {
           closePrice: ft.close_price ?? 0,
           fees: ft.commission ?? 0,
           swap: ft.swaps ?? 0,
-          netPnl: ft.net_pnl ?? 0,
+          // FP's net_pnl is NOT net: their docs state it equals `profit`,
+          // excluding commission and swaps. Taking it at face value overstates
+          // every trader's P&L, and ROI with it, on any account that pays
+          // commission. Net it here so the rest of the pipeline gets what the
+          // field name promises.
+          netPnl: (ft.net_pnl ?? ft.profit ?? 0) - (ft.commission ?? 0) - (ft.swaps ?? 0),
           currency,
           source: "broker",
         });
@@ -661,6 +742,7 @@ export const fpMarketsConnector: BrokerConnector = {
       snapshots,
       trades,
       brokerMetrics: [],
+      cursors,
     };
   },
 };

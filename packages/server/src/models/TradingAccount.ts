@@ -10,6 +10,12 @@ export interface ITradingAccount extends Document {
   status: "active" | "pending" | "disabled";
   validated_at?: Date;
   last_synced_at?: Date;
+  /**
+   * Where the next activity read resumes from (ISO 8601), for brokers that
+   * support incremental reads. Absent until the first successful sync, which
+   * backfills from the competition start.
+   */
+  activity_cursor?: string;
   sync_state: "idle" | "ready" | "error";
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +48,7 @@ const TradingAccountSchema: Schema = new Schema(
     },
     validated_at: { type: Date },
     last_synced_at: { type: Date },
+    activity_cursor: { type: String },
     sync_state: {
       type: String,
       enum: ["idle", "ready", "error"],
