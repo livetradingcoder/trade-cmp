@@ -25,11 +25,18 @@ import {
  * the returned trading accounts back to the participant accounts we were asked
  * about.
  *
- * The API does not return raw trades, and its `roi` field is reserved (always
- * 0). We therefore emit two balance snapshots per account (starting_balance and
- * current_balance) and let calculateLeaderboard derive ROI from equity change.
+ * Raw trades come from the per-account Trade Activity API, so P&L, trade count
+ * and win rate are computed from real trades and `supportsRawTrades` is true.
+ * The Performance API's `roi` and `starting_balance` are reserved (always 0),
+ * so ROI is derived instead: Σ net_pnl ÷ (current_balance − Σ net_pnl).
  *
- * Credentials are read from the environment for the beta integration:
+ * Credentials come from the integration's own config, so several brokers can
+ * speak this protocol at once — see docs in BROKER_INTEGRATION_SPEC.md and
+ * services/brokers/config.ts. Keys: `base_url`, `token`, `secret`,
+ * `rebate_accounts`.
+ *
+ * They fall back to the environment when an integration carries no config,
+ * which is how the original FP integration is still configured:
  *   FP_MARKETS_BASE_URL          (default https://ibbeta.fptrading.com)
  *   FP_MARKETS_TOKEN             (required)
  *   FP_MARKETS_SECRET            (required)
