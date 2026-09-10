@@ -6,7 +6,7 @@ import SyncRun from "../../models/SyncRun";
 import LeaderboardCache from "../../models/LeaderboardCache";
 import BrokerIntegration from "../../models/BrokerIntegration";
 import Participant from "../../models/Participant";
-import { getBrokerConnector } from "../brokers";
+import { getBrokerConnector, isIntegrationConnected } from "../brokers";
 import { listManagedAccounts } from "../brokers/managedAccounts";
 import { BrokerConfig, resolveBrokerConfig } from "../brokers/config";
 import {
@@ -114,6 +114,17 @@ export async function syncTournament(
       }
 
       const connector = getBrokerConnector(integration.type);
+
+      // A broker picked for a competition before its API credentials exist:
+      // traders can join, but there is nothing to sync from yet. Fail the
+      // group with a message an admin can act on — never fall back to FP.
+      if (!isIntegrationConnected(integration)) {
+        throw new Error(
+          `${
+            (integration as any).display_name || integration.name
+          } is not connected for live data yet — add its API credentials`
+        );
+      }
 
       const result: FetchCompetitionDataResult =
         await connector.fetchCompetitionData({

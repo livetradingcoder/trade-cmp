@@ -170,7 +170,7 @@ const AdminDashboard = () => {
 
   // Brokers a competition can run on, for the Broker selector.
   const [brokerIntegrations, setBrokerIntegrations] = useState<
-    { _id: string; type: string; name: string; display_name?: string; enabled: boolean }[]
+    { _id: string; type: string; name: string; display_name?: string; enabled: boolean; connected?: boolean }[]
   >([]);
 
   useEffect(() => {
@@ -182,6 +182,17 @@ const AdminDashboard = () => {
       .then((d) => setBrokerIntegrations(d?.integrations || []))
       .catch(() => setBrokerIntegrations([]));
   }, [isAdmin, API_URL]);
+
+  const [newBrokerName, setNewBrokerName] = useState("");
+
+  // The original FP integration is what "no broker" already means, so it is the
+  // blank option rather than a second FP entry named "fpmarkets".
+  const isLegacyFp = (i: { type: string; name: string }) =>
+    i.type === "fpmarkets" && i.name === "fpmarkets";
+  const legacyFpLabel = brokerIntegrations.find(isLegacyFp)?.display_name || "FPTrading";
+  const selectedBroker = brokerIntegrations.find(
+    (i) => i._id === formData.broker_integration_id
+  );
 
   // Fetch affiliate code on mount
   useEffect(() => {
@@ -353,12 +364,63 @@ const AdminDashboard = () => {
       return;
     }
 
+    // "Other…" registers the broker first; the competition then points at it.
+    let payload = formData;
+    if (formData.broker_integration_id === "__other__") {
+      const name = newBrokerName.trim();
+      if (!name) {
+        setSaveMessage({ type: "error", text: "Enter the broker's name" });
+        return;
+      }
+      // Typing a broker that already exists reuses it instead of creating an
+      // unconnected duplicate — including FP itself.
+      const typed = name.toLowerCase();
+      const existing = brokerIntegrations.find((i) =>
+        [i.display_name, i.name].some((n) => n && n.toLowerCase() === typed)
+      );
+      let brokerId: string | null = null;
+      if (typed === legacyFpLabel.toLowerCase() || (existing && isLegacyFp(existing))) {
+        brokerId = "";
+      } else if (existing) {
+        brokerId = existing._id;
+      } else {
+        try {
+          const res = await fetch(`${API_URL}/api/admin/broker-integrations`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+            },
+            // Conforming brokers speak the FP protocol (BROKER_INTEGRATION_SPEC.md).
+            body: JSON.stringify({ type: "fpmarkets", name, display_name: name }),
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data?.integration?._id) {
+            throw new Error(data?.message || "Could not add the broker");
+          }
+          brokerId = data.integration._id;
+          setBrokerIntegrations((prev) =>
+            prev.some((i) => i._id === data.integration._id) ? prev : [...prev, data.integration]
+          );
+        } catch (error) {
+          setSaveMessage({
+            type: "error",
+            text: error instanceof Error ? error.message : "Could not add the broker",
+          });
+          return;
+        }
+      }
+      payload = { ...formData, broker_integration_id: brokerId };
+      setFormData(payload);
+      setNewBrokerName("");
+    }
+
     setIsSaving(true);
     setSaveMessage({ type: "", text: "" });
 
     try {
       if (viewMode === "create") {
-        const success = await createTournament(formData);
+        const success = await createTournament(payload);
         if (success) {
           setSaveMessage({ type: "success", text: "Competition created successfully!" });
           setTimeout(() => {
@@ -369,7 +431,7 @@ const AdminDashboard = () => {
           setSaveMessage({ type: "error", text: "Failed to create competition" });
         }
       } else if (viewMode === "edit" && editingTournament) {
-        const success = await updateTournament(editingTournament.id, formData);
+        const success = await updateTournament(editingTournament.id, payload);
         if (success) {
           setSaveMessage({ type: "success", text: "Competition updated successfully!" });
           setTimeout(() => {
@@ -949,14 +1011,16 @@ const AdminDashboard = () => {
                             setFormData({ ...formData, broker_integration_id: e.target.value })
                           }
                         >
-                          <option value=''>Default (FPTrading)</option>
+                          <option value=''>{legacyFpLabel}</option>
                           {brokerIntegrations
-                            .filter((i) => i.enabled && i.type !== "fixture")
+                            .filter((i) => i.enabled && i.type !== "fixture" && !isLegacyFp(i))
                             .map((i) => (
                               <option key={i._id} value={i._id}>
-                                {i.display_name || i.name}
+                                {(i.display_name || i.name) +
+                                  (i.connected === false ? " — not connected yet" : "")}
                               </option>
                             ))}
+                          <option value='__other__'>Other…</option>
                         </select>
                       </div>
                       <div className='form-group'>
@@ -969,6 +1033,25 @@ const AdminDashboard = () => {
                         />
                       </div>
                     </div>
+
+                    {formData.broker_integration_id === "__other__" && (
+                      <div className='form-group'>
+                        <label>Broker Name *</label>
+                        <input
+                          type='text'
+                          value={newBrokerName}
+                          onChange={(e) => setNewBrokerName(e.target.value)}
+                          placeholder='e.g., VT Markets'
+                        />
+                      </div>
+                    )}
+                    {(formData.broker_integration_id === "__other__" ||
+                      selectedBroker?.connected === false) && (
+                      <p style={{ fontSize: "0.85rem", color: "#fbbf24", margin: "4px 0 0" }}>
+                        Traders can join straight away. The leaderboard starts once this
+                        broker's API credentials are added.
+                      </p>
+                    )}
                   </div>
 
                   {/* Images */}

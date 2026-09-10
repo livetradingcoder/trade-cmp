@@ -7,6 +7,7 @@ import TradingAccount from "../../models/TradingAccount";
 import LeaderboardCache from "../../models/LeaderboardCache";
 import AccountSnapshot from "../../models/AccountSnapshot";
 import Trade from "../../models/Trade";
+import { fpMarketsConnector } from "../../services/brokers/fpMarketsConnector";
 
 /**
  * Full-pipeline integration test against the real Express app and an in-memory
@@ -851,7 +852,7 @@ describe("full pipeline with fixture connector", () => {
     const integration = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
-      .send({ type: "fpmarkets", name: "FP Markets" });
+      .send({ type: "fpmarkets", name: "FP Markets", config: { token: "test-token", secret: "test-secret" } });
     const integrationId = integration.body.integration._id;
 
     const tid = await createTournament("Unmatched account");
@@ -892,6 +893,49 @@ describe("full pipeline with fixture connector", () => {
     expect(unmatched!.last_synced_at).toBeFalsy();
   });
 
+  it("reports an unconnected broker and never syncs it with FP's keys", async () => {
+    const vt = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fpmarkets", name: "VT Markets (unconnected)", display_name: "VT Markets" });
+    expect(vt.status).toBe(200);
+    expect(vt.body.integration.connected).toBe(false);
+
+    const withKeys = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fpmarkets", name: "Keyed broker", config: { token: "t", secret: "s" } });
+    expect(withKeys.body.integration.connected).toBe(true);
+
+    const tid = await createTournament("VT unconnected");
+    await request(app)
+      .put(`/api/tournaments/${tid}`)
+      .set(auth())
+      .send({ broker_integration_id: vt.body.integration._id })
+      .expect(200);
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({ tournament_id: tid, email: "vt.trader@example.test", fp_account_number: "5550001", is_new_user: true })
+      .expect(200);
+    await request(app)
+      .put(`/api/participants/${apply.body.participant.id}/approve`)
+      .set(auth())
+      .expect(200);
+
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}), text: async () => "{}" })));
+    const fetchSpy = vi.spyOn(fpMarketsConnector, "fetchCompetitionData");
+
+    const sync = await request(app).post(`/api/admin/sync/${tid}`).set(auth());
+    expect(sync.body.status).toBe("failed");
+    expect(JSON.stringify(sync.body.errors)).toContain("not connected");
+    // The trap: the connector must not run at all for this broker.
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+
+    const account = await TradingAccount.findOne({ tournament_id: tid });
+    expect(account!.sync_state).toBe("error");
+  });
+
   it("refuses an account correction without a token", async () => {
     const res = await request(app)
       .put("/api/participants/000000000000000000000000/trading-account")
@@ -918,7 +962,7 @@ describe("full pipeline with fpmarkets connector (mocked broker API)", () => {
     const integrationRes = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
-      .send({ type: "fpmarkets", name: "FP Markets" });
+      .send({ type: "fpmarkets", name: "FP Markets", config: { token: "test-token", secret: "test-secret" } });
     expect(integrationRes.status).toBe(200);
     const integrationId = integrationRes.body.integration._id;
 

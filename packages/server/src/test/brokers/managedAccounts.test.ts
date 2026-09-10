@@ -109,14 +109,28 @@ describe("listManagedAccounts", () => {
   });
 
   it("calls a shared connector once when two integrations use it", async () => {
-    await enable("fpmarkets", "fp-a");
-    await enable("fpmarkets", "fp-b");
+    // Two integrations sharing one credential set: still one call.
+    const shared = { token: "t", secret: "s", base_url: "https://x.test", rebate_accounts: "1" };
+    await BrokerIntegration.create({ type: "fpmarkets", name: "fp-a", enabled: true, config: shared });
+    await BrokerIntegration.create({ type: "fpmarkets", name: "fp-b", enabled: true, config: shared });
     const spy = vi
       .spyOn(fpMarketsConnector, "listManagedAccounts")
       .mockResolvedValue(new Set(["111"]));
 
     await listManagedAccounts();
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("unconnected brokers", () => {
+  it("never asks a broker that has no credentials of its own", async () => {
+    // A new broker added by name only. Without this guard it would fall back
+    // to FP's env keys and query FP on its behalf.
+    await BrokerIntegration.create({ type: "fpmarkets", name: "VT Markets", enabled: true });
+    const spy = vi.spyOn(fpMarketsConnector, "listManagedAccounts");
+
+    expect([...(await listManagedAccounts())]).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 

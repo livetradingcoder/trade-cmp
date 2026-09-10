@@ -1,5 +1,5 @@
 import BrokerIntegration from "../../models/BrokerIntegration";
-import { getBrokerConnector } from "./index";
+import { getBrokerConnector, isIntegrationConnected } from "./index";
 import { BrokerAccountBalance, BrokerConnector } from "./types";
 import { BrokerConfig, resolveBrokerConfig } from "./config";
 
@@ -33,12 +33,14 @@ interface EnabledBroker {
  */
 async function enabledBrokers(): Promise<EnabledBroker[]> {
   const integrations = await BrokerIntegration.find({ enabled: true }).select(
-    "type config"
+    "type name config"
   );
 
   const brokers: EnabledBroker[] = [];
   const seen = new Set<string>();
   for (const integration of integrations) {
+    // No credentials yet: nothing to ask, and asking would borrow FP's keys.
+    if (!isIntegrationConnected(integration)) continue;
     const type = String(integration.type);
     const config = resolveBrokerConfig(integration.config as BrokerConfig);
     const key = `${type}|${JSON.stringify(config)}`;

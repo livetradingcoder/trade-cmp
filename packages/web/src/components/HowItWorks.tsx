@@ -2,19 +2,22 @@ import { motion } from "framer-motion";
 import { UserPlus, BarChart2, Trophy, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 
+// Order follows what a trader actually does: pick a competition, join it with
+// their broker account, trade, then watch where they stand. Icons travel with
+// their step; colours stay with the position.
 const steps = [
   {
-    icon: UserPlus,
+    icon: Wallet,
     number: "01",
-    title: "Create Account",
-    desc: "Register and verify.",
+    title: "Choose a Competition",
+    desc: "Daily, weekly, or monthly events.",
     color: "#667eea",
   },
   {
-    icon: Wallet,
+    icon: UserPlus,
     number: "02",
-    title: "Choose a Competition",
-    desc: "Daily, weekly, or monthly events.",
+    title: "Register and Verify",
+    desc: "Enter your email and trading account number.",
     color: "#f093fb",
   },
   {
@@ -27,8 +30,8 @@ const steps = [
   {
     icon: Trophy,
     number: "04",
-    title: "Win & Withdraw",
-    desc: "Top performers share the prize pool.",
+    title: "Follow the Leaderboard",
+    desc: "Compete for the lead.",
     color: "#ffd700",
   },
 ];

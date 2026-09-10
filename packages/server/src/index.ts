@@ -34,7 +34,7 @@ import {
   listManagedAccounts,
   getManagedAccountBalances,
 } from "./services/brokers/managedAccounts";
-import { getBrokerConnector } from "./services/brokers";
+import { getBrokerConnector, isIntegrationConnected } from "./services/brokers";
 import {
   encryptBrokerConfig,
   redactBrokerConfig,
@@ -1472,6 +1472,7 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
       integration: {
         ...integration.toObject(),
         config: redactBrokerConfig(integration.config as any),
+        connected: isIntegrationConnected(integration as any),
       },
     });
   } catch (error) {
@@ -1489,6 +1490,7 @@ app.get("/api/admin/broker-integrations", verifyToken, async (_req: AuthRequest,
       integrations: integrations.map((integration) => ({
         ...integration.toObject(),
         config: redactBrokerConfig(integration.config as any),
+        connected: isIntegrationConnected(integration as any),
       })),
     });
   } catch (error) {

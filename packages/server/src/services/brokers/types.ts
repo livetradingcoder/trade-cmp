@@ -82,6 +82,12 @@ export interface BrokerAccountBalance {
 
 export interface BrokerConnector {
   type: string;
+  /**
+   * Whether this connector needs per-integration API credentials to fetch.
+   * An integration of such a connector without credentials is "not connected":
+   * joining works, the leaderboard waits.
+   */
+  requiresCredentials?: boolean;
   supportsRawTrades: boolean;
   supportsSnapshots: boolean;
   supportsBrokerMetrics: boolean;

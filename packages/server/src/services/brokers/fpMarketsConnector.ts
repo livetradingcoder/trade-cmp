@@ -630,6 +630,7 @@ export async function probeFpActivity(
 
 export const fpMarketsConnector: BrokerConnector = {
   type: "fpmarkets",
+  requiresCredentials: true,
   // Both read the same cached Account Performance response, so neither adds
   // broker calls on top of what referral verification already fetches.
   listManagedAccounts: getRebateAccountNumbers,
