@@ -250,18 +250,30 @@ found here, not in testing.
 
 ## Appendix — for LiveTradingLeague operators
 
-A conforming broker needs **no code**. Add it in the admin:
+A conforming broker needs **no code**:
 
-- **Type** — the protocol. Use `fpmarkets`; it names this contract, not the
-  company, and is what every conforming broker speaks.
-- **Name** — the broker's display name. Integrations are keyed by name, so two
-  brokers on one protocol coexist. Do **not** reuse a name.
-- **Config** — `base_url`, `token`, `secret`, `rebate_accounts`
-  (comma-separated or an array). Secrets are encrypted at rest and redacted in
-  API responses.
+1. **Add it**: Admin → Settings → Brokers → *Add a broker* (or *Other…* in
+   the competition form). It is registered on the `fpmarkets` protocol, which
+   names this contract, not the company. Brokers are keyed by name, so several
+   coexist on one protocol; do **not** reuse a name.
+2. **Connect it**: a developer sets four variables in the app server's
+   environment, named after the broker. `<NAME>` is the name upper-cased with
+   anything that isn't a letter or digit replaced by `_`, so "VT Markets"
+   becomes `VT_MARKETS`:
+   - `BROKER_<NAME>_BASE_URL`
+   - `BROKER_<NAME>_TOKEN`
+   - `BROKER_<NAME>_SECRET`
+   - `BROKER_<NAME>_REBATE_ACCOUNTS` (comma-separated)
 
-Then pick that broker when creating a competition. Participants approved into it
-are provisioned against it, and the sync pulls from it.
+   Settings → Brokers lists the exact names and which are set; values are
+   never shown. All four are required: a partly configured broker stays *not
+   connected* and is never called, so its keys can't be sent to another
+   broker's host. The server picks them up on its next deploy, and the broker
+   then shows **Connected**.
+3. **Use it**: pick it when creating a competition. Traders can join before
+   step 2; its leaderboard fills in once it is connected.
+
+FPTrading, the original integration, keeps reading `FP_MARKETS_*`.
 
 A broker that deviates from this contract needs its own connector in
 `packages/server/src/services/brokers/` — one file implementing

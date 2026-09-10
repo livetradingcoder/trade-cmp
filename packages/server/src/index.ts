@@ -34,7 +34,11 @@ import {
   listManagedAccounts,
   getManagedAccountBalances,
 } from "./services/brokers/managedAccounts";
-import { getBrokerConnector, isIntegrationConnected } from "./services/brokers";
+import {
+  brokerEnvStatus,
+  getBrokerConnector,
+  isIntegrationConnected,
+} from "./services/brokers";
 import {
   encryptBrokerConfig,
   redactBrokerConfig,
@@ -1473,6 +1477,8 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
         ...integration.toObject(),
         config: redactBrokerConfig(integration.config as any),
         connected: isIntegrationConnected(integration as any),
+        // Names and presence only — values never leave the server.
+        env_status: brokerEnvStatus(integration as any),
       },
     });
   } catch (error) {
@@ -1491,6 +1497,8 @@ app.get("/api/admin/broker-integrations", verifyToken, async (_req: AuthRequest,
         ...integration.toObject(),
         config: redactBrokerConfig(integration.config as any),
         connected: isIntegrationConnected(integration as any),
+        // Names and presence only — values never leave the server.
+        env_status: brokerEnvStatus(integration as any),
       })),
     });
   } catch (error) {

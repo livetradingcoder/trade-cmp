@@ -31,6 +31,7 @@ import {
   Mail,
   Loader,
   FlaskConical,
+  Building2,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
@@ -168,9 +169,18 @@ const AdminDashboard = () => {
     }
   }, [showCapitalTooltip]);
 
-  // Brokers a competition can run on, for the Broker selector.
+  // Brokers a competition can run on: the Broker selector and Settings → Brokers.
   const [brokerIntegrations, setBrokerIntegrations] = useState<
-    { _id: string; type: string; name: string; display_name?: string; enabled: boolean; connected?: boolean }[]
+    {
+      _id: string;
+      type: string;
+      name: string;
+      display_name?: string;
+      enabled: boolean;
+      connected?: boolean;
+      // Env var name -> whether it is set. Names only; values never leave the server.
+      env_status?: Record<string, boolean>;
+    }[]
   >([]);
 
   useEffect(() => {
@@ -193,6 +203,76 @@ const AdminDashboard = () => {
   const selectedBroker = brokerIntegrations.find(
     (i) => i._id === formData.broker_integration_id
   );
+
+  // Test-only connectors (the Sync E2E page) are not brokers a competition runs on.
+  const isTestBroker = (i: { type: string }) => i.type === "fixture" || i.type === "simulation";
+  const brokerLabel = (i: { type: string; name: string; display_name?: string }) =>
+    isLegacyFp(i) ? legacyFpLabel : i.display_name || i.name;
+  const findBrokerByName = (name: string) => {
+    const typed = name.trim().toLowerCase();
+    return brokerIntegrations.find((i) =>
+      [i.display_name, i.name, isLegacyFp(i) ? legacyFpLabel : ""].some(
+        (n) => n && n.toLowerCase() === typed
+      )
+    );
+  };
+
+  // Registers a broker on the FP protocol (BROKER_INTEGRATION_SPEC.md). It is
+  // selectable at once; a developer connects it later through env vars.
+  const addBroker = async (name: string) => {
+    const res = await fetch(`${API_URL}/api/admin/broker-integrations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+      },
+      body: JSON.stringify({ type: "fpmarkets", name, display_name: name }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.integration?._id) {
+      throw new Error(data?.message || "Could not add the broker");
+    }
+    setBrokerIntegrations((prev) =>
+      prev.some((i) => i._id === data.integration._id) ? prev : [...prev, data.integration]
+    );
+    return data.integration as { _id: string };
+  };
+
+  const [settingsBrokerName, setSettingsBrokerName] = useState("");
+  const [isAddingBroker, setIsAddingBroker] = useState(false);
+  const [brokerMessage, setBrokerMessage] = useState<{ type: "success" | "error" | ""; text: string }>({
+    type: "",
+    text: "",
+  });
+
+  const handleAddBrokerFromSettings = async () => {
+    const name = settingsBrokerName.trim();
+    if (!name) return;
+    const existing = findBrokerByName(name);
+    if (existing || name.toLowerCase() === legacyFpLabel.toLowerCase()) {
+      setBrokerMessage({
+        type: "error",
+        text: `${existing ? brokerLabel(existing) : legacyFpLabel} is already on the list`,
+      });
+      return;
+    }
+    setIsAddingBroker(true);
+    try {
+      await addBroker(name);
+      setSettingsBrokerName("");
+      setBrokerMessage({
+        type: "success",
+        text: `${name} added. It's in the Broker menu when you create a competition.`,
+      });
+    } catch (error) {
+      setBrokerMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Could not add the broker",
+      });
+    } finally {
+      setIsAddingBroker(false);
+    }
+  };
 
   // Fetch affiliate code on mount
   useEffect(() => {
@@ -374,34 +454,15 @@ const AdminDashboard = () => {
       }
       // Typing a broker that already exists reuses it instead of creating an
       // unconnected duplicate — including FP itself.
-      const typed = name.toLowerCase();
-      const existing = brokerIntegrations.find((i) =>
-        [i.display_name, i.name].some((n) => n && n.toLowerCase() === typed)
-      );
+      const existing = findBrokerByName(name);
       let brokerId: string | null = null;
-      if (typed === legacyFpLabel.toLowerCase() || (existing && isLegacyFp(existing))) {
+      if (name.toLowerCase() === legacyFpLabel.toLowerCase() || (existing && isLegacyFp(existing))) {
         brokerId = "";
       } else if (existing) {
         brokerId = existing._id;
       } else {
         try {
-          const res = await fetch(`${API_URL}/api/admin/broker-integrations`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-            },
-            // Conforming brokers speak the FP protocol (BROKER_INTEGRATION_SPEC.md).
-            body: JSON.stringify({ type: "fpmarkets", name, display_name: name }),
-          });
-          const data = await res.json().catch(() => null);
-          if (!res.ok || !data?.integration?._id) {
-            throw new Error(data?.message || "Could not add the broker");
-          }
-          brokerId = data.integration._id;
-          setBrokerIntegrations((prev) =>
-            prev.some((i) => i._id === data.integration._id) ? prev : [...prev, data.integration]
-          );
+          brokerId = (await addBroker(name))._id;
         } catch (error) {
           setSaveMessage({
             type: "error",
@@ -1013,7 +1074,7 @@ const AdminDashboard = () => {
                         >
                           <option value=''>{legacyFpLabel}</option>
                           {brokerIntegrations
-                            .filter((i) => i.enabled && i.type !== "fixture" && !isLegacyFp(i))
+                            .filter((i) => i.enabled && !isTestBroker(i) && !isLegacyFp(i))
                             .map((i) => (
                               <option key={i._id} value={i._id}>
                                 {(i.display_name || i.name) +
@@ -1048,8 +1109,8 @@ const AdminDashboard = () => {
                     {(formData.broker_integration_id === "__other__" ||
                       selectedBroker?.connected === false) && (
                       <p style={{ fontSize: "0.85rem", color: "#fbbf24", margin: "4px 0 0" }}>
-                        Traders can join straight away. The leaderboard starts once this
-                        broker's API credentials are added.
+                        Traders can join straight away. The leaderboard starts once a
+                        developer connects this broker — see Settings → Brokers.
                       </p>
                     )}
                   </div>
@@ -1325,6 +1386,90 @@ const AdminDashboard = () => {
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Brokers */}
+                <div className='settings-section'>
+                  <div className='settings-section-header'>
+                    <Building2 size={20} />
+                    <h3>Brokers</h3>
+                  </div>
+                  <p className='settings-description'>
+                    Brokers a competition can run on. Each one listed here appears in the Broker
+                    menu when you create a competition. A developer connects a new broker by adding
+                    its API keys to the server; until then traders can join, but its leaderboard
+                    stays empty.
+                  </p>
+
+                  <div className='broker-list'>
+                    {brokerIntegrations
+                      .filter((i) => !isTestBroker(i))
+                      .map((i) => (
+                        <div key={i._id} className='broker-row'>
+                          <div className='broker-row-head'>
+                            <span className='broker-name'>{brokerLabel(i)}</span>
+                            {i.connected ? (
+                              <span className='broker-status connected'>
+                                <CheckCircle size={14} /> Connected
+                              </span>
+                            ) : (
+                              <span className='broker-status pending'>
+                                <AlertCircle size={14} /> Needs developer configuration
+                              </span>
+                            )}
+                          </div>
+                          {!i.connected && i.env_status && (
+                            <div className='broker-env'>
+                              <p>For the developer: set these on the server (Railway → Variables).</p>
+                              <ul>
+                                {Object.entries(i.env_status).map(([envName, isSet]) => (
+                                  <li key={envName}>
+                                    <code>{envName}</code>
+                                    <span className={isSet ? "env-set" : "env-missing"}>
+                                      {isSet ? "set" : "missing"}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className='form-group'>
+                    <label>Add a broker</label>
+                    <div className='broker-add-row'>
+                      <input
+                        type='text'
+                        value={settingsBrokerName}
+                        onChange={(e) => setSettingsBrokerName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddBrokerFromSettings();
+                          }
+                        }}
+                        placeholder='e.g., VT Markets'
+                      />
+                      <button
+                        type='button'
+                        className='test-button'
+                        onClick={handleAddBrokerFromSettings}
+                        disabled={isAddingBroker || !settingsBrokerName.trim()}
+                      >
+                        {isAddingBroker ? <Loader className='spinner' size={16} /> : <Plus size={16} />}
+                        Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {brokerMessage.text && (
+                    <div className={brokerMessage.type === "success" ? "success-message" : "error-message"}>
+                      {brokerMessage.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                      {brokerMessage.text}
+                    </div>
+                  )}
                 </div>
 
                 {/* Mailgun Configuration Section */}
@@ -2420,6 +2565,109 @@ const dashboardStyles = `
 
   .settings-section + .settings-section {
     margin-top: 2rem;
+  }
+
+  .broker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .broker-row {
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .broker-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .broker-name {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .broker-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .broker-status.connected {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  .broker-status.pending {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+  }
+
+  .broker-env {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  .broker-env p {
+    margin: 0 0 6px;
+  }
+
+  .broker-env ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .broker-env li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .broker-env code {
+    font-family: var(--font-mono);
+    color: rgba(255, 255, 255, 0.85);
+    overflow-wrap: anywhere;
+  }
+
+  .broker-env .env-set {
+    color: #22c55e;
+  }
+
+  .broker-env .env-missing {
+    color: #fbbf24;
+  }
+
+  .broker-add-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .broker-add-row input {
+    flex: 1;
+  }
+
+  .broker-add-row .test-button {
+    margin-top: 0;
+    white-space: nowrap;
   }
 
   .success-message {

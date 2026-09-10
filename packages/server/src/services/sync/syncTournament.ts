@@ -6,9 +6,12 @@ import SyncRun from "../../models/SyncRun";
 import LeaderboardCache from "../../models/LeaderboardCache";
 import BrokerIntegration from "../../models/BrokerIntegration";
 import Participant from "../../models/Participant";
-import { getBrokerConnector, isIntegrationConnected } from "../brokers";
+import {
+  effectiveBrokerConfig,
+  getBrokerConnector,
+  isIntegrationConnected,
+} from "../brokers";
 import { listManagedAccounts } from "../brokers/managedAccounts";
-import { BrokerConfig, resolveBrokerConfig } from "../brokers/config";
 import {
   FetchCompetitionDataResult,
   NormalizedSnapshotInput,
@@ -140,7 +143,7 @@ export async function syncTournament(
           endDate,
           // This integration's own credentials, so two accounts of the same
           // broker don't pull each other's data.
-          config: resolveBrokerConfig(integration.config as BrokerConfig),
+          config: effectiveBrokerConfig(integration),
         });
 
       const accountByNumber = new Map(

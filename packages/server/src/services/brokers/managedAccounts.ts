@@ -1,7 +1,11 @@
 import BrokerIntegration from "../../models/BrokerIntegration";
-import { getBrokerConnector, isIntegrationConnected } from "./index";
+import {
+  effectiveBrokerConfig,
+  getBrokerConnector,
+  isIntegrationConnected,
+} from "./index";
 import { BrokerAccountBalance, BrokerConnector } from "./types";
-import { BrokerConfig, resolveBrokerConfig } from "./config";
+import { BrokerConfig } from "./config";
 
 /**
  * Broker-agnostic access to "which accounts do we manage, and what do they
@@ -42,7 +46,7 @@ async function enabledBrokers(): Promise<EnabledBroker[]> {
     // No credentials yet: nothing to ask, and asking would borrow FP's keys.
     if (!isIntegrationConnected(integration)) continue;
     const type = String(integration.type);
-    const config = resolveBrokerConfig(integration.config as BrokerConfig);
+    const config = effectiveBrokerConfig(integration);
     const key = `${type}|${JSON.stringify(config)}`;
     if (seen.has(key)) continue;
     seen.add(key);

@@ -20,12 +20,30 @@ import {
 
 let mongod: MongoMemoryServer;
 
+// `enable("fpmarkets")` is the live FPTrading integration, which is configured
+// through FP_MARKETS_*. Its connector calls are mocked; the env only has to
+// make it count as connected, as it does in production.
+const FP_ENV = {
+  FP_MARKETS_TOKEN: "test-token",
+  FP_MARKETS_SECRET: "test-secret",
+  FP_MARKETS_REBATE_ACCOUNTS: "477779",
+};
+const savedEnv: Record<string, string | undefined> = {};
+
 beforeAll(async () => {
+  for (const [name, value] of Object.entries(FP_ENV)) {
+    savedEnv[name] = process.env[name];
+    process.env[name] = value;
+  }
   mongod = await MongoMemoryServer.create();
   await mongoose.connect(mongod.getUri("ltl_brokers_test"));
 }, 120_000);
 
 afterAll(async () => {
+  for (const [name, value] of Object.entries(savedEnv)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
   await mongoose.disconnect();
   await mongod?.stop();
 });

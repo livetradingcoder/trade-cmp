@@ -11,9 +11,11 @@ Snapshot for resuming in a fresh session. Repo: `github.com/livetradingcoder/tra
 The FP Markets leaderboard integration **works end-to-end on beta** (`ibbeta.fptrading.com`):
 join → approve (auto-provisions trading account) → referral-verified → 1-min sync pulls
 FP balances + trades → ranked leaderboard with **real ROI, P&L, trade count, win rate,
-currency**. Verified live on the public + admin boards. Server tests: **54 passing**.
+currency**. Verified live on the public + admin boards. Server tests: all passing
+(`npm test` in `packages/server`).
 
-`main` HEAD = **`18df76f`**. Railway auto-deploys `main`; it's the live app.
+Railway auto-deploys `main`, but only for pushes touching `packages/**`; it's the live app.
+Competitions now choose their broker (see "Brokers" below).
 
 **The only gate to production is FP's prod environment** (below). Nothing on our side blocks.
 
@@ -100,7 +102,47 @@ Admin probes we added: `GET /api/admin/fp-test?start_date&end_date` (performance
 
 ---
 
+## Brokers (2026-09-10)
+
+Every competition runs on one broker. A broker that follows `BROKER_INTEGRATION_SPEC.md`
+(FP's API contract) needs no code.
+
+- **Admin → Settings → Brokers** lists each broker as **Connected** or **Needs developer
+  configuration**, and adds new ones by name. *Other…* in the competition form does the same.
+- **Connecting one** means setting four Railway variables named after it ("VT Markets" →
+  `VT_MARKETS`): `BROKER_VT_MARKETS_BASE_URL`, `BROKER_VT_MARKETS_TOKEN`,
+  `BROKER_VT_MARKETS_SECRET`, `BROKER_VT_MARKETS_REBATE_ACCOUNTS` (comma-separated). The
+  Settings page shows the exact names and which are set, never the values. Railway stages
+  variable edits, so deploy them to apply.
+- **All four are required.** A partial set stays "not connected" and is never called: the
+  connector fills missing fields from FP's env, so a broker with only keys would send them
+  to FP's host against FP's rebate accounts.
+- The broker must also allowlist our egress IPs (`/api/egress-ip`).
+- **FPTrading** (integration `name: fpmarkets`, display name "FPTrading") keeps reading
+  `FP_MARKETS_*`. Its status checks those vars field by field, the same way the connector
+  does.
+- Brokers as of 2026-09-10: FPTrading (connected) and VT Markets (added, not connected).
+- Code lives in `packages/server/src/services/brokers/index.ts` (`brokerEnvVars`,
+  `effectiveBrokerConfig`, `isIntegrationConnected`). Env vars override any config stored on
+  the integration record. The encrypted per-integration config is an older path the admin
+  API still accepts.
+
+---
+
 ## What this session shipped (commits, newest first)
+
+**Multi-broker (after 2026-08-11):**
+
+- Settings → Brokers; brokers connect through `BROKER_<NAME>_*` env vars (2026-09-10)
+- `af685ce` add brokers from the competition form; reorder How It Works
+- `509a538` stop the FP cursor walk at the live edge; reject malformed account numbers
+- `e77605d` join flow and admin form follow the competition's broker
+- `8fe56c3` FP trade activity moved to cursor mode (range mode is capped at 3 days); P&L netted
+  as profit − commission − swaps
+- `915c246` `e4caecf` `738e469` `f79b4c5` one protocol for many brokers, a broker per
+  competition, per-integration encrypted credentials, managed accounts on the connector
+- `fd289cc` `546182e` broker integration spec
+- `0fa6511` `ee2657c` `c8a9df3` homepage copy (static prize line, ticker)
 
 **2026-08-11 (client-reported):**
 
@@ -158,7 +200,9 @@ Admin probes we added: `GET /api/admin/fp-test?start_date&end_date` (performance
    correctness; wire it later if you want deposit/withdrawal display or a stricter baseline.
 5. ~~**Vercel** projects are redundant~~ **DONE** — already deleted. Only the orphaned
    `livetradingleague.com` domain entry remains on the Vercel team; reclaim when convenient.
-6. **www-canonical** (optional): today www/apex 302→app.*. To make www the served site you'd add
+6. **VT Markets** is added but not connected. It needs its four `BROKER_VT_MARKETS_*`
+   variables once VT sends credentials, and VT must allowlist our egress IPs.
+7. **www-canonical** (optional): today www/apex 302→app.*. To make www the served site you'd add
    www as a Railway custom domain and point its CNAME there (see `/Users/klev/RAILWAY_DNS_HANDOFF.md`).
 
 ---

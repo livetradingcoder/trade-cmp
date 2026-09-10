@@ -852,7 +852,7 @@ describe("full pipeline with fixture connector", () => {
     const integration = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
-      .send({ type: "fpmarkets", name: "FP Markets", config: { token: "test-token", secret: "test-secret" } });
+      .send({ type: "fpmarkets", name: "FP Markets", config: { token: "test-token", secret: "test-secret", base_url: "https://ibbeta.fptrading.com", rebate_accounts: "477779" } });
     const integrationId = integration.body.integration._id;
 
     const tid = await createTournament("Unmatched account");
@@ -904,7 +904,7 @@ describe("full pipeline with fixture connector", () => {
     const withKeys = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
-      .send({ type: "fpmarkets", name: "Keyed broker", config: { token: "t", secret: "s" } });
+      .send({ type: "fpmarkets", name: "Keyed broker", config: { token: "t", secret: "s", base_url: "https://k.example", rebate_accounts: "1" } });
     expect(withKeys.body.integration.connected).toBe(true);
 
     const tid = await createTournament("VT unconnected");
@@ -962,7 +962,7 @@ describe("full pipeline with fpmarkets connector (mocked broker API)", () => {
     const integrationRes = await request(app)
       .post("/api/admin/broker-integrations")
       .set(auth())
-      .send({ type: "fpmarkets", name: "FP Markets", config: { token: "test-token", secret: "test-secret" } });
+      .send({ type: "fpmarkets", name: "FP Markets", config: { token: "test-token", secret: "test-secret", base_url: "https://ibbeta.fptrading.com", rebate_accounts: "477779" } });
     expect(integrationRes.status).toBe(200);
     const integrationId = integrationRes.body.integration._id;
 
