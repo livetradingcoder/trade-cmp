@@ -94,6 +94,8 @@ const AdminDashboard = () => {
       "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
     image: "",
     registrationLink: "",
+    broker_integration_id: "",
+    referral_code: "",
   });
 
   // Password change state
@@ -150,6 +152,8 @@ const AdminDashboard = () => {
         cover: editingTournament.cover,
         image: editingTournament.image || "",
         registrationLink: editingTournament.registrationLink,
+        broker_integration_id: editingTournament.broker_integration_id || "",
+        referral_code: editingTournament.referral_code || "",
       });
     }
   }, [viewMode, editingTournament]);
@@ -164,11 +168,28 @@ const AdminDashboard = () => {
     }
   }, [showCapitalTooltip]);
 
+  // Brokers a competition can run on, for the Broker selector.
+  const [brokerIntegrations, setBrokerIntegrations] = useState<
+    { _id: string; type: string; name: string; display_name?: string; enabled: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch(`${API_URL}/api/admin/broker-integrations`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setBrokerIntegrations(d?.integrations || []))
+      .catch(() => setBrokerIntegrations([]));
+  }, [isAdmin, API_URL]);
+
   // Fetch affiliate code on mount
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/settings/affiliateCode`);
+        const response = await fetch(`${API_URL}/api/settings/affiliateCode`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` },
+        });
         if (response.ok) {
           const data = await response.json();
           setAffiliateCode(data.value || "");
@@ -190,7 +211,9 @@ const AdminDashboard = () => {
         const settings: Record<string, string> = {};
 
         for (const key of keys) {
-          const response = await fetch(`${API_URL}/api/settings/${key}`);
+          const response = await fetch(`${API_URL}/api/settings/${key}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` },
+          });
           if (response.ok) {
             const data = await response.json();
             settings[key] = data.value || "";
@@ -290,6 +313,8 @@ const AdminDashboard = () => {
         "https://firebasestorage.googleapis.com/v0/b/fortraders-production.firebasestorage.app/o/public%2Ftournament_cover%2Fe2207b07-3cdb-4e1b-96d8-1763c85679ae.jpg?alt=media",
       image: "",
       registrationLink: "",
+      broker_integration_id: "",
+      referral_code: "",
     });
   };
 
@@ -311,6 +336,8 @@ const AdminDashboard = () => {
       cover: tournament.cover,
       image: tournament.image || "",
       registrationLink: tournament.registrationLink,
+      broker_integration_id: tournament.broker_integration_id || "",
+      referral_code: tournament.referral_code || "",
     });
     setSaveMessage({ type: "", text: "" });
     navigate(`/admin/competitions/${tournament.id}/edit`);
@@ -911,6 +938,36 @@ const AdminDashboard = () => {
                         onChange={(e) => setFormData({ ...formData, registrationLink: e.target.value })}
                         placeholder='https://example.com/register'
                       />
+                    </div>
+
+                    <div className='form-row'>
+                      <div className='form-group'>
+                        <label>Broker</label>
+                        <select
+                          value={formData.broker_integration_id || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, broker_integration_id: e.target.value })
+                          }
+                        >
+                          <option value=''>Default (FPTrading)</option>
+                          {brokerIntegrations
+                            .filter((i) => i.enabled && i.type !== "fixture")
+                            .map((i) => (
+                              <option key={i._id} value={i._id}>
+                                {i.display_name || i.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <div className='form-group'>
+                        <label>Referral Code</label>
+                        <input
+                          type='text'
+                          value={formData.referral_code || ""}
+                          onChange={(e) => setFormData({ ...formData, referral_code: e.target.value })}
+                          placeholder='Leave empty to use the site-wide code'
+                        />
+                      </div>
                     </div>
                   </div>
 

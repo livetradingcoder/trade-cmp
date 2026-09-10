@@ -9,6 +9,10 @@ interface JoinCompetitionDialogProps {
   tournamentId: string;
   tournamentTitle: string;
   referralCode?: string;
+  /** The competition's broker, as traders should see it. */
+  brokerName?: string;
+  /** Where new traders open their broker account — set per competition. */
+  registrationLink?: string;
 }
 
 const JoinCompetitionDialog = ({
@@ -16,7 +20,9 @@ const JoinCompetitionDialog = ({
   onClose,
   tournamentId,
   tournamentTitle,
-  referralCode = "AFFASAD",
+  referralCode = "",
+  brokerName = "FPTrading",
+  registrationLink,
 }: JoinCompetitionDialogProps) => {
   const [userType, setUserType] = useState<"new" | "existing" | null>(null);
   const [email, setEmail] = useState("");
@@ -34,11 +40,10 @@ const JoinCompetitionDialog = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // The competition's own link. This used to be a hardcoded FP signup URL, so a
+  // competition on any other broker sent new traders to the wrong broker.
   const handleOpenBrokerRegistration = () => {
-    window.open(
-      "https://portal.fptrading.com/register?fpm-affiliate-utm-source=IB&fpm-affiliate-agt=477779",
-      "_blank"
-    );
+    if (registrationLink) window.open(registrationLink, "_blank");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,7 +166,7 @@ const JoinCompetitionDialog = ({
           {/* User Type Selection */}
           {!userType && !success && (
             <div className="dialog-body">
-              <h3 className="section-title">Do you have an FPTrading account?</h3>
+              <h3 className="section-title">Do you have an account with {brokerName}?</h3>
               <div className="user-type-buttons">
                 <button
                   className="user-type-button"
@@ -169,7 +174,7 @@ const JoinCompetitionDialog = ({
                 >
                   <div className="user-type-icon">✓</div>
                   <div>
-                    <div className="user-type-title">Yes, I have an FPTrading account with your referral code</div>
+                    <div className="user-type-title">Yes, I have an account with {brokerName} under your referral code</div>
                   </div>
                 </button>
                 <button
@@ -178,7 +183,7 @@ const JoinCompetitionDialog = ({
                 >
                   <div className="user-type-icon">+</div>
                   <div>
-                    <div className="user-type-title">I'm new. Create an FPTrading account with your referral code.</div>
+                    <div className="user-type-title">I'm new. Open an account with {brokerName} using your referral code.</div>
                   </div>
                 </button>
               </div>
@@ -196,7 +201,7 @@ const JoinCompetitionDialog = ({
                     <div>
                       <div className="referral-title">Referral Code Required</div>
                       <div className="referral-description">
-                        Your FPTrading account must have been created using our referral code <strong>{referralCode}</strong>. If your account was not registered with this code, please contact support to have it transferred before applying.
+                        Your {brokerName} account must have been created using our referral code <strong>{referralCode}</strong>. If your account was not registered with this code, please contact support to have it transferred before applying.
                       </div>
                     </div>
                   </div>
@@ -210,7 +215,7 @@ const JoinCompetitionDialog = ({
                     <div>
                       <div className="referral-title">Important: Use Referral Code</div>
                       <div className="referral-description">
-                        You must create your FPTrading account using this referral code
+                        You must create your {brokerName} account using this referral code
                       </div>
                     </div>
                   </div>
@@ -230,7 +235,7 @@ const JoinCompetitionDialog = ({
                     className="broker-link-button"
                     onClick={handleOpenBrokerRegistration}
                   >
-                    Create FPTrading account
+                    Create {brokerName} account
                     <ExternalLink size={16} />
                   </button>
                   <div className="checkbox-field">
@@ -261,7 +266,7 @@ const JoinCompetitionDialog = ({
                   />
                 </div>
                 <div className="form-field">
-                  <label htmlFor="account-number">FPTrading Account Number *</label>
+                  <label htmlFor="account-number">{brokerName} Account Number *</label>
                   <input
                     type="text"
                     id="account-number"

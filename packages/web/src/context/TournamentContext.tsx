@@ -19,6 +19,10 @@ export interface Tournament {
   registrationLink: string;
   /** Broker this competition runs on; empty means the server default. */
   broker_integration_id?: string | null;
+  /** Referral code for THIS competition's broker; empty means the site-wide code. */
+  referral_code?: string | null;
+  /** Public display name of the competition's broker, e.g. "FPTrading". */
+  broker_name?: string | null;
   status?: "draft" | "active" | "completed" | "archived";
   start_date?: string;
   end_date?: string;

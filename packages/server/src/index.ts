@@ -309,7 +309,7 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
  * `_id`). This was copy-pasted at four call sites, which is how a new field
  * ends up present on create and missing on list.
  */
-function transformTournament(t: any) {
+function transformTournament(t: any, brokerName?: string | null) {
   return {
     id: t._id.toString(),
     title: t.title,
@@ -325,6 +325,10 @@ function transformTournament(t: any) {
     broker_integration_id: t.broker_integration_id
       ? String(t.broker_integration_id)
       : null,
+    // Public-safe broker identity for the join flow. Never the integration's
+    // config — that holds credentials.
+    broker_name: brokerName ?? null,
+    referral_code: t.referral_code || null,
     status: t.status,
     start_date: t.start_date,
     end_date: t.end_date,
@@ -367,6 +371,65 @@ async function resolveTournamentBroker(brokerIntegrationId?: unknown) {
   );
 }
 
+/** What traders see when a competition names no broker, or an unnamed FP one. */
+const DEFAULT_BROKER_DISPLAY = "FPTrading";
+
+/**
+ * Display name for a competition's broker in the public join flow.
+ *
+ * The live FP integration's `name` is the raw type string "fpmarkets", which
+ * isn't fit to show a trader, so FP falls back to the name the site has always
+ * used. Competitions without a broker fall back the same way, which keeps
+ * existing competitions reading exactly as before.
+ */
+function brokerDisplayName(integration: any): string {
+  if (!integration) return DEFAULT_BROKER_DISPLAY;
+  if (integration.display_name) return integration.display_name;
+  if (integration.type === "fpmarkets") return DEFAULT_BROKER_DISPLAY;
+  return integration.name || integration.type;
+}
+
+/** Broker display names for a batch of tournaments, in one query. */
+async function brokerNamesFor(tournaments: any[]): Promise<Map<string, string>> {
+  const ids = [
+    ...new Set(
+      tournaments
+        .map((t) => t.broker_integration_id)
+        .filter(Boolean)
+        .map(String)
+    ),
+  ];
+  const integrations = ids.length
+    ? await BrokerIntegration.find({ _id: { $in: ids } }).select(
+        "type name display_name"
+      )
+    : [];
+  const byId = new Map(integrations.map((i) => [String(i._id), i]));
+  const names = new Map<string, string>();
+  for (const t of tournaments) {
+    const id = t.broker_integration_id ? String(t.broker_integration_id) : "";
+    names.set(String(t._id), brokerDisplayName(id ? byId.get(id) : null));
+  }
+  return names;
+}
+
+/**
+ * The admin form sends "" for the Default broker. Passed straight through it
+ * hits an ObjectId field and throws a CastError, so creating or saving a
+ * competition on the default broker would fail.
+ */
+function normalizeTournamentBody(body: any) {
+  const out = { ...body };
+  if ("broker_integration_id" in out && !out.broker_integration_id) {
+    out.broker_integration_id = null;
+  }
+  if ("referral_code" in out) {
+    const code = typeof out.referral_code === "string" ? out.referral_code.trim() : "";
+    out.referral_code = code || null;
+  }
+  return out;
+}
+
 // ==================== TOURNAMENT ENDPOINTS ====================
 
 // Get all tournaments
@@ -374,7 +437,10 @@ app.get("/api/tournaments", async (req, res) => {
   try {
     const tournaments = await Tournament.find().sort({ createdAt: 1 });
     // Transform _id to id for frontend compatibility
-    const transformedTournaments = tournaments.map((t) => (transformTournament(t)));
+    const brokerNames = await brokerNamesFor(tournaments);
+    const transformedTournaments = tournaments.map((t) =>
+      transformTournament(t, brokerNames.get(String(t._id)))
+    );
     res.json(transformedTournaments);
   } catch (error) {
     console.error("Fetch tournaments error:", error);
@@ -388,7 +454,10 @@ app.get("/api/tournaments/:id", async (req, res) => {
     const tournament = await Tournament.findById(req.params.id);
     if (tournament) {
       // Transform _id to id for frontend compatibility
-      const transformed = transformTournament(tournament);
+      const transformed = transformTournament(
+      tournament,
+      (await brokerNamesFor([tournament])).get(String(tournament._id))
+    );
       res.json(transformed);
     } else {
       res.status(404).json({ error: "Tournament not found" });
@@ -411,7 +480,7 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
 
     // Set defaults for optional fields
     const tournamentData = {
-      ...req.body,
+      ...normalizeTournamentBody(req.body),
       tier: req.body.tier || "Weekly",
       prize: req.body.prize || "",
       fee: req.body.fee || "",
@@ -429,7 +498,10 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
 
     const tournament = await Tournament.create(tournamentData);
     // Transform _id to id for frontend compatibility
-    const transformed = transformTournament(tournament);
+    const transformed = transformTournament(
+      tournament,
+      (await brokerNamesFor([tournament])).get(String(tournament._id))
+    );
     res.json(transformed);
   } catch (error) {
     console.error("Create tournament error:", error);
@@ -444,7 +516,7 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
 app.put("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) => {
   try {
     // Filter out undefined values but keep empty strings
-    const updateData = { ...req.body };
+    const updateData = normalizeTournamentBody(req.body);
 
     const tournament = await Tournament.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
@@ -452,7 +524,10 @@ app.put("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) => {
     });
     if (tournament) {
       // Transform _id to id for frontend compatibility
-      const transformed = transformTournament(tournament);
+      const transformed = transformTournament(
+      tournament,
+      (await brokerNamesFor([tournament])).get(String(tournament._id))
+    );
       res.json(transformed);
     } else {
       res.status(404).json({ error: "Tournament not found" });
@@ -1187,12 +1262,21 @@ app.post("/api/broker/performance", async (req, res) => {
 // ==================== SETTINGS ENDPOINTS ====================
 
 // Get all settings (public)
+/**
+ * Settings anyone may read. Everything else is admin configuration: the
+ * public page only needs the affiliate code, but this endpoint used to hand
+ * anonymous callers the SMTP host, a staff email address and the mail domain.
+ */
+const PUBLIC_SETTING_KEYS = new Set(["affiliateCode"]);
+
 app.get("/api/settings", async (req, res) => {
   try {
     const settings = await Settings.find();
     const settingsObj: Record<string, string> = {};
     const secretKeys = ["smtp_pass", "mailgun_api_key"];
+    const admin = isAdminRequest(req);
     settings.forEach((s) => {
+      if (!admin && !PUBLIC_SETTING_KEYS.has(s.key)) return;
       settingsObj[s.key] = secretKeys.includes(s.key) && s.value ? "••••••••" : s.value;
     });
     res.json(settingsObj);
@@ -1205,6 +1289,9 @@ app.get("/api/settings", async (req, res) => {
 // Get specific setting (public)
 app.get("/api/settings/:key", async (req, res) => {
   try {
+    if (!PUBLIC_SETTING_KEYS.has(req.params.key) && !isAdminRequest(req)) {
+      return res.status(401).json({ error: "Admin authentication required" });
+    }
     const setting = await Settings.findOne({ key: req.params.key });
     if (setting) {
       // Mask secrets for security
@@ -1314,7 +1401,7 @@ app.post("/api/settings/smtp/test", verifyToken, async (req: AuthRequest, res) =
 // Ensure a broker integration exists for a connector type (idempotent upsert).
 // Capability flags come from the connector implementation itself.
 app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest, res) => {
-  const { type, name, config } = req.body;
+  const { type, name, config, display_name } = req.body;
 
   try {
     if (!type) {
@@ -1344,6 +1431,9 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
         $set: {
           type,
           name: integrationName,
+          ...(typeof display_name === "string" && display_name.trim()
+            ? { display_name: display_name.trim() }
+            : {}),
           enabled: true,
           supports_raw_trades: connector.supportsRawTrades,
           supports_snapshots: connector.supportsSnapshots,

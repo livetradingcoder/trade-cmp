@@ -17,6 +17,12 @@ export interface ITournament extends Document {
    * integration so they keep behaving exactly as before.
    */
   broker_integration_id?: mongoose.Types.ObjectId;
+  /**
+   * Referral code traders must sign up with at this competition's broker.
+   * Empty means the site-wide affiliateCode, which is how every competition
+   * worked before brokers could differ.
+   */
+  referral_code?: string;
   status: "draft" | "active" | "completed" | "archived";
   start_date?: Date;
   end_date?: Date;
@@ -40,6 +46,7 @@ const TournamentSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "BrokerIntegration",
     },
+    referral_code: { type: String },
     status: {
       type: String,
       enum: ["draft", "active", "completed", "archived"],

@@ -2,6 +2,8 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IBrokerIntegration extends Document {
   type: string;
+  /** What traders see, e.g. "FP Markets". Falls back to a default per type. */
+  display_name?: string;
   name: string;
   enabled: boolean;
   supports_account_validation: boolean;
@@ -27,6 +29,7 @@ const BrokerIntegrationSchema: Schema = new Schema(
       required: true,
     },
     name: { type: String, required: true },
+    display_name: { type: String },
     enabled: { type: Boolean, default: true },
     supports_account_validation: { type: Boolean, default: false },
     supports_raw_trades: { type: Boolean, default: false },

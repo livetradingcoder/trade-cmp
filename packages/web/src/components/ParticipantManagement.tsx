@@ -7,6 +7,7 @@ import "../styles/ParticipantManagement.css";
 interface Tournament {
   id: string | number;
   title: string;
+  broker_name?: string | null;
 }
 
 interface User {
@@ -230,6 +231,11 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
 
   const filteredParticipants = participants.filter((p) => p.status === activeTab);
 
+  // Warnings name the selected competition's broker, not always FP.
+  const brokerName =
+    tournaments.find((t) => String(t.id) === String(selectedTournament))?.broker_name ||
+    "FPTrading";
+
   const getStatusCounts = () => {
     return {
       pending: participants.filter((p) => p.status === "pending").length,
@@ -363,7 +369,7 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                             fontWeight: "700",
                             textTransform: "uppercase",
                           }}
-                          title="This user's FPTrading account was not registered with the platform's referral code"
+                          title={`This user's ${brokerName} account was not registered with the platform's referral code`}
                         >
                           ⚠️ No Referral Code
                         </span>
@@ -452,7 +458,7 @@ const ParticipantManagement = ({ tournaments, selectedTournamentId, onTournament
                     </div>
                     {!participant.referral_code_verified && (
                       <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#fbbf24", fontStyle: "italic" }}>
-                        ⚠️ This user may need to be manually transferred under the referral code. Coordinate with FPTrading team before approving.
+                        ⚠️ This user may need to be manually transferred under the referral code. Coordinate with the {brokerName} team before approving.
                       </div>
                     )}
                     {participant.decline_reason && (

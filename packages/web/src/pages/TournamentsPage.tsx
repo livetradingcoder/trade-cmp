@@ -12,7 +12,15 @@ const TournamentsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTournament, setSelectedTournament] = useState<{ id: string; title: string } | null>(null);
+  // Carries the broker identity the join dialog needs, not just id/title —
+  // otherwise the dialog falls back to FP for every competition.
+  const [selectedTournament, setSelectedTournament] = useState<{
+    id: string;
+    title: string;
+    registrationLink?: string;
+    referral_code?: string | null;
+    broker_name?: string | null;
+  } | null>(null);
 
   const affiliateCode = settings.affiliateCode;
 
@@ -319,7 +327,13 @@ const TournamentsPage = () => {
                   <button
                     className='btn-primary card-join-btn'
                     onClick={() => {
-                      setSelectedTournament({ id: camp.id.toString(), title: camp.title });
+                      setSelectedTournament({
+                        id: camp.id.toString(),
+                        title: camp.title,
+                        registrationLink: camp.registrationLink,
+                        referral_code: camp.referral_code,
+                        broker_name: camp.broker_name,
+                      });
                       setDialogOpen(true);
                     }}
                   >
@@ -716,7 +730,9 @@ const TournamentsPage = () => {
           }}
           tournamentId={selectedTournament.id}
           tournamentTitle={selectedTournament.title}
-          referralCode={affiliateCode}
+          referralCode={selectedTournament.referral_code || affiliateCode}
+          brokerName={selectedTournament.broker_name || undefined}
+          registrationLink={selectedTournament.registrationLink}
         />
       )}
     </section>

@@ -718,6 +718,104 @@ describe("full pipeline with fixture connector", () => {
     expect(JSON.stringify(list.body)).not.toContain("tok-b");
   });
 
+  it("exposes the competition's broker and referral code to the join flow", async () => {
+    // The join dialog used to hardcode FPTrading, FP's signup link and one
+    // site-wide referral code, so a competition on another broker told traders
+    // to open an account at the wrong broker.
+    const integration = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({
+        type: "fpmarkets",
+        name: "VT Markets (join flow)",
+        display_name: "VT Markets",
+        config: { token: "tok-vt-secret", secret: "sec-vt-secret" },
+      });
+    expect(integration.status).toBe(200);
+
+    const tid = await createTournament("VT competition");
+    await request(app)
+      .put(`/api/tournaments/${tid}`)
+      .set(auth())
+      .send({
+        broker_integration_id: integration.body.integration._id,
+        referral_code: "VT123",
+      })
+      .expect(200);
+
+    const list = await request(app).get("/api/tournaments");
+    const listed = list.body.find((t: any) => t.id === tid);
+    expect(listed.broker_name).toBe("VT Markets");
+    expect(listed.referral_code).toBe("VT123");
+
+    // Public payload: broker identity only, never the integration's credentials.
+    const payload = JSON.stringify(list.body);
+    expect(payload).not.toContain("tok-vt-secret");
+    expect(payload).not.toContain("sec-vt-secret");
+  });
+
+  it("keeps existing competitions reading as before", async () => {
+    // No broker set -> the default name the site has always shown, and no
+    // per-competition code, so the join flow falls back to the site-wide one.
+    const tid = await createTournament("Legacy competition");
+    const list = await request(app).get("/api/tournaments");
+    const listed = list.body.find((t: any) => t.id === tid);
+    expect(listed.broker_name).toBe("FPTrading");
+    expect(listed.referral_code).toBeNull();
+  });
+
+  it("accepts the Default broker as the admin form sends it", async () => {
+    // The form sends "" for Default. Unnormalized, that hits an ObjectId field
+    // and the save fails with a cast error.
+    const res = await request(app)
+      .post("/api/tournaments")
+      .set(auth())
+      .send({
+        title: "Default broker save",
+        registrationLink: "https://example.test/register",
+        broker_integration_id: "",
+        referral_code: "  ",
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.broker_integration_id).toBeNull();
+    expect(res.body.referral_code).toBeNull();
+
+    const edited = await request(app)
+      .put(`/api/tournaments/${res.body.id}`)
+      .set(auth())
+      .send({ broker_integration_id: "" });
+    expect(edited.status).toBe(200);
+  });
+
+  it("hides admin settings from anonymous callers", async () => {
+    await request(app)
+      .put("/api/settings/affiliateCode")
+      .set(auth())
+      .send({ value: "477779" })
+      .expect(200);
+    await request(app)
+      .put("/api/settings/smtp_user")
+      .set(auth())
+      .send({ value: "staff@example.test" })
+      .expect(200);
+
+    // The public page needs the affiliate code and nothing else.
+    const anon = await request(app).get("/api/settings");
+    expect(anon.body.affiliateCode).toBe("477779");
+    expect(anon.body).not.toHaveProperty("smtp_user");
+    expect(JSON.stringify(anon.body)).not.toContain("staff@example.test");
+
+    expect((await request(app).get("/api/settings/smtp_user")).status).toBe(401);
+    expect((await request(app).get("/api/settings/affiliateCode")).status).toBe(200);
+
+    // The admin dashboard still reads them.
+    const admin = await request(app).get("/api/settings").set(auth());
+    expect(admin.body.smtp_user).toBe("staff@example.test");
+    const one = await request(app).get("/api/settings/smtp_user").set(auth());
+    expect(one.status).toBe(200);
+    expect(one.body.value).toBe("staff@example.test");
+  });
+
   it("refuses an account correction without a token", async () => {
     const res = await request(app)
       .put("/api/participants/000000000000000000000000/trading-account")
