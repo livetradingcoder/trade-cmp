@@ -1006,7 +1006,7 @@ app.put("/api/participants/:id/approve", verifyToken, async (req: AuthRequest, r
     );
 
     // Auto-provision the trading account so this participant is picked up by
-    // the next sync immediately — no manual E2E-panel step required.
+    // the next sync immediately — no manual step required.
     try {
       // The competition's own broker. Competitions created before multi-broker
       // support carry none, so fall back to the fpmarkets integration — which

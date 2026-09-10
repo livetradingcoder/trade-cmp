@@ -30,17 +30,16 @@ import {
   Activity,
   Mail,
   Loader,
-  FlaskConical,
   Building2,
+  AlertTriangle,
 } from "lucide-react";
 import { useTournaments, type Tournament } from "../context/TournamentContext";
 import { ImageUpload } from "../components/ImageUpload";
 import { useNavigate, useLocation } from "react-router-dom";
 import ParticipantManagement from "../components/ParticipantManagement";
 import CompetitionManagement from "../components/CompetitionManagement";
-import E2ETestPanel from "../components/E2ETestPanel";
 
-type ViewMode = "list" | "create" | "edit" | "password" | "settings" | "participants" | "manage" | "e2e";
+type ViewMode = "list" | "create" | "edit" | "settings" | "participants" | "manage";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -58,7 +57,7 @@ const AdminDashboard = () => {
   const pathParts = location.pathname.replace(/\/$/, "").split("/");
   // /admin → list, /admin/competitions/new → create, /admin/competitions/:id/edit → edit,
   // /admin/competitions/:id/manage → manage, /admin/participants → participants,
-  // /admin/settings → settings, /admin/password → password
+  // /admin/settings → settings (so does the old /admin/password link)
   const viewMode: ViewMode = (() => {
     if (pathParts[2] === "competitions") {
       if (pathParts[3] === "new") return "create";
@@ -67,8 +66,7 @@ const AdminDashboard = () => {
     }
     if (pathParts[2] === "participants") return "participants";
     if (pathParts[2] === "settings") return "settings";
-    if (pathParts[2] === "password") return "password";
-    if (pathParts[2] === "e2e-test") return "e2e";
+    if (pathParts[2] === "password") return "settings";
     return "list";
   })();
   const urlTournamentId = pathParts[2] === "competitions" ? pathParts[3]
@@ -108,6 +106,8 @@ const AdminDashboard = () => {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  // Lives in Settings → Danger Zone; the old /admin/password link opens it.
+  const [showPasswordForm, setShowPasswordForm] = useState(pathParts[2] === "password");
 
   // Settings state
   const [affiliateCode, setAffiliateCode] = useState("");
@@ -204,7 +204,7 @@ const AdminDashboard = () => {
     (i) => i._id === formData.broker_integration_id
   );
 
-  // Test-only connectors (the Sync E2E page) are not brokers a competition runs on.
+  // Test-only connectors (fixture, simulation) are not brokers a competition runs on.
   const isTestBroker = (i: { type: string }) => i.type === "fixture" || i.type === "simulation";
   const brokerLabel = (i: { type: string; name: string; display_name?: string }) =>
     isLegacyFp(i) ? legacyFpLabel : i.display_name || i.name;
@@ -550,9 +550,9 @@ const AdminDashboard = () => {
       });
 
       if (response.ok) {
-        setPasswordSuccess("Password changed successfully!");
+        setPasswordSuccess("Password changed. Everyone signing in now needs the new one.");
         setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
-        setTimeout(() => navigate("/admin"), 2000);
+        setShowPasswordForm(false);
       } else {
         const data = await response.json();
         setPasswordError(data.error || "Failed to change password");
@@ -562,6 +562,12 @@ const AdminDashboard = () => {
     } finally {
       setIsChangingPassword(false);
     }
+  };
+
+  const closePasswordForm = () => {
+    setShowPasswordForm(false);
+    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setPasswordError("");
   };
 
   const cancelAction = () => {
@@ -758,19 +764,6 @@ const AdminDashboard = () => {
           <button className={`nav-item ${viewMode === "settings" ? "active" : ""}`} onClick={() => navigate("/admin/settings")}>
             <Settings size={20} />
             <span>Settings</span>
-          </button>
-          <button
-            className={`nav-item e2e-nav ${viewMode === "e2e" ? "active" : ""}`}
-            onClick={() => navigate("/admin/e2e-test")}
-            title='E2E test only — broker sync pipeline testing'
-          >
-            <FlaskConical size={20} />
-            <span>Sync E2E</span>
-            <span className='e2e-nav-badge'>TEST</span>
-          </button>
-          <button className={`nav-item ${viewMode === "password" ? "active" : ""}`} onClick={() => navigate("/admin/password")}>
-            <Key size={20} />
-            <span>Change Password</span>
           </button>
         </nav>
 
@@ -1171,105 +1164,6 @@ const AdminDashboard = () => {
             </motion.div>
           )}
 
-          {viewMode === "password" && (
-            <motion.div
-              key='password'
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className='content-section'
-            >
-              <div className='section-header'>
-                <div>
-                  <h1>Change Password</h1>
-                  <p>Update your admin password</p>
-                </div>
-              </div>
-
-              <div className='password-form-container'>
-                <form onSubmit={handlePasswordChange} className='password-form'>
-                  <div className='form-group'>
-                    <label>Current Password</label>
-                    <div className='password-input'>
-                      <input
-                        type='password'
-                        value={passwordData.currentPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className='form-group'>
-                    <label>New Password</label>
-                    <div className='password-input'>
-                      <input
-                        type='password'
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                  </div>
-
-                  <div className='form-group'>
-                    <label>Confirm New Password</label>
-                    <div className='password-input'>
-                      <input
-                        type='password'
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <AnimatePresence>
-                    {passwordError && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className='error-message'
-                      >
-                        <AlertCircle size={16} />
-                        {passwordError}
-                      </motion.div>
-                    )}
-                    {passwordSuccess && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className='success-message'
-                      >
-                        <CheckCircle size={16} />
-                        {passwordSuccess}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <div className='form-actions'>
-                    <button type='button' className='cancel-btn' onClick={cancelAction}>
-                      Cancel
-                    </button>
-                    <button type='submit' className='save-btn' disabled={isChangingPassword}>
-                      {isChangingPassword ? (
-                        <span className='loading-spinner' />
-                      ) : (
-                        <>
-                          <Key size={18} />
-                          Change Password
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </motion.div>
-          )}
-
           {viewMode === "participants" && (
             <motion.div
               key='participants'
@@ -1283,24 +1177,6 @@ const AdminDashboard = () => {
                 selectedTournamentId={urlTournamentId}
                 onTournamentChange={(id) => navigate(`/admin/participants/${id}`)}
               />
-            </motion.div>
-          )}
-
-          {viewMode === "e2e" && (
-            <motion.div
-              key='e2e'
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className='content-section'
-            >
-              <div className='section-header'>
-                <div>
-                  <h1>Sync E2E Testing</h1>
-                  <p>Broker → snapshots → leaderboard pipeline verification (test only)</p>
-                </div>
-              </div>
-              <E2ETestPanel tournaments={tournaments} />
             </motion.div>
           )}
 
@@ -1597,6 +1473,106 @@ const AdminDashboard = () => {
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* Danger zone */}
+                <div className='settings-section danger-zone'>
+                  <div className='settings-section-header'>
+                    <AlertTriangle size={20} />
+                    <h3>Danger Zone</h3>
+                  </div>
+
+                  <div className='danger-row'>
+                    <div>
+                      <h4>Change admin password</h4>
+                      <p>
+                        Everyone who signs in with this admin login will need the new password.
+                        The old one stops working as soon as you change it. Admins who are
+                        already signed in stay signed in until their session expires (up to 7 days).
+                      </p>
+                    </div>
+                    {!showPasswordForm && (
+                      <button
+                        type='button'
+                        className='danger-btn'
+                        onClick={() => {
+                          setPasswordSuccess("");
+                          setShowPasswordForm(true);
+                        }}
+                      >
+                        <Key size={16} />
+                        Change password
+                      </button>
+                    )}
+                  </div>
+
+                  {showPasswordForm && (
+                    <form onSubmit={handlePasswordChange} className='danger-form'>
+                      <div className='form-group'>
+                        <label>Current Password</label>
+                        <input
+                          type='password'
+                          autoComplete='current-password'
+                          value={passwordData.currentPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                          required
+                        />
+                      </div>
+
+                      <div className='form-group'>
+                        <label>New Password</label>
+                        <input
+                          type='password'
+                          autoComplete='new-password'
+                          value={passwordData.newPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                          required
+                          minLength={6}
+                        />
+                      </div>
+
+                      <div className='form-group'>
+                        <label>Confirm New Password</label>
+                        <input
+                          type='password'
+                          autoComplete='new-password'
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                          required
+                        />
+                      </div>
+
+                      {passwordError && (
+                        <div className='error-message'>
+                          <AlertCircle size={16} />
+                          {passwordError}
+                        </div>
+                      )}
+
+                      <div className='form-actions'>
+                        <button type='button' className='cancel-btn' onClick={closePasswordForm}>
+                          Cancel
+                        </button>
+                        <button type='submit' className='danger-btn solid' disabled={isChangingPassword}>
+                          {isChangingPassword ? (
+                            <span className='loading-spinner' />
+                          ) : (
+                            <>
+                              <Key size={16} />
+                              Change password
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {passwordSuccess && (
+                    <div className='success-message'>
+                      <CheckCircle size={16} />
+                      {passwordSuccess}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1903,20 +1879,6 @@ const dashboardStyles = `
     text-align: center;
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
     animation: pulse 2s ease-in-out infinite;
-  }
-
-  .e2e-nav-badge {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    background: rgba(245, 158, 11, 0.2);
-    border: 1px dashed rgba(245, 158, 11, 0.7);
-    color: #fbbf24;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    padding: 2px 6px;
-    border-radius: 6px;
   }
 
   @keyframes pulse {
@@ -2412,17 +2374,6 @@ const dashboardStyles = `
   }
 
   /* Password Form */
-  .password-form-container {
-    max-width: 480px;
-  }
-
-  .password-form {
-    background: rgba(20, 20, 30, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    padding: 32px;
-  }
-
   .password-input {
     position: relative;
   }
@@ -2668,6 +2619,83 @@ const dashboardStyles = `
   .broker-add-row .test-button {
     margin-top: 0;
     white-space: nowrap;
+  }
+
+  .settings-section.danger-zone {
+    border-color: rgba(239, 68, 68, 0.35);
+  }
+
+  .danger-zone .settings-section-header {
+    color: #ef4444;
+  }
+
+  .danger-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .danger-row h4 {
+    margin: 0 0 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .danger-row p {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .danger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 0.65rem 1.1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.6);
+    background: transparent;
+    color: #ef4444;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .danger-btn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.12);
+  }
+
+  .danger-btn.solid {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+  }
+
+  .danger-btn.solid:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+
+  .danger-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .danger-form {
+    margin-top: 20px;
+  }
+
+  @media (max-width: 640px) {
+    .danger-row {
+      flex-direction: column;
+    }
   }
 
   .success-message {
