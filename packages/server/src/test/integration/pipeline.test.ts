@@ -1057,3 +1057,25 @@ describe("full pipeline with fpmarkets connector (mocked broker API)", () => {
     expect(list.body.accounts[0].sync_state).toBe("error");
   });
 });
+
+
+describe("image upload", () => {
+  // A 1x1 PNG.
+  const PNG = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+    "base64"
+  );
+
+  it("is admin-only", async () => {
+    await request(app).post("/api/upload").attach("image", PNG, "pixel.png").expect(401);
+  });
+
+  it("says uploads aren't set up when the server has no Cloudinary keys", async () => {
+    const res = await request(app)
+      .post("/api/upload")
+      .set(auth())
+      .attach("image", PNG, "pixel.png")
+      .expect(503);
+    expect(res.body.error).toMatch(/aren't set up/);
+  });
+});

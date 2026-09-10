@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import crypto from "crypto";
 import connectDB from "./config/database";
 import { pingDatabase, startDbWatchdog } from "./config/dbHealth";
-import cloudinary from "./config/cloudinary";
+import cloudinary, { isCloudinaryConfigured } from "./config/cloudinary";
 import Tournament from "./models/Tournament";
 import Admin from "./models/Admin";
 import Settings from "./models/Settings";
@@ -269,9 +269,16 @@ app.post("/api/admin/change-password", verifyToken, async (req: AuthRequest, res
 
 // ==================== IMAGE UPLOAD ENDPOINTS ====================
 
-// Upload image to Cloudinary
-app.post("/api/upload", upload.single("image"), async (req, res) => {
+// Upload image to Cloudinary. Admin-only: an open upload endpoint would let
+// anyone store files on our Cloudinary account. The admin form sends its token.
+app.post("/api/upload", verifyToken, upload.single("image"), async (req, res) => {
   try {
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({
+        error: "Image uploads aren't set up on the server yet. Paste an image URL instead for now.",
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: "No image file provided" });
     }

@@ -204,6 +204,9 @@ Every competition runs on one broker. A broker that follows `BROKER_INTEGRATION_
    variables once VT sends credentials, and VT must allowlist our egress IPs.
 7. **www-canonical** (optional): today www/apex 302→app.*. To make www the served site you'd add
    www as a Railway custom domain and point its CNAME there (see `/Users/klev/RAILWAY_DNS_HANDOFF.md`).
+8. **Image uploads** need Cloudinary keys on Railway: `CLOUDINARY_URL` (Cloudinary dashboard →
+   API environment variable), or `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_API_KEY` +
+   `CLOUDINARY_API_SECRET`. Until then the upload box says so, and "Or paste image URL" works.
 
 ---
 
