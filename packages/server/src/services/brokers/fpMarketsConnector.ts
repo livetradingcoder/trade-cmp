@@ -472,6 +472,11 @@ async function fetchActivityPaged<T>(
 /** Each cursor call covers at most 3 days, so catching up needs several. */
 const ACTIVITY_MAX_WINDOWS = 40;
 
+/** A cursor window spans at most this; a shorter one was capped by "now". */
+const ACTIVITY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+/** Tolerance when deciding whether a window was a full 3-day one. */
+const FULL_WINDOW_SLACK_MS = 60 * 60 * 1000;
+
 /**
  * Walk cursor windows from `since` until the broker stops advancing.
  *
@@ -498,10 +503,21 @@ async function fetchActivitySince<T>(
     );
     all.push(...records);
 
-    // No advance means we have reached the live edge; stop rather than spin.
-    if (!nextSinceTimestamp || nextSinceTimestamp <= cursor) break;
+    if (!nextSinceTimestamp) break;
+    // Compare instants, not strings — the broker's "+00:00" and our "Z"
+    // formats do not sort together as text.
+    const advancedMs =
+      new Date(nextSinceTimestamp).getTime() - new Date(cursor).getTime();
+    if (!(advancedMs > 0)) break; // no advance
     cursor = nextSinceTimestamp;
-    if (new Date(cursor).getTime() >= Date.now()) break;
+
+    // A window shorter than a full 3 days was capped by the broker's "now":
+    // we are at the live edge, so stop. This used to stop only once the
+    // cursor passed our own clock, but at the edge each call returns a
+    // timestamp a few seconds later — never quite past Date.now() — so it ran
+    // to the window cap: ~40 calls (~100s) per account per sync, two-thirds
+    // of FP's 60 requests/minute on a single account.
+    if (advancedMs < ACTIVITY_WINDOW_MS - FULL_WINDOW_SLACK_MS) break;
   }
 
   return { records: all, cursor };

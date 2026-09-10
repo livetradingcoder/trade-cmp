@@ -816,6 +816,82 @@ describe("full pipeline with fixture connector", () => {
     expect(one.body.value).toBe("staff@example.test");
   });
 
+  it("rejects a malformed account number at the join form", async () => {
+    // A trailing colon got through before, and the entrant never synced.
+    const tid = await createTournament("Malformed account");
+    const res = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: tid,
+        email: "typo.colon@example.test",
+        fp_account_number: "81049662:",
+        is_new_user: true,
+      });
+    expect(res.status).toBe(400);
+  });
+
+  it("stores the trimmed account number", async () => {
+    const tid = await createTournament("Whitespace account");
+    const res = await request(app)
+      .post("/api/participants/apply")
+      .send({
+        tournament_id: tid,
+        email: "padded.account@example.test",
+        fp_account_number: "  70000300  ",
+        is_new_user: true,
+      });
+    expect(res.status).toBe(200);
+    const listed = await request(app)
+      .get(`/api/participants/${tid}`)
+      .set(auth());
+    expect(listed.body.participants[0].fp_account_number).toBe("70000300");
+  });
+
+  it("flags an account the broker did not return instead of calling it synced", async () => {
+    const integration = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fpmarkets", name: "FP Markets" });
+    const integrationId = integration.body.integration._id;
+
+    const tid = await createTournament("Unmatched account");
+    await onboardParticipant(tid, "matched@example.test", "3058014", integrationId);
+    await onboardParticipant(tid, "unmatched@example.test", "3999999", integrationId);
+
+    // The broker knows only the first account.
+    const fpResponse = {
+      data: {
+        resource: {
+          accounts: [
+            {
+              account_number: "3058014",
+              metrics: { roi: 0, starting_balance: 0, current_balance: 1000 },
+              status: "active",
+            },
+          ],
+        },
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => fpResponse,
+        text: async () => JSON.stringify(fpResponse),
+      }))
+    );
+
+    await request(app).post(`/api/admin/sync/${tid}`).set(auth()).expect(200);
+
+    const matched = await TradingAccount.findOne({ tournament_id: tid, broker_account_number: "3058014" });
+    const unmatched = await TradingAccount.findOne({ tournament_id: tid, broker_account_number: "3999999" });
+    expect(matched!.sync_state).toBe("ready");
+    expect(unmatched!.sync_state).toBe("error");
+    // Never actually synced, so it must not claim a sync time.
+    expect(unmatched!.last_synced_at).toBeFalsy();
+  });
+
   it("refuses an account correction without a token", async () => {
     const res = await request(app)
       .put("/api/participants/000000000000000000000000/trading-account")

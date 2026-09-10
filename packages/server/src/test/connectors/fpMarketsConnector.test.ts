@@ -428,3 +428,78 @@ describe("fpMarkets trade activity (post 2026-09-03)", () => {
     expect(result.trades[0].swap).toBe(3);
   });
 });
+
+/**
+ * At the live edge FP answers every cursor call with a next_since_timestamp a
+ * few seconds later than the one sent. Walking on "did it advance?" alone
+ * chases the clock to the window cap — ~40 calls per account per sync against
+ * a 60/minute limit. A window shorter than 3 days means we are caught up.
+ */
+describe("fpMarkets cursor at the live edge", () => {
+  beforeEach(() => {
+    setEnv();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env = OLD_ENV;
+  });
+
+  it("makes one call when already caught up, instead of chasing the clock", async () => {
+    const tradeBodies: any[] = [];
+    mockFetch(async (url: string, init: any) => {
+      const body = JSON.parse(init.body);
+      if (String(url).includes("/api/account/performance")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              resource: {
+                accounts: [
+                  {
+                    account_number: "82373607",
+                    currency: "usd",
+                    metrics: { roi: 0, starting_balance: 0, current_balance: 500 },
+                    status: "active",
+                  },
+                ],
+              },
+            },
+          }),
+        };
+      }
+      tradeBodies.push(body);
+      // Live edge: always "caught up to a few seconds after what you sent".
+      const next = new Date(new Date(body.since_timestamp).getTime() + 5_000)
+        .toISOString()
+        .replace(".000Z", "+00:00");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: {
+            resource: {
+              trades: [],
+              next_since_timestamp: next,
+              meta: { total: 0, per_page: 200, current_page: 1, last_page: 1 },
+            },
+          },
+        }),
+      };
+    });
+
+    const result = await fpMarketsConnector.fetchCompetitionData({
+      tournamentId: "t1",
+      accounts: [
+        { accountNumber: "82373607", userId: "u1", cursor: "2026-09-10T08:00:00+00:00" },
+      ],
+      startDate: "2026-08-15T00:00:00.000Z",
+    });
+
+    expect(tradeBodies).toHaveLength(1);
+    expect(result.cursors).toEqual([
+      { accountNumber: "82373607", cursor: "2026-09-10T08:00:05+00:00" },
+    ]);
+  });
+});

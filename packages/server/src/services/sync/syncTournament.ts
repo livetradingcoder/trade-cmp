@@ -297,15 +297,23 @@ export async function syncTournament(
       const cursorByNumber = new Map(
         (result.cursors ?? []).map((c) => [c.accountNumber, c.cursor])
       );
+      // An account the broker did not return was not synced — typically a
+      // mistyped number, or one not (yet) mapped under the rebate. Marking it
+      // "ready" with a fresh last_synced_at hid that from admins; it stays in
+      // the sync, so it recovers on its own once the number is corrected.
+      const returnedNumbers = new Set(
+        result.accounts.map((a) => a.accountNumber)
+      );
       const accountUpdates = group.map((account) => {
         const cursor = cursorByNumber.get(account.broker_account_number);
+        const synced = returnedNumbers.has(account.broker_account_number);
         return {
           updateOne: {
             filter: { _id: account._id },
             update: {
               $set: {
-                last_synced_at: now,
-                sync_state: "ready" as const,
+                ...(synced ? { last_synced_at: now } : {}),
+                sync_state: synced ? ("ready" as const) : ("error" as const),
                 ...(cursor ? { activity_cursor: cursor } : {}),
               },
             },

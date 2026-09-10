@@ -649,6 +649,19 @@ app.post("/api/participants/apply", async (req, res) => {
       });
     }
 
+    // Broker logins are letters, digits and dashes. Anything else is a typo —
+    // "81049662:" used to be stored verbatim, the broker has no such account,
+    // and the entrant silently never synced. (A wrong-but-valid number like an
+    // extra digit can't be caught here; it surfaces as an unverified referral
+    // and, after approval, as a trading account in sync_state "error".)
+    const accountNumber = String(fp_account_number).trim();
+    if (!/^[A-Za-z0-9-]{3,32}$/.test(accountNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "Account number may only contain letters, digits and dashes",
+      });
+    }
+
     // Check if tournament exists
     const tournament = await Tournament.findById(tournament_id);
     if (!tournament) {
@@ -671,7 +684,7 @@ app.post("/api/participants/apply", async (req, res) => {
     if (!user) {
       user = await User.create({
         email: email.toLowerCase(),
-        fp_account_number,
+        fp_account_number: accountNumber,
         referral_code_used,
         is_new_user: is_new_user !== undefined ? is_new_user : true,
         account_verified: false,
@@ -701,7 +714,7 @@ app.post("/api/participants/apply", async (req, res) => {
       user_id: user._id,
       // The account submitted for THIS tournament — the number the entrant
       // actually typed, which is what the sync must track.
-      fp_account_number: String(fp_account_number).trim(),
+      fp_account_number: accountNumber,
       status: "pending",
       referral_code_verified: referralCodeVerified,
       applied_at: new Date(),
