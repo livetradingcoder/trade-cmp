@@ -7,7 +7,7 @@ import { useTournaments } from "../context/TournamentContext";
 import JoinCompetitionDialog from "../components/JoinCompetitionDialog";
 
 const TournamentsPage = () => {
-  const { tournaments, settings } = useTournaments();
+  const { tournaments } = useTournaments();
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [copied, setCopied] = useState(false);
@@ -22,7 +22,13 @@ const TournamentsPage = () => {
     broker_name?: string | null;
   } | null>(null);
 
-  const affiliateCode = settings.affiliateCode;
+  // Each broker has its own code. When every open competition shares one, show
+  // it up front; otherwise each join dialog shows its own competition's.
+  const openCompetitions = tournaments.filter((t) => t.status !== "draft");
+  const listedCodes = [...new Set(openCompetitions.map((t) => t.referral_code).filter(Boolean))];
+  const listedBrokers = [...new Set(openCompetitions.map((t) => t.broker_name).filter(Boolean))];
+  const affiliateCode = listedCodes.length === 1 ? String(listedCodes[0]) : "";
+  const affiliateBroker = listedBrokers.length === 1 ? String(listedBrokers[0]) : "broker";
 
   const handleCopyCode = () => {
     if (affiliateCode) {
@@ -167,7 +173,7 @@ const TournamentsPage = () => {
             </div>
             <div className="affiliate-content">
               <span className="affiliate-text">
-                <strong>To join the competitions, broker account must be created using the following affiliate code:</strong>
+                <strong>To join the competitions, your {affiliateBroker} account must be created using the following affiliate code:</strong>
               </span>
               <div className="affiliate-code-wrapper">
                 <span className="affiliate-code">{affiliateCode}</span>
@@ -730,7 +736,7 @@ const TournamentsPage = () => {
           }}
           tournamentId={selectedTournament.id}
           tournamentTitle={selectedTournament.title}
-          referralCode={selectedTournament.referral_code || affiliateCode}
+          referralCode={selectedTournament.referral_code || ""}
           brokerName={selectedTournament.broker_name || undefined}
           registrationLink={selectedTournament.registrationLink}
         />

@@ -4,6 +4,7 @@ import request from "supertest";
 import jwt from "jsonwebtoken";
 import { afterAll, beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import TradingAccount from "../../models/TradingAccount";
+import BrokerIntegration from "../../models/BrokerIntegration";
 import LeaderboardCache from "../../models/LeaderboardCache";
 import AccountSnapshot from "../../models/AccountSnapshot";
 import Trade from "../../models/Trade";
@@ -1077,5 +1078,110 @@ describe("image upload", () => {
       .attach("image", PNG, "pixel.png")
       .expect(503);
     expect(res.body.error).toMatch(/aren't set up/);
+  });
+});
+
+describe("broker referral details", () => {
+  async function addBroker(name: string): Promise<string> {
+    const res = await request(app)
+      .post("/api/admin/broker-integrations")
+      .set(auth())
+      .send({ type: "fpmarkets", name });
+    expect(res.status).toBe(200);
+    return res.body.integration._id;
+  }
+
+  it("competitions use their broker's code and link unless they set their own", async () => {
+    const id = await addBroker("Referral Broker");
+    const saved = await request(app)
+      .patch(`/api/admin/broker-integrations/${id}`)
+      .set(auth())
+      .send({ referral_code: " RB-42 ", registration_link: "https://rb.example/register" })
+      .expect(200);
+    expect(saved.body.integration.referral_code).toBe("RB-42");
+
+    const inherits = await request(app)
+      .post("/api/tournaments")
+      .set(auth())
+      .send({ title: "Inherits", broker_integration_id: id, status: "active" })
+      .expect(200);
+    expect(inherits.body.referral_code).toBe("RB-42");
+    expect(inherits.body.registrationLink).toBe("https://rb.example/register");
+    // Its own fields stay empty, so later edits to the broker still apply.
+    expect(inherits.body.own_referral_code).toBeNull();
+    expect(inherits.body.own_registration_link).toBe("");
+
+    const overrides = await request(app)
+      .post("/api/tournaments")
+      .set(auth())
+      .send({
+        title: "Overrides",
+        broker_integration_id: id,
+        status: "active",
+        referral_code: "OWN-1",
+        registrationLink: "https://own.example/join",
+      })
+      .expect(200);
+    expect(overrides.body.referral_code).toBe("OWN-1");
+    expect(overrides.body.registrationLink).toBe("https://own.example/join");
+  });
+
+  it("a competition without a broker uses the original FP integration's details", async () => {
+    const fp = await addBroker("fpmarkets");
+    await request(app)
+      .patch(`/api/admin/broker-integrations/${fp}`)
+      .set(auth())
+      .send({ referral_code: "477779", registration_link: "https://portal.fptrading.com/register" })
+      .expect(200);
+
+    const res = await request(app)
+      .post("/api/tournaments")
+      .set(auth())
+      .send({ title: "Default broker", status: "active" })
+      .expect(200);
+    expect(res.body.referral_code).toBe("477779");
+    expect(res.body.registrationLink).toBe("https://portal.fptrading.com/register");
+  });
+
+  it("rejects a registration link that isn't a web address", async () => {
+    const id = await addBroker("Link Check Broker");
+    await request(app)
+      .patch(`/api/admin/broker-integrations/${id}`)
+      .set(auth())
+      .send({ registration_link: "javascript:alert(1)" })
+      .expect(400);
+  });
+
+  it("keeps broker details admin-only", async () => {
+    await request(app)
+      .patch("/api/admin/broker-integrations/000000000000000000000000")
+      .send({ referral_code: "X" })
+      .expect(401);
+  });
+
+  it("approving into a competition without a broker never touches another FP-protocol broker", async () => {
+    // Another broker on FP's protocol, and no original FP record yet.
+    await BrokerIntegration.deleteMany({ type: "fpmarkets" });
+    const vt = await BrokerIntegration.create({ type: "fpmarkets", name: "VT Markets", enabled: true });
+
+    const tid = await createTournament("No broker set");
+    const email = "nobroker@test.dev";
+    const account = "7700001";
+    await request(app)
+      .post("/api/users/register")
+      .send({ email, fp_account_number: account, is_new_user: true })
+      .expect(200);
+    const apply = await request(app)
+      .post("/api/participants/apply")
+      .send({ tournament_id: tid, email, fp_account_number: account, is_new_user: true })
+      .expect(200);
+    await request(app)
+      .put(`/api/participants/${apply.body.participant.id}/approve`)
+      .set(auth())
+      .expect(200);
+
+    expect((await BrokerIntegration.findById(vt._id))!.name).toBe("VT Markets");
+    const provisioned = await TradingAccount.findOne({ tournament_id: tid });
+    expect(String(provisioned!.broker_integration_id)).not.toBe(String(vt._id));
   });
 });

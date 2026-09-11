@@ -25,7 +25,6 @@ import {
   Sparkles,
   Info,
   Settings,
-  Gift,
   Bell,
   Activity,
   Mail,
@@ -110,9 +109,6 @@ const AdminDashboard = () => {
   const [showPasswordForm, setShowPasswordForm] = useState(pathParts[2] === "password");
 
   // Settings state
-  const [affiliateCode, setAffiliateCode] = useState("");
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState({ type: "", text: "" });
 
   // Mailgun settings state (HTTP API — SMTP is blocked on Railway's network)
   const [mailgunSettings, setMailgunSettings] = useState({
@@ -152,9 +148,9 @@ const AdminDashboard = () => {
         timeLeft: editingTournament.timeLeft,
         cover: editingTournament.cover,
         image: editingTournament.image || "",
-        registrationLink: editingTournament.registrationLink,
+        registrationLink: editingTournament.own_registration_link || "",
         broker_integration_id: editingTournament.broker_integration_id || "",
-        referral_code: editingTournament.referral_code || "",
+        referral_code: editingTournament.own_referral_code || "",
       });
     }
   }, [viewMode, editingTournament]);
@@ -180,8 +176,12 @@ const AdminDashboard = () => {
       connected?: boolean;
       // Env var name -> whether it is set. Names only; values never leave the server.
       env_status?: Record<string, boolean>;
+      // What traders see when joining a competition on this broker.
+      referral_code?: string;
+      registration_link?: string;
     }[]
   >([]);
+  type Broker = (typeof brokerIntegrations)[number];
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -217,6 +217,17 @@ const AdminDashboard = () => {
     );
   };
 
+  // The broker a competition in the form inherits its code and link from.
+  const formBroker =
+    formData.broker_integration_id === "__other__"
+      ? undefined
+      : formData.broker_integration_id
+        ? selectedBroker
+        : brokerIntegrations.find(isLegacyFp);
+  const formBrokerLabel = formBroker
+    ? brokerLabel(formBroker)
+    : newBrokerName.trim() || "this broker";
+
   // Registers a broker on the FP protocol (BROKER_INTEGRATION_SPEC.md). It is
   // selectable at once; a developer connects it later through env vars.
   const addBroker = async (name: string) => {
@@ -236,6 +247,61 @@ const AdminDashboard = () => {
       prev.some((i) => i._id === data.integration._id) ? prev : [...prev, data.integration]
     );
     return data.integration as { _id: string };
+  };
+
+  // Unsaved edits to each broker's referral code and registration link.
+  type BrokerDetails = { referral_code: string; registration_link: string };
+  const [brokerDrafts, setBrokerDrafts] = useState<Record<string, BrokerDetails>>({});
+  const [savingBrokerId, setSavingBrokerId] = useState<string | null>(null);
+  const brokerDraft = (i: Broker): BrokerDetails =>
+    brokerDrafts[i._id] ?? {
+      referral_code: i.referral_code || "",
+      registration_link: i.registration_link || "",
+    };
+  const editBrokerDraft = (i: Broker, change: Partial<BrokerDetails>) =>
+    setBrokerDrafts((prev) => ({
+      ...prev,
+      [i._id]: {
+        ...(prev[i._id] ?? {
+          referral_code: i.referral_code || "",
+          registration_link: i.registration_link || "",
+        }),
+        ...change,
+      },
+    }));
+  const discardBrokerDraft = (id: string) =>
+    setBrokerDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
+  const saveBrokerDetails = async (i: Broker) => {
+    setSavingBrokerId(i._id);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/broker-integrations/${i._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+        body: JSON.stringify(brokerDraft(i)),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.integration) {
+        throw new Error(data?.message || "Could not save the broker");
+      }
+      setBrokerIntegrations((prev) => prev.map((b) => (b._id === i._id ? data.integration : b)));
+      discardBrokerDraft(i._id);
+      setBrokerMessage({ type: "success", text: `${brokerLabel(i)} saved.` });
+    } catch (error) {
+      setBrokerMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Could not save the broker",
+      });
+    } finally {
+      setSavingBrokerId(null);
+    }
   };
 
   const [settingsBrokerName, setSettingsBrokerName] = useState("");
@@ -273,26 +339,6 @@ const AdminDashboard = () => {
       setIsAddingBroker(false);
     }
   };
-
-  // Fetch affiliate code on mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/settings/affiliateCode`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("adminToken")}` },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setAffiliateCode(data.value || "");
-        }
-      } catch (error) {
-        console.error("Failed to fetch settings:", error);
-      }
-    };
-    if (isAdmin) {
-      fetchSettings();
-    }
-  }, [isAdmin, API_URL]);
 
   // Fetch Mailgun settings on mount
   useEffect(() => {
@@ -426,9 +472,9 @@ const AdminDashboard = () => {
       timeLeft: tournament.timeLeft,
       cover: tournament.cover,
       image: tournament.image || "",
-      registrationLink: tournament.registrationLink,
+      registrationLink: tournament.own_registration_link || "",
       broker_integration_id: tournament.broker_integration_id || "",
-      referral_code: tournament.referral_code || "",
+      referral_code: tournament.own_referral_code || "",
     });
     setSaveMessage({ type: "", text: "" });
     navigate(`/admin/competitions/${tournament.id}/edit`);
@@ -439,8 +485,16 @@ const AdminDashboard = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.title || !formData.registrationLink || !formData.cover) {
-      setSaveMessage({ type: "error", text: "Please fill in all required fields (Title, Registration Link, Cover Image)" });
+    if (!formData.title || !formData.cover) {
+      setSaveMessage({ type: "error", text: "Please fill in all required fields (Title, Cover Image)" });
+      return;
+    }
+    // A competition may leave its link empty to use its broker's.
+    if (!formData.registrationLink?.trim() && !formBroker?.registration_link) {
+      setSaveMessage({
+        type: "error",
+        text: `Add a registration link, here or for ${formBrokerLabel} in Settings → Brokers`,
+      });
       return;
     }
 
@@ -576,35 +630,7 @@ const AdminDashboard = () => {
     setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     setPasswordError("");
     setPasswordSuccess("");
-    setSettingsMessage({ type: "", text: "" });
     navigate("/admin");
-  };
-
-  const handleSaveSettings = async () => {
-    setIsSavingSettings(true);
-    setSettingsMessage({ type: "", text: "" });
-
-    try {
-      const token = localStorage.getItem("adminToken");
-      const response = await fetch(`${API_URL}/api/settings/affiliateCode`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ value: affiliateCode }),
-      });
-
-      if (response.ok) {
-        setSettingsMessage({ type: "success", text: "Affiliate code saved successfully!" });
-      } else {
-        setSettingsMessage({ type: "error", text: "Failed to save settings" });
-      }
-    } catch {
-      setSettingsMessage({ type: "error", text: "Network error. Please try again." });
-    } finally {
-      setIsSavingSettings(false);
-    }
   };
 
   const handleSaveSMTPSettings = async () => {
@@ -1046,16 +1072,6 @@ const AdminDashboard = () => {
                       <LinkIcon size={18} /> Registration
                     </h3>
 
-                    <div className='form-group'>
-                      <label>Registration Link *</label>
-                      <input
-                        type='url'
-                        value={formData.registrationLink}
-                        onChange={(e) => setFormData({ ...formData, registrationLink: e.target.value })}
-                        placeholder='https://example.com/register'
-                      />
-                    </div>
-
                     <div className='form-row'>
                       <div className='form-group'>
                         <label>Broker</label>
@@ -1083,7 +1099,11 @@ const AdminDashboard = () => {
                           type='text'
                           value={formData.referral_code || ""}
                           onChange={(e) => setFormData({ ...formData, referral_code: e.target.value })}
-                          placeholder='Leave empty to use the site-wide code'
+                          placeholder={
+                            formBroker?.referral_code
+                              ? `Leave empty to use ${formBrokerLabel}'s code (${formBroker.referral_code})`
+                              : `${formBrokerLabel} has no code in Settings → Brokers`
+                          }
                         />
                       </div>
                     </div>
@@ -1099,6 +1119,19 @@ const AdminDashboard = () => {
                         />
                       </div>
                     )}
+                    <div className='form-group'>
+                      <label>Registration Link</label>
+                      <input
+                        type='url'
+                        value={formData.registrationLink}
+                        onChange={(e) => setFormData({ ...formData, registrationLink: e.target.value })}
+                        placeholder={
+                          formBroker?.registration_link
+                            ? `Leave empty to use ${formBrokerLabel}'s link`
+                            : `Required: ${formBrokerLabel} has no link in Settings → Brokers`
+                        }
+                      />
+                    </div>
                     {(formData.broker_integration_id === "__other__" ||
                       selectedBroker?.connected === false) && (
                       <p style={{ fontSize: "0.85rem", color: "#fbbf24", margin: "4px 0 0" }}>
@@ -1216,65 +1249,17 @@ const AdminDashboard = () => {
               </div>
 
               <div className='settings-container'>
-                <div className='settings-section'>
-                  <div className='settings-section-header'>
-                    <Gift size={20} />
-                    <h3>Affiliate Code</h3>
-                  </div>
-                  <p className='settings-description'>
-                    This code will be displayed on the competitions page for new users to use when signing up.
-                  </p>
-
-                  <div className='form-group'>
-                    <label>Affiliate Code</label>
-                    <input
-                      type='text'
-                      value={affiliateCode}
-                      onChange={(e) => setAffiliateCode(e.target.value.toUpperCase())}
-                      placeholder='e.g., AFFASAD'
-                      style={{ textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}
-                    />
-                  </div>
-
-                  <AnimatePresence>
-                    {settingsMessage.text && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className={settingsMessage.type === 'success' ? 'success-message' : 'error-message'}
-                      >
-                        {settingsMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                        {settingsMessage.text}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <div className='form-actions'>
-                    <button type='button' className='save-btn' onClick={handleSaveSettings} disabled={isSavingSettings}>
-                      {isSavingSettings ? (
-                        <span className='loading-spinner' />
-                      ) : (
-                        <>
-                          <Save size={18} />
-                          Save Settings
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
                 {/* Brokers */}
                 <div className='settings-section'>
                   <div className='settings-section-header'>
                     <Building2 size={20} />
-                    <h3>Brokers</h3>
+                    <h3>Brokers &amp; Referral Codes</h3>
                   </div>
                   <p className='settings-description'>
-                    Brokers a competition can run on. Each one listed here appears in the Broker
-                    menu when you create a competition. A developer connects a new broker by adding
-                    its API keys to the server; until then traders can join, but its leaderboard
-                    stays empty.
+                    Each broker has its own referral code and registration link, which traders see
+                    when they join a competition on it. A competition uses its broker's unless it
+                    sets its own. A developer connects a new broker by adding its API keys to the
+                    server; until then traders can join, but its leaderboard stays empty.
                   </p>
 
                   <div className='broker-list'>
@@ -1294,6 +1279,48 @@ const AdminDashboard = () => {
                               </span>
                             )}
                           </div>
+                          <div className='broker-fields'>
+                            <div className='form-group'>
+                              <label>Referral code</label>
+                              <input
+                                type='text'
+                                value={brokerDraft(i).referral_code}
+                                onChange={(e) => editBrokerDraft(i, { referral_code: e.target.value })}
+                                placeholder='e.g., 477779'
+                              />
+                            </div>
+                            <div className='form-group'>
+                              <label>Registration link</label>
+                              <input
+                                type='url'
+                                value={brokerDraft(i).registration_link}
+                                onChange={(e) => editBrokerDraft(i, { registration_link: e.target.value })}
+                                placeholder='https://…'
+                              />
+                            </div>
+                          </div>
+                          {brokerDrafts[i._id] && (
+                            <div className='broker-save-row'>
+                              <button type='button' className='cancel-btn' onClick={() => discardBrokerDraft(i._id)}>
+                                Cancel
+                              </button>
+                              <button
+                                type='button'
+                                className='save-btn'
+                                onClick={() => saveBrokerDetails(i)}
+                                disabled={savingBrokerId === i._id}
+                              >
+                                {savingBrokerId === i._id ? (
+                                  <span className='loading-spinner' />
+                                ) : (
+                                  <>
+                                    <Save size={16} />
+                                    Save
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
                           {!i.connected && i.env_status && (
                             <div className='broker-env'>
                               <p>For the developer: set these on the server (Railway → Variables).</p>
@@ -2619,6 +2646,30 @@ const dashboardStyles = `
   .broker-add-row .test-button {
     margin-top: 0;
     white-space: nowrap;
+  }
+
+  .broker-fields {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .broker-fields .form-group {
+    margin-bottom: 0;
+  }
+
+  .broker-save-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .broker-fields {
+      grid-template-columns: 1fr;
+    }
   }
 
   .settings-section.danger-zone {

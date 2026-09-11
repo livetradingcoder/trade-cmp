@@ -21,6 +21,10 @@ export interface Tournament {
   broker_integration_id?: string | null;
   /** Referral code for THIS competition's broker; empty means the site-wide code. */
   referral_code?: string | null;
+  // The competition's own values. registrationLink and referral_code above
+  // fall back to its broker's (Settings → Brokers).
+  own_registration_link?: string;
+  own_referral_code?: string | null;
   /** Public display name of the competition's broker, e.g. "FPTrading". */
   broker_name?: string | null;
   status?: "draft" | "active" | "completed" | "archived";
@@ -28,13 +32,8 @@ export interface Tournament {
   end_date?: string;
 }
 
-interface Settings {
-  affiliateCode: string;
-}
-
 interface TournamentContextType {
   tournaments: Tournament[];
-  settings: Settings;
   isAdmin: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
@@ -92,7 +91,6 @@ const FALLBACK_TOURNAMENTS: Tournament[] = [
 
 export function TournamentProvider({ children }: { children: ReactNode }) {
   const [tournaments, setTournaments] = useState<Tournament[]>(FALLBACK_TOURNAMENTS);
-  const [settings, setSettings] = useState<Settings>({ affiliateCode: "" });
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -111,23 +109,8 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/settings`);
-      if (response.ok) {
-        const data = await response.json();
-        setSettings({
-          affiliateCode: data.affiliateCode || "",
-        });
-      }
-    } catch {
-      console.log("Using default settings");
-    }
-  };
-
   useEffect(() => {
     fetchTournaments();
-    fetchSettings();
     // Check if admin token exists and verify it
     const token = localStorage.getItem("adminToken");
     if (token) {
@@ -265,7 +248,6 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     <TournamentContext.Provider
       value={{
         tournaments,
-        settings,
         isAdmin,
         isLoading,
         login,

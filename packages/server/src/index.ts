@@ -1,3 +1,4 @@
+import { isValidObjectId } from "mongoose";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -320,7 +321,7 @@ app.post("/api/upload", verifyToken, upload.single("image"), async (req, res) =>
  * `_id`). This was copy-pasted at four call sites, which is how a new field
  * ends up present on create and missing on list.
  */
-function transformTournament(t: any, brokerName?: string | null) {
+function transformTournament(t: any, broker?: BrokerPublicInfo | null) {
   return {
     id: t._id.toString(),
     title: t.title,
@@ -332,14 +333,18 @@ function transformTournament(t: any, brokerName?: string | null) {
     timeLeft: t.timeLeft,
     cover: t.cover,
     image: t.image,
-    registrationLink: t.registrationLink,
+    // A competition's own link and code win; otherwise its broker's
+    // (Settings → Brokers). own_* carry the competition's values for editing.
+    registrationLink: t.registrationLink || broker?.registration_link || "",
+    own_registration_link: t.registrationLink || "",
     broker_integration_id: t.broker_integration_id
       ? String(t.broker_integration_id)
       : null,
     // Public-safe broker identity for the join flow. Never the integration's
     // config — that holds credentials.
-    broker_name: brokerName ?? null,
-    referral_code: t.referral_code || null,
+    broker_name: broker?.name ?? null,
+    referral_code: t.referral_code || broker?.referral_code || null,
+    own_referral_code: t.referral_code || null,
     status: t.status,
     start_date: t.start_date,
     end_date: t.end_date,
@@ -366,9 +371,12 @@ async function resolveTournamentBroker(brokerIntegrationId?: unknown) {
     return integration;
   }
 
+  // Match the original FP integration exactly. Other brokers speak the same
+  // protocol type, so a bare type match could pick one of them, and the $set
+  // below would then rename it to "fpmarkets".
   const connector = getBrokerConnector("fpmarkets");
   return BrokerIntegration.findOneAndUpdate(
-    { type: "fpmarkets" },
+    { type: "fpmarkets", name: "fpmarkets" },
     {
       $set: {
         name: "fpmarkets",
@@ -400,8 +408,18 @@ function brokerDisplayName(integration: any): string {
   return integration.name || integration.type;
 }
 
-/** Broker display names for a batch of tournaments, in one query. */
-async function brokerNamesFor(tournaments: any[]): Promise<Map<string, string>> {
+type BrokerPublicInfo = {
+  name: string;
+  referral_code: string | null;
+  registration_link: string | null;
+};
+
+/**
+ * What traders see about each tournament's broker, in one query: its name,
+ * referral code and registration link. A tournament without a broker runs on
+ * the original FP integration, so that record is loaded too.
+ */
+async function brokerInfoFor(tournaments: any[]): Promise<Map<string, BrokerPublicInfo>> {
   const ids = [
     ...new Set(
       tournaments
@@ -410,18 +428,29 @@ async function brokerNamesFor(tournaments: any[]): Promise<Map<string, string>> 
         .map(String)
     ),
   ];
-  const integrations = ids.length
-    ? await BrokerIntegration.find({ _id: { $in: ids } }).select(
-        "type name display_name"
+  const wanted: any[] = [];
+  if (ids.length) wanted.push({ _id: { $in: ids } });
+  if (tournaments.some((t) => !t.broker_integration_id)) {
+    wanted.push({ type: "fpmarkets", name: "fpmarkets" });
+  }
+  const integrations = wanted.length
+    ? await BrokerIntegration.find({ $or: wanted }).select(
+        "type name display_name referral_code registration_link"
       )
     : [];
   const byId = new Map(integrations.map((i) => [String(i._id), i]));
-  const names = new Map<string, string>();
+  const legacy = integrations.find((i) => i.type === "fpmarkets" && i.name === "fpmarkets");
+  const info = new Map<string, BrokerPublicInfo>();
   for (const t of tournaments) {
     const id = t.broker_integration_id ? String(t.broker_integration_id) : "";
-    names.set(String(t._id), brokerDisplayName(id ? byId.get(id) : null));
+    const integration = id ? byId.get(id) : legacy;
+    info.set(String(t._id), {
+      name: brokerDisplayName(integration),
+      referral_code: integration?.referral_code || null,
+      registration_link: integration?.registration_link || null,
+    });
   }
-  return names;
+  return info;
 }
 
 /**
@@ -448,7 +477,7 @@ app.get("/api/tournaments", async (req, res) => {
   try {
     const tournaments = await Tournament.find().sort({ createdAt: 1 });
     // Transform _id to id for frontend compatibility
-    const brokerNames = await brokerNamesFor(tournaments);
+    const brokerNames = await brokerInfoFor(tournaments);
     const transformedTournaments = tournaments.map((t) =>
       transformTournament(t, brokerNames.get(String(t._id)))
     );
@@ -467,7 +496,7 @@ app.get("/api/tournaments/:id", async (req, res) => {
       // Transform _id to id for frontend compatibility
       const transformed = transformTournament(
       tournament,
-      (await brokerNamesFor([tournament])).get(String(tournament._id))
+      (await brokerInfoFor([tournament])).get(String(tournament._id))
     );
       res.json(transformed);
     } else {
@@ -482,11 +511,10 @@ app.get("/api/tournaments/:id", async (req, res) => {
 // Create tournament (protected)
 app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
   try {
-    // Validate required fields
-    if (!req.body.title || !req.body.registrationLink) {
-      return res.status(400).json({
-        error: "Title and registration link are required",
-      });
+    // The registration link may be empty: the competition then uses its
+    // broker's (Settings → Brokers).
+    if (!req.body.title) {
+      return res.status(400).json({ error: "Title is required" });
     }
 
     // Set defaults for optional fields
@@ -511,7 +539,7 @@ app.post("/api/tournaments", verifyToken, async (req: AuthRequest, res) => {
     // Transform _id to id for frontend compatibility
     const transformed = transformTournament(
       tournament,
-      (await brokerNamesFor([tournament])).get(String(tournament._id))
+      (await brokerInfoFor([tournament])).get(String(tournament._id))
     );
     res.json(transformed);
   } catch (error) {
@@ -537,7 +565,7 @@ app.put("/api/tournaments/:id", verifyToken, async (req: AuthRequest, res) => {
       // Transform _id to id for frontend compatibility
       const transformed = transformTournament(
       tournament,
-      (await brokerNamesFor([tournament])).get(String(tournament._id))
+      (await brokerInfoFor([tournament])).get(String(tournament._id))
     );
       res.json(transformed);
     } else {
@@ -1480,17 +1508,69 @@ app.post("/api/admin/broker-integrations", verifyToken, async (req: AuthRequest,
 
     res.json({
       success: true,
-      integration: {
-        ...integration.toObject(),
-        config: redactBrokerConfig(integration.config as any),
-        connected: isIntegrationConnected(integration as any),
-        // Names and presence only — values never leave the server.
-        env_status: brokerEnvStatus(integration as any),
-      },
+      integration: integrationForAdmin(integration),
     });
   } catch (error) {
     console.error("Broker integration ensure error:", error);
     res.status(500).json({ success: false, message: "Failed to ensure broker integration" });
+  }
+});
+
+/** How an integration goes over the admin API: config redacted, plus status. */
+function integrationForAdmin(integration: any) {
+  return {
+    ...integration.toObject(),
+    config: redactBrokerConfig(integration.config as any),
+    connected: isIntegrationConnected(integration as any),
+    // Names and presence only — values never leave the server.
+    env_status: brokerEnvStatus(integration as any),
+  };
+}
+
+// What traders see when joining a competition on this broker: its referral
+// code and registration link, plus its display name. No credentials here;
+// those live in env vars.
+app.patch("/api/admin/broker-integrations/:id", verifyToken, async (req: AuthRequest, res) => {
+  if (!isValidObjectId(req.params.id)) {
+    return res.status(404).json({ success: false, message: "Broker not found" });
+  }
+  const body = req.body || {};
+  const set: Record<string, string> = {};
+  const unset: Record<string, ""> = {};
+  for (const field of ["display_name", "referral_code", "registration_link"] as const) {
+    if (!(field in body)) continue;
+    const value = typeof body[field] === "string" ? body[field].trim() : "";
+    if (value.length > (field === "registration_link" ? 2048 : 100)) {
+      return res.status(400).json({ success: false, message: `${field} is too long` });
+    }
+    if (field === "registration_link" && value && !/^https?:\/\//i.test(value)) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration link must start with http:// or https://",
+      });
+    }
+    // A broker always keeps a name.
+    if (field === "display_name" && !value) continue;
+    if (value) set[field] = value;
+    else unset[field] = "";
+  }
+
+  try {
+    const integration = await BrokerIntegration.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...(Object.keys(set).length ? { $set: set } : {}),
+        ...(Object.keys(unset).length ? { $unset: unset } : {}),
+      },
+      { new: true }
+    );
+    if (!integration) {
+      return res.status(404).json({ success: false, message: "Broker not found" });
+    }
+    res.json({ success: true, integration: integrationForAdmin(integration) });
+  } catch (error) {
+    console.error("Broker integration update error:", error);
+    res.status(500).json({ success: false, message: "Failed to update the broker" });
   }
 });
 
@@ -1500,13 +1580,7 @@ app.get("/api/admin/broker-integrations", verifyToken, async (_req: AuthRequest,
     const integrations = await BrokerIntegration.find().sort({ type: 1 });
     res.json({
       success: true,
-      integrations: integrations.map((integration) => ({
-        ...integration.toObject(),
-        config: redactBrokerConfig(integration.config as any),
-        connected: isIntegrationConnected(integration as any),
-        // Names and presence only — values never leave the server.
-        env_status: brokerEnvStatus(integration as any),
-      })),
+      integrations: integrations.map((integration) => integrationForAdmin(integration)),
     });
   } catch (error) {
     console.error("Broker integration list error:", error);

@@ -109,6 +109,9 @@ Every competition runs on one broker. A broker that follows `BROKER_INTEGRATION_
 
 - **Admin → Settings → Brokers** lists each broker as **Connected** or **Needs developer
   configuration**, and adds new ones by name. *Other…* in the competition form does the same.
+- Each broker also carries its **referral code** and **registration link**, edited there.
+  Competitions use their broker's unless they set their own. The old site-wide affiliate code
+  is retired. FPTrading's are 477779 and its FP portal link.
 - **Connecting one** means setting four Railway variables named after it ("VT Markets" →
   `VT_MARKETS`): `BROKER_VT_MARKETS_BASE_URL`, `BROKER_VT_MARKETS_TOKEN`,
   `BROKER_VT_MARKETS_SECRET`, `BROKER_VT_MARKETS_REBATE_ACCOUNTS` (comma-separated). The

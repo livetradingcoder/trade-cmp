@@ -41,7 +41,8 @@ const TournamentSchema: Schema = new Schema(
     timeLeft: { type: String, default: "" },
     cover: { type: String, required: true },
     image: { type: String, default: "" },
-    registrationLink: { type: String, required: true },
+    // Empty means "use the broker's link" (Settings → Brokers).
+    registrationLink: { type: String, default: "" },
     broker_integration_id: {
       type: Schema.Types.ObjectId,
       ref: "BrokerIntegration",

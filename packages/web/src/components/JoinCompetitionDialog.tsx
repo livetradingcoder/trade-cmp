@@ -194,7 +194,7 @@ const JoinCompetitionDialog = ({
           {userType && !success && (
             <form className="dialog-body" onSubmit={handleSubmit}>
               {/* Existing User - Referral Code Notice */}
-              {userType === "existing" && (
+              {userType === "existing" && referralCode && (
                 <div className="referral-section" style={{ marginBottom: "24px" }}>
                   <div className="referral-banner">
                     <div className="referral-icon">⚠️</div>
@@ -210,34 +210,40 @@ const JoinCompetitionDialog = ({
               {/* New User - Referral Code Section */}
               {userType === "new" && (
                 <div className="referral-section">
-                  <div className="referral-banner">
-                    <div className="referral-icon">🎁</div>
-                    <div>
-                      <div className="referral-title">Important: Use Referral Code</div>
-                      <div className="referral-description">
-                        You must create your {brokerName} account using this referral code
+                  {referralCode && (
+                    <>
+                      <div className="referral-banner">
+                        <div className="referral-icon">🎁</div>
+                        <div>
+                          <div className="referral-title">Important: Use Referral Code</div>
+                          <div className="referral-description">
+                            You must create your {brokerName} account using this referral code
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="referral-code-box">
-                    <span className="referral-code">{referralCode}</span>
+                      <div className="referral-code-box">
+                        <span className="referral-code">{referralCode}</span>
+                        <button
+                          type="button"
+                          className="copy-button"
+                          onClick={handleCopyCode}
+                        >
+                          {copied ? <Check size={16} /> : <Copy size={16} />}
+                          {copied ? "Copied!" : "Copy"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {registrationLink && (
                     <button
                       type="button"
-                      className="copy-button"
-                      onClick={handleCopyCode}
+                      className="broker-link-button"
+                      onClick={handleOpenBrokerRegistration}
                     >
-                      {copied ? <Check size={16} /> : <Copy size={16} />}
-                      {copied ? "Copied!" : "Copy"}
+                      Create {brokerName} account
+                      <ExternalLink size={16} />
                     </button>
-                  </div>
-                  <button
-                    type="button"
-                    className="broker-link-button"
-                    onClick={handleOpenBrokerRegistration}
-                  >
-                    Create {brokerName} account
-                    <ExternalLink size={16} />
-                  </button>
+                  )}
                   <div className="checkbox-field">
                     <input
                       type="checkbox"

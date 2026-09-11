@@ -5,6 +5,9 @@ export interface IBrokerIntegration extends Document {
   /** What traders see, e.g. "FP Markets". Falls back to a default per type. */
   display_name?: string;
   name: string;
+  /** Shown to traders joining a competition on this broker. Not secrets. */
+  referral_code?: string;
+  registration_link?: string;
   enabled: boolean;
   supports_account_validation: boolean;
   supports_raw_trades: boolean;
@@ -30,6 +33,8 @@ const BrokerIntegrationSchema: Schema = new Schema(
     },
     name: { type: String, required: true },
     display_name: { type: String },
+    referral_code: { type: String },
+    registration_link: { type: String },
     enabled: { type: Boolean, default: true },
     supports_account_validation: { type: Boolean, default: false },
     supports_raw_trades: { type: Boolean, default: false },

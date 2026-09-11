@@ -255,7 +255,9 @@ A conforming broker needs **no code**:
 1. **Add it**: Admin → Settings → Brokers → *Add a broker* (or *Other…* in
    the competition form). It is registered on the `fpmarkets` protocol, which
    names this contract, not the company. Brokers are keyed by name, so several
-   coexist on one protocol; do **not** reuse a name.
+   coexist on one protocol; do **not** reuse a name. Fill in its referral code
+   and registration link there too; competitions on it use them unless they
+   set their own.
 2. **Connect it**: a developer sets four variables in the app server's
    environment, named after the broker. `<NAME>` is the name upper-cased with
    anything that isn't a letter or digit replaced by `_`, so "VT Markets"
