@@ -1,11 +1,30 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useRef, useState, type MouseEvent } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {  Menu, X } from "lucide-react";
 import logoImage from "../images/logo.png";
+
+// Hidden way into the admin: five quick clicks on the logo. /admin still
+// asks for the admin login; this only saves typing the URL.
+const ADMIN_CLICKS = 5;
+const CLICK_GAP_MS = 1000;
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const logoClicks = useRef({ count: 0, last: 0 });
+
+  const handleLogoClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    const now = Date.now();
+    const clicks = logoClicks.current;
+    clicks.count = now - clicks.last < CLICK_GAP_MS ? clicks.count + 1 : 1;
+    clicks.last = now;
+    if (clicks.count >= ADMIN_CLICKS) {
+      clicks.count = 0;
+      e.preventDefault();
+      navigate("/admin");
+    }
+  };
 
   const leaderboardUrl = import.meta.env.VITE_LEADERBOARD_URL || "/leaderboard";
 
@@ -23,7 +42,7 @@ const Navbar = () => {
       <nav className='navbar'>
         <div className='navbar-container'>
           {/* Logo */}
-          <Link to='/' className='navbar-logo'>
+          <Link to='/' className='navbar-logo' onClick={handleLogoClick}>
             <img src={logoImage} alt='Live Trading League' className='logo-image' />
           </Link>
 
@@ -124,6 +143,8 @@ const Navbar = () => {
           align-items: center;
           text-decoration: none;
           color: inherit;
+          /* Quick taps must count as clicks, not double-tap zoom. */
+          touch-action: manipulation;
         }
 
         .logo-image {
