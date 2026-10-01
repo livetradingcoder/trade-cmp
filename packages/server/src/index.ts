@@ -1774,9 +1774,12 @@ app.get("/api/admin/fp-test", verifyToken, async (req: AuthRequest, res) => {
       accounts: result.accountsReturned,
     });
   } catch (error: any) {
-    // 502: we reached out but the broker rejected us (bad IP / signature / token)
-    // or config is missing. The message carries the broker's exact reason.
-    res.status(502).json({
+    // 424, not 502: we reached the broker and it rejected us (bad IP, signature,
+    // token, or an IB this token does not own), and the message carries its
+    // exact reason. Cloudflare replaces origin 502/504 bodies with its own
+    // error page, which would throw that reason away — the one thing this
+    // endpoint exists to show.
+    res.status(424).json({
       success: false,
       message: error?.message || "FP Markets probe failed",
     });
@@ -1811,7 +1814,9 @@ app.get("/api/admin/fp-activity-test", verifyToken, async (req: AuthRequest, res
     );
     res.json({ success: true, rebate_override: rebate || null, ...result });
   } catch (error: any) {
-    res.status(502).json({
+    // 424 for the same reason as the performance probe: Cloudflare swallows
+    // the body of an origin 502.
+    res.status(424).json({
       success: false,
       message: error?.message || "FP activity probe failed",
     });
