@@ -1185,3 +1185,67 @@ describe("broker referral details", () => {
     expect(String(provisioned!.broker_integration_id)).not.toBe(String(vt._id));
   });
 });
+
+describe("probing another IB number", () => {
+  const emptyAccounts = { data: { resource: { accounts: [] } } };
+  const mockFp = () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => emptyAccounts,
+      text: async () => JSON.stringify(emptyAccounts),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  };
+
+  it("asks for the IB number given in the query, on the existing credentials", async () => {
+    const fetchMock = mockFp();
+
+    const res = await request(app)
+      .get("/api/admin/fp-test?rebate=999999")
+      .set(auth())
+      .expect(200);
+
+    expect(res.body.rebate_override).toBe("999999");
+    expect(res.body.requested_accounts).toEqual(["999999"]);
+    const [url, opts] = fetchMock.mock.calls[0] as unknown as [string, any];
+    expect(url).toBe("https://ibbeta.fptrading.com/api/account/performance");
+    expect(JSON.parse(opts.body).account_numbers).toEqual(["999999"]);
+    // Only the IB number changes: the token still comes from the environment.
+    expect(opts.headers.token).toBe("test-token");
+  });
+
+  it("keeps using the configured IB number when the query leaves it out", async () => {
+    const fetchMock = mockFp();
+
+    const res = await request(app).get("/api/admin/fp-test").set(auth()).expect(200);
+
+    expect(res.body.rebate_override).toBeNull();
+    expect(res.body.requested_accounts).toEqual(["477779"]);
+    const [, opts] = fetchMock.mock.calls[0] as unknown as [string, any];
+    expect(JSON.parse(opts.body).account_numbers).toEqual(["477779"]);
+  });
+
+  it("takes several IB numbers at once", async () => {
+    mockFp();
+    const res = await request(app)
+      .get("/api/admin/fp-test?rebate=111111,222222")
+      .set(auth())
+      .expect(200);
+    expect(res.body.requested_accounts).toEqual(["111111", "222222"]);
+  });
+
+  it("sends the given IB number on the activity probe too", async () => {
+    mockFp();
+    const res = await request(app)
+      .get("/api/admin/fp-activity-test?account=82373607&rebate=888888")
+      .set(auth())
+      .expect(200);
+    expect(res.body.rebateAccountNumber).toBe("888888");
+  });
+
+  it("stays admin-only", async () => {
+    await request(app).get("/api/admin/fp-test?rebate=999999").expect(401);
+  });
+});

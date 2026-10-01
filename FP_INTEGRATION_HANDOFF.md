@@ -78,6 +78,9 @@ Env: `FP_MARKETS_TOKEN/SECRET/BASE_URL/REBATE_ACCOUNTS` (Railway dashboard vars,
 
 Admin probes we added: `GET /api/admin/fp-test?start_date&end_date` (performance) and
 `GET /api/admin/fp-activity-test?account=<n>&start_date&end_date` (trade+cash, raw diagnostic).
+Both take `&rebate=<ib>` to run the same credentials against a different IB number — how we
+check whether a token is scoped to one IB before switching the app to another. Only the IB
+number changes; token, secret and base URL still come from the env.
 
 ---
 

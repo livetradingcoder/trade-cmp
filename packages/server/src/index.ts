@@ -1753,10 +1753,20 @@ app.get("/api/admin/fp-test", verifyToken, async (req: AuthRequest, res) => {
     const endDate =
       typeof req.query.end_date === "string" ? req.query.end_date : undefined;
 
-    const result = await probeFpMarkets({ startDate, endDate });
+    // `rebate` asks the same credentials for a different IB number, which is
+    // how we check whether a token is scoped to one IB before moving to it.
+    // Nothing else changes: token, secret and base URL still come from the env.
+    const rebate =
+      typeof req.query.rebate === "string" ? req.query.rebate.trim() : "";
+
+    const result = await probeFpMarkets(
+      { startDate, endDate },
+      rebate ? { rebate_accounts: rebate } : undefined
+    );
     res.json({
       success: true,
       base_url: result.baseUrl,
+      rebate_override: rebate || null,
       requested_accounts: result.requestedAccounts,
       start_date: result.startDate,
       end_date: result.endDate,
@@ -1790,8 +1800,16 @@ app.get("/api/admin/fp-activity-test", verifyToken, async (req: AuthRequest, res
     const endDate =
       typeof req.query.end_date === "string" ? req.query.end_date : undefined;
 
-    const result = await probeFpActivity({ accountNumber, startDate, endDate });
-    res.json({ success: true, ...result });
+    // Same idea as the performance probe: try another IB number on the
+    // credentials we already have.
+    const rebate =
+      typeof req.query.rebate === "string" ? req.query.rebate.trim() : "";
+
+    const result = await probeFpActivity(
+      { accountNumber, startDate, endDate },
+      rebate ? { rebate_accounts: rebate } : undefined
+    );
+    res.json({ success: true, rebate_override: rebate || null, ...result });
   } catch (error: any) {
     res.status(502).json({
       success: false,
