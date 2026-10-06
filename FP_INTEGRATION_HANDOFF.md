@@ -133,12 +133,41 @@ Every competition runs on one broker. A broker that follows `BROKER_INTEGRATION_
   the integration record. The encrypted per-integration config is an older path the admin
   API still accepts.
 
+### IB scoping and the broker spec (2026-10-06)
+
+- **A token is bound to one IB.** Probing IB `448642` with the live `477779` credentials returns
+  "Access denied: you do not own this rebate account." (403). An IB that does not exist returns
+  "Rebate account [999999] not found." A list with any unowned IB fails the whole request, so
+  one token cannot be pointed at two IBs. A second IB needs its own token and secret from FP,
+  as its own broker entry (or its own deployment). Changing only `FP_MARKETS_REBATE_ACCOUNTS`
+  does not work.
+- **Probing an IB number:** `GET /api/admin/fp-test?rebate=<ib>` and
+  `GET /api/admin/fp-activity-test?account=<n>&rebate=<ib>` run the live credentials against
+  another IB. They answer **424** on rejection, not 502: Cloudflare replaces the body of an
+  origin 502 with its own "error code: 502" page, which hides the broker's reason.
+  (`/api/egress-ip` still answers 502 and has the same problem.)
+- **`BROKER_INTEGRATION_SPEC.md` is v1.1** and matches what FP actually does: `net_pnl` is profit
+  before costs and we subtract `commission` and `swaps`; cursor mode is required; errors come in
+  two body shapes; a cursor never re-reads old windows. The PDF sent to brokers is generated from
+  it with the internal appendix cut off. It is not committed.
+- **Open: sign of `commission` and `swaps`.** Every live FP beta trade we can see reports `0` for
+  both, so the connector's assumption (positive = cost, subtracted) is unverified. If FP sends MT5
+  style negatives, P&L would add costs instead of deducting them. Ask FP for one example with
+  non-zero costs.
+- **Open: the performance call has no timeout** (trade/cash activity abort after 15s). A hung FP
+  performance call would stall a sync tick.
+
 ---
 
 ## What this session shipped (commits, newest first)
 
 **Multi-broker (after 2026-08-11):**
 
+- `517ae33` `718c084` probe another IB number (`&rebate=`); probe rejections answer 424
+- `ae50f56` five quick clicks on the header logo open `/admin`
+- `5d603dd` referral code and registration link per broker (Settings → Brokers)
+- `26e2c32` `/api/upload` is admin-only and says so plainly when Cloudinary isn't configured
+- `100ab67` Change Password moved to Settings → Danger Zone; Sync E2E page removed
 - Settings → Brokers; brokers connect through `BROKER_<NAME>_*` env vars (2026-09-10)
 - `af685ce` add brokers from the competition form; reorder How It Works
 - `509a538` stop the FP cursor walk at the live edge; reject malformed account numbers
