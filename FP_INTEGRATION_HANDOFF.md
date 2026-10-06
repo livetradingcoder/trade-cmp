@@ -150,6 +150,10 @@ Every competition runs on one broker. A broker that follows `BROKER_INTEGRATION_
   before costs and we subtract `commission` and `swaps`; cursor mode is required; errors come in
   two body shapes; a cursor never re-reads old windows. The PDF sent to brokers is generated from
   it with the internal appendix cut off. It is not committed.
+- **`BROKER_API_REQUIREMENTS.md` is the unbranded sibling** for approaching a broker cold: no company
+  name and no FP references, a numbered requirements table (§7) the broker answers Met / Partial /
+  Not met, and the same technical §1–§5 and §8 as the spec above. Keep §1–§5 in sync when the spec
+  changes. Its PDF is generated the same way and not committed.
 - **Open: sign of `commission` and `swaps`.** Every live FP beta trade we can see reports `0` for
   both, so the connector's assumption (positive = cost, subtracted) is unverified. If FP sends MT5
   style negatives, P&L would add costs instead of deducting them. Ask FP for one example with
